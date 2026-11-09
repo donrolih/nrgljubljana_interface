@@ -188,6 +188,15 @@ CPMAddPackage(
     "SYM_ALL OFF"
 )
 
+# The interface uses NRG Ljubljana's workflow API 2 (discretize, instantiate, solve, preparation checks)
+if(NOT TARGET nrgljubljana::workflow OR NOT TARGET nrgljubljana::numerics)
+  message(FATAL_ERROR "NRG Ljubljana does not provide the nrgljubljana::workflow and nrgljubljana::numerics targets")
+endif()
+get_target_property(NRG_WORKFLOW_API nrgljubljana::workflow WORKFLOW_API_VERSION)
+if(NOT NRG_WORKFLOW_API STREQUAL "2")
+  message(FATAL_ERROR "nrgljubljana_interface requires NRG Ljubljana workflow API 2, found '${NRG_WORKFLOW_API}'")
+endif()
+
 # Tests
 if(Build_Tests)
   # GoogleTest for the C++ tests. NRG Ljubljana fetches it only when it is the top-level project.

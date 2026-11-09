@@ -6,7 +6,7 @@ endforeach()
 
 # List of all tests
 #file(GLOB_RECURSE all_tests RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.cpp)
-set(all_tests refreq_log.cpp hilbert_transform.cpp siam.cpp solver_hdf5.cpp)
+set(all_tests refreq_log.cpp hilbert_transform.cpp siam.cpp solver_hdf5.cpp nrg_libraries.cpp)
 
 foreach(test ${all_tests})
   get_filename_component(test_name ${test} NAME_WE)
@@ -38,3 +38,6 @@ foreach(test ${all_tests})
     )
   endif()
 endforeach()
+
+# The interface links NRG Ljubljana privately; this test includes its headers directly
+target_link_libraries(nrg_libraries nrgljubljana::workflow nrgljubljana::numerics)

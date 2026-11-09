@@ -26,8 +26,9 @@ target_compile_definitions(${PROJECT_NAME}_c PUBLIC
 # ############
 # Dependencies
 
-# Link against NRG
-target_link_libraries(${PROJECT_NAME}_c PRIVATE nrgljubljana_c)
+# Link against NRG Ljubljana: the solver (run_nrg_master, until the in-process pipeline replaces it),
+# the workflow API and the numerics library
+target_link_libraries(${PROJECT_NAME}_c PRIVATE nrgljubljana_c nrgljubljana::workflow nrgljubljana::numerics)
 
 # Link against other libraries
 target_link_libraries(${PROJECT_NAME}_c PUBLIC gsl blas_lapack)
