@@ -590,7 +590,7 @@ namespace nrgljubljana_interface {
   }
 
   matrix<std::complex<double>> hilbert_transform_elementwise(const m_w_cvt &gf, std::complex<double> z) {
-    return hilbert_transform_elementwise(gf, z);
+    return triqs::gfs::hilbert_transform_elementwise(gf, z);
   }
 
 } // namespace nrgljubljana_interface
