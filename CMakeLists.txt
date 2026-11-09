@@ -190,6 +190,17 @@ CPMAddPackage(
 
 # Tests
 if(Build_Tests)
+  # GoogleTest for the C++ tests. NRG Ljubljana fetches it only when it is the top-level project.
+  if(NOT TARGET gtest_main)
+    CPMAddPackage(
+      NAME googletest
+      GITHUB_REPOSITORY google/googletest
+      GIT_TAG v1.15.2
+      OPTIONS
+        "INSTALL_GTEST OFF"
+        "BUILD_GMOCK OFF"
+    )
+  endif()
   add_subdirectory(test)
 endif()
 
