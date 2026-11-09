@@ -4,9 +4,12 @@ foreach(file ${all_h5_ref_files})
   configure_file(${file} ${file} COPYONLY)
 endforeach()
 
-# List of all tests
+# List of all tests, by CTest label: unit (no NRG run), solver (short NRG runs), long (manual)
 #file(GLOB_RECURSE all_tests RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.cpp)
-set(all_tests refreq_log.cpp hilbert_transform.cpp siam.cpp solver_hdf5.cpp nrg_libraries.cpp nrg_adapters.cpp)
+set(unit_tests refreq_log.cpp hilbert_transform.cpp nrg_libraries.cpp nrg_adapters.cpp)
+set(solver_tests siam.cpp solver_hdf5.cpp)
+set(long_tests)
+set(all_tests ${unit_tests} ${solver_tests} ${long_tests})
 
 foreach(test ${all_tests})
   get_filename_component(test_name ${test} NAME_WE)
@@ -37,6 +40,13 @@ foreach(test ${all_tests})
       ${CMAKE_CURRENT_SOURCE_DIR}/${test}
     )
   endif()
+endforeach()
+
+foreach(label unit solver long)
+  foreach(test ${${label}_tests})
+    get_filename_component(test_name ${test} NAME_WE)
+    set_property(TEST ${test_name} APPEND PROPERTY LABELS ${label})
+  endforeach()
 endforeach()
 
 # The interface links NRG Ljubljana privately; these tests include its headers directly

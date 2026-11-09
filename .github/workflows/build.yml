@@ -150,7 +150,7 @@ jobs:
       run: |
         source $HOME/install/share/triqs/triqsvars.sh
         cd build
-        ctest -j2 --output-on-failure
+        ctest -j2 --output-on-failure -L "unit|solver"
 
     - name: ccache statistics
       if: always()
