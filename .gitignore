@@ -7,3 +7,4 @@ build_*
 build-*
 rok_testing
 .claude
+__pycache__/
