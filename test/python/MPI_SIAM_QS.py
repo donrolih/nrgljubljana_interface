@@ -6,7 +6,7 @@ from nrgljubljana_interface import Solver, SemiCircular
 
 from triqs.utility import mpi
 from h5 import HDFArchive
-from triqs.utility.h5diff import h5diff
+from ref_compare import compare_to_reference
 
 
 class test_SIAM(unittest.TestCase):
@@ -62,7 +62,7 @@ class test_SIAM(unittest.TestCase):
 
           # Compare against reference result
           fnref = "MPI_SIAM_QS.ref.h5" # the same for all cases!
-          h5diff(fnout, fnref)
+          compare_to_reference(fnout, fnref)
 
 if __name__ == '__main__':
     unittest.main()

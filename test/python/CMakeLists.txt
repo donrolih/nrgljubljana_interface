@@ -1,5 +1,5 @@
-# Copy h5 files to binary dir
-file(GLOB_RECURSE all_h5_ref_files RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.ref.h5)
+# Copy the references and their tolerances (X.ref.json, see ref_compare.py) to binary dir
+file(GLOB_RECURSE all_h5_ref_files RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.ref.h5 *.ref.json)
 foreach(file ${all_h5_ref_files})
   configure_file(${file} ${file} COPYONLY)
 endforeach()

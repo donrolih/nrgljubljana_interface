@@ -1,0 +1,12 @@
+{
+  "precision": 1e-11,
+  "reason": "10 x the largest measured difference (2.4e-13, against the reference), rounded up to a power of ten. The spread between runs (1-4 MPI ranks at 1 and 8 BLAS threads (8 runs)) is 0.",
+  "measured": {
+    "spread_between_runs": 0.0,
+    "vs_reference": 2.4e-13
+  },
+  "method": "max |a.data - b.data| over all blocks and points (as h5diff), per Green's function; runs at 1 and 8 BLAS threads (OpenBLAS via FlexiBLAS); also 1-4 MPI ranks",
+  "reference_from": "NRG Ljubljana b2dc884 (the script pipeline before workflow API 2)",
+  "measured_with": "NRG Ljubljana 13e7aace, TRIQS 4.0.2, foss/2026.1",
+  "date": "2026-11-09"
+}

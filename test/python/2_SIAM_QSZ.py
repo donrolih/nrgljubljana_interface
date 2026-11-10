@@ -5,7 +5,7 @@ import unittest
 from nrgljubljana_interface import Solver, SemiCircular
 
 from h5 import HDFArchive
-from triqs.utility.h5diff import h5diff
+from ref_compare import compare_to_reference
 
 
 class test_SIAM(unittest.TestCase):
@@ -60,7 +60,7 @@ class test_SIAM(unittest.TestCase):
             arch["Sigma_w"] = S.Sigma_w
 
         # Compare against reference result
-        h5diff("2_SIAM_QSZ.out.h5", "2_SIAM_QSZ.ref.h5")
+        compare_to_reference("2_SIAM_QSZ.out.h5", "2_SIAM_QSZ.ref.h5")
 
 if __name__ == '__main__':
     unittest.main()
