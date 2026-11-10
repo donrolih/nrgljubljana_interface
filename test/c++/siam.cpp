@@ -56,8 +56,21 @@ TEST(nrgljubljana_interface, siam) { // NOLINT
     h5_write(arch, "S", S);
   }
 
-  // Compare against the reference data
-  // h5diff("siam.out.h5", "siam.ref.h5") // TODO (h5diff is Python only)
+  // Compare against the reference data, Gf by Gf. Not the whole solver: reading a solver_core from HDF5
+  // reruns its constructor, which needs the template directory (blanked in the reference).
+  // REF_PRECISION is the precision recorded in siam.ref.json (see test/c++/CMakeLists.txt).
+  auto out_file = h5::file("siam.out.h5", 'r');
+  auto ref_file = h5::file("siam.ref.h5", 'r');
+  auto out      = h5::group(out_file).open_group("S");
+  auto ref      = h5::group(ref_file).open_group("S");
+  for (std::string name : {"A_w", "B_l_w", "B_r_w", "C_w", "Delta_w", "F_l_w", "F_r_w", "G_w", "I_w", "SigmaHartree_w", "Sigma_w",
+                           "chi_NN_w", "chi_SS_w"}) {
+    ASSERT_EQ(out.has_subgroup(name), ref.has_subgroup(name)) << name << " is in only one of output and reference";
+    if (not ref.has_subgroup(name)) continue;
+    auto g_out = h5::read<g_w_t>(out, name);
+    auto g_ref = h5::read<g_w_t>(ref, name);
+    EXPECT_BLOCK_GF_NEAR(g_out, g_ref, REF_PRECISION) << name;
+  }
 }
 
 MAKE_MAIN

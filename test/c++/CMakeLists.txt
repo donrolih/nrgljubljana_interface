@@ -49,6 +49,19 @@ foreach(label unit solver long)
   endforeach()
 endforeach()
 
+# Tolerance of a reference X.ref.h5, recorded in X.ref.json (as in test/python): its precision is passed to
+# test X as REF_PRECISION. Editing the JSON file reconfigures.
+foreach(test ${all_tests})
+  get_filename_component(test_name ${test} NAME_WE)
+  set(ref_json ${CMAKE_CURRENT_SOURCE_DIR}/${test_name}.ref.json)
+  if(EXISTS ${ref_json})
+    file(READ ${ref_json} ref_json_content)
+    string(JSON ref_precision GET "${ref_json_content}" precision)
+    target_compile_definitions(${test_name} PRIVATE REF_PRECISION=${ref_precision})
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${ref_json})
+  endif()
+endforeach()
+
 # The interface links NRG Ljubljana privately; these tests include its headers directly
 target_link_libraries(nrg_libraries nrgljubljana::workflow nrgljubljana::numerics)
 target_link_libraries(nrg_adapters nrgljubljana::numerics)
