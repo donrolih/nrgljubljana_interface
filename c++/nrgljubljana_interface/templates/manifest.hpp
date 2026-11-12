@@ -4,6 +4,7 @@
 
 #include <compare>
 #include <map>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -56,8 +57,11 @@ namespace nrgljubljana_interface::templates {
     // [correlators]: logical name -> entries, ordered by element
     std::map<std::string, std::vector<correlator_entry_t>> correlators;
 
-    // [hartree], [levels]: element -> operator, element -> model parameter
-    std::map<block_element_t, std::string> hartree, levels;
+    // [hartree]: element -> operator whose expectation value is the Hartree term; nothing for "0" (no Hartree term)
+    std::map<block_element_t, std::optional<std::string>> hartree;
+
+    // [levels]: element -> model parameter
+    std::map<block_element_t, std::string> levels;
 
     /// Whether the template gives F_l, F_r and I with G, and so the self-energy
     [[nodiscard]] bool has_self_energy() const;
@@ -74,7 +78,7 @@ namespace nrgljubljana_interface::templates {
    * section or key; a missing required section or key; an unknown format; a malformed value; a block or list entry
    * given twice; a block element outside its structure; degeneracy not covering exactly the blocks of gf; an
    * unknown layout; a correlator whose operators are not in ops; F_l, F_r, I not given together with G for the
-   * same elements, or without a [hartree] entry for each of them; a [hartree] entry for another element; a
+   * same elements, or without a [hartree] entry (an operator, or 0) for each of them; a [hartree] entry for another element; a
    * [levels] entry that is off-diagonal or names a parameter not in params.
    */
   manifest_t parse_manifest(std::string_view text, std::string_view source = {});

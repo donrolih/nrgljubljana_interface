@@ -1,0 +1,28 @@
+# Single-impurity Anderson model at particle-hole symmetry, isospin and spin symmetry (ISO)
+
+[template]
+format=1
+model=SIAM
+symtype=ISO
+channels=1
+ops=n_d n_d^2 hop0 A_d sigma_d isoself_d
+params=U1
+
+[structure]
+gf=imp:1
+degeneracy=imp:2
+
+[bath]
+coefficient_channels=imp[0,0]
+
+[correlators]
+G imp[0,0]=A_d-A_d
+F_l imp[0,0]=isoself_d-A_d
+F_r imp[0,0]=A_d-isoself_d
+I imp[0,0]=isoself_d-isoself_d
+chi_NN imp[0,0]=n_d-n_d
+chi_SS imp[0,0]=sigma_d-sigma_d
+
+[hartree]
+# no Hartree operator: Σ = I - F_l G^-1 F_r
+imp[0,0]=0

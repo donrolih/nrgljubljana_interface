@@ -264,7 +264,11 @@ namespace nrgljubljana_interface::templates {
       auto const at = where("hartree", key);
       auto const e  = parse_element(key, source, at);
       if (not sigma_elements.contains(e)) fail(source, at, "no self-energy for " + key + " (G, F_l, F_r and I give it)");
-      if (not contains(m.ops, value)) fail(source, at, "operator \"" + value + "\" is not in ops");
+      if (value == "0") {
+        m.hartree[e] = std::nullopt;
+        continue;
+      }
+      if (not contains(m.ops, value)) fail(source, at, "operator \"" + value + "\" is not in ops (or 0 for no Hartree term)");
       m.hartree[e] = value;
     }
     for (auto const &e : sigma_elements)
@@ -337,7 +341,7 @@ namespace nrgljubljana_interface::templates {
       }
 
     for (auto const &[e, op] : m.hartree)
-      if (type_of.at(op) != 's') mismatch(where("hartree", to_string(e)), "operator \"" + op + "\" is not of type s");
+      if (op and type_of.at(*op) != 's') mismatch(where("hartree", to_string(e)), "operator \"" + *op + "\" is not of type s");
 
     auto const n_coef = static_cast<long>(m.coefficient_channels.size());
     if (m.layout == "uncoupled" and n_coef != m.channels and n_coef != 2 * m.channels)

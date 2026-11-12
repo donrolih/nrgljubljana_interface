@@ -292,6 +292,13 @@ TEST(Manifest, SelfEnergyRule) {
   EXPECT_TRUE(contains(error_of(replaced(siam_qs, "[hartree]\nimp[0,0]=SigmaHartree\n", "")), "[hartree]: missing for imp[0,0]"));
 }
 
+TEST(Manifest, NoHartreeTerm) {
+  auto const m = parse_manifest(replaced(siam_qs, "imp[0,0]=SigmaHartree", "imp[0,0]=0"));
+  EXPECT_TRUE(m.has_self_energy());
+  EXPECT_EQ(m.hartree.at(parse_block_element("imp[0,0]")), std::nullopt);
+  EXPECT_EQ(check_error_of(replaced(siam_qs, "imp[0,0]=SigmaHartree", "imp[0,0]=0")), "");
+}
+
 TEST(Manifest, HartreeAndLevels) {
   EXPECT_TRUE(contains(error_of(replaced(siam_qs, "imp[0,0]=SigmaHartree", "imp[0,0]=SigmaH")), "[hartree] imp[0,0]: operator \"SigmaH\" is not in ops"));
   auto const g_only = replaced(replaced(replaced(siam_qs, "F_l imp[0,0]=self_d-A_d\n", ""), "F_r imp[0,0]=A_d-self_d\n", ""), "I imp[0,0]=self_d-self_d\n", "");
@@ -350,4 +357,11 @@ TEST(Template, SpinSuffix) {
   EXPECT_TRUE(contains(check_error_of(replaced(siam_qsz, "=n_d-n_d", "=n_d-n_d-u"), qsz), "a spin suffix -u/-d belongs only to d spectra"));
   // QS has none
   EXPECT_TRUE(contains(check_error_of(replaced(siam_qs, "=A_d-A_d", "=A_d-A_d-u")), "a spin suffix -u/-d belongs only to d spectra"));
+}
+
+TEST(Template, ShippedManifests) {
+  for (auto const *name : {"SIAM/QS", "SIAM/QSZ", "SIAM/ISO", "2orb-UJ/QS", "Holstein/Nph=10/QS", "CLEAN/QS"}) {
+    auto const dir = template_dir(name);
+    EXPECT_NO_THROW(check_against_template(load_manifest(dir), dir)) << name;
+  }
 }

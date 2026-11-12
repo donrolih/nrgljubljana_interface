@@ -1,0 +1,30 @@
+# Anderson-Holstein model, up to 10 phonons, spin and charge symmetry (QS)
+
+[template]
+format=1
+model=Holstein
+symtype=QS
+channels=1
+ops=n_d n_d^2 hop0 A_d sigma_d self_d aan nph displ displ^2 SigmaHartree
+params=U1 eps1 omega g1 n1
+
+[structure]
+gf=imp:1
+degeneracy=imp:2
+
+[bath]
+coefficient_channels=imp[0,0]
+
+[correlators]
+G imp[0,0]=A_d-A_d
+F_l imp[0,0]=self_d-A_d
+F_r imp[0,0]=A_d-self_d
+I imp[0,0]=self_d-self_d
+chi_NN imp[0,0]=n_d-n_d
+chi_SS imp[0,0]=sigma_d-sigma_d
+
+[hartree]
+imp[0,0]=SigmaHartree
+
+[levels]
+imp[0,0]=eps1

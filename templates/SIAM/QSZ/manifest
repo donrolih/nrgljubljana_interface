@@ -1,0 +1,36 @@
+# Single-impurity Anderson model, charge and S_z symmetry (QSZ), spin-polarized bath
+
+[template]
+format=1
+model=SIAM
+symtype=QSZ
+channels=1
+ops=n_d n_d^2 hop0 A_d self_d SZd n_d_u n_d_d SigmaHartree-u SigmaHartree-d
+params=U1 eps1 B1
+
+[structure]
+gf=up:1 dn:1
+degeneracy=up:1 dn:1
+
+[bath]
+coefficient_channels=up[0,0] dn[0,0]
+
+[correlators]
+G up[0,0]=A_d-A_d-u
+G dn[0,0]=A_d-A_d-d
+F_l up[0,0]=self_d-A_d-u
+F_l dn[0,0]=self_d-A_d-d
+F_r up[0,0]=A_d-self_d-u
+F_r dn[0,0]=A_d-self_d-d
+I up[0,0]=self_d-self_d-u
+I dn[0,0]=self_d-self_d-d
+chi_NN imp[0,0]=n_d-n_d
+chi_SS imp[0,0]=SZd-SZd
+
+[hartree]
+up[0,0]=SigmaHartree-u
+dn[0,0]=SigmaHartree-d
+
+[levels]
+up[0,0]=eps1
+dn[0,0]=eps1

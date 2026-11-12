@@ -1,0 +1,17 @@
+# Bath only, without an impurity (QS)
+
+[template]
+format=1
+model=CLEAN
+symtype=QS
+channels=1
+ops=n_f n_f^2 A_f sigma_f
+params=
+
+[structure]
+gf=
+delta=imp:1
+degeneracy=
+
+[bath]
+coefficient_channels=imp[0,0]
