@@ -56,9 +56,7 @@ TEST(nrgljubljana_interface, siam) { // NOLINT
     h5_write(arch, "S", S);
   }
 
-  // Compare against the reference data, Gf by Gf. Not the whole solver: reading a solver_core from HDF5
-  // reruns its constructor, which needs the template directory (blanked in the reference).
-  // REF_PRECISION is the precision recorded in siam.ref.json (see test/c++/CMakeLists.txt).
+  // Compare against the reference data, Gf by Gf, at the precision recorded in siam.ref.json (REF_PRECISION)
   auto out_file = h5::file("siam.out.h5", 'r');
   auto ref_file = h5::file("siam.ref.h5", 'r');
   auto out      = h5::group(out_file).open_group("S");

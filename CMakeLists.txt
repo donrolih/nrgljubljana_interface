@@ -199,7 +199,7 @@ endif()
 
 # Tests
 if(Build_Tests)
-  # GoogleTest for the C++ tests. NRG Ljubljana fetches it only when it is the top-level project.
+  # GoogleTest for the C++ tests
   if(NOT TARGET gtest_main)
     CPMAddPackage(
       NAME googletest

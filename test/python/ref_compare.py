@@ -2,7 +2,7 @@
 #
 # Each reference X.ref.h5 has a file X.ref.json next to it. Its "precision" is the largest allowed
 # max |a - b| of the Green's function data (the measure of h5diff); "reason" and "measured" record how
-# the value was chosen. Tolerances are fixed when a reference is recorded, not adjusted to make a test pass.
+# the value was chosen.
 
 import json
 import os

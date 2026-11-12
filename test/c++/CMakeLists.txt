@@ -62,6 +62,6 @@ foreach(test ${all_tests})
   endif()
 endforeach()
 
-# The interface links NRG Ljubljana privately; these tests include its headers directly
+# These tests include NRG Ljubljana headers directly
 target_link_libraries(nrg_libraries nrgljubljana::workflow nrgljubljana::numerics)
 target_link_libraries(nrg_adapters nrgljubljana::numerics)

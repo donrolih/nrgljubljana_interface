@@ -1,7 +1,4 @@
 // Raw spectral bins of one correlator, as written by NRG Ljubljana (savebins).
-//
-// This header does not include NRG Ljubljana headers: results hold spectrum_bins_t, and the conversion to the
-// NRG Ljubljana type lives in nrg/convert.hpp.
 
 #pragma once
 
