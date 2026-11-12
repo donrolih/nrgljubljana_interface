@@ -181,8 +181,8 @@ include(CMake/CPM.cmake)
 # NRG Ljubljana library
 CPMAddPackage(
   NAME nrgljubljana
-  GITHUB_REPOSITORY rokzitko/nrgljubljana
-  GIT_TAG 13e7aaceff866921ad00d4cf0f4d41049981b613
+  GITHUB_REPOSITORY donrolih/nrgljubljana
+  GIT_TAG c928cc553ba5b764516bd6d632f2c6dcf3053c9f
   OPTIONS
     "SYM_MORE OFF"
     "SYM_ALL OFF"
