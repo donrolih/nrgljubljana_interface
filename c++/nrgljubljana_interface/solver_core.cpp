@@ -32,6 +32,8 @@
 #include <fstream>
 #include <utility>
 #include <deque>
+#include <map>
+#include <vector>
 #include <iomanip>    // setprecision
 #include <limits>     // max_digits10, MAX_PATH
 
@@ -42,6 +44,7 @@
 #include <mpi/string.hpp>
 
 #include "openmp.hpp"
+#include "templates/manifest.hpp"
 
 // std::filesystem is not production-ready as of 2020. As a workaround,
 // we remove temporary files using "rm".
@@ -67,37 +70,68 @@ namespace nrgljubljana_interface {
     return len > 0;
   }
 
+  namespace {
+
+    std::string join(std::vector<std::string> const &items) {
+      std::string result;
+      for (auto const &item : items) result += (result.empty() ? "" : " ") + item;
+      return result;
+    }
+
+  } // namespace
+
+  void solver_core::read_manifest() {
+    auto const dir = constr_params.get_model_dir();
+    std::ifstream probe(dir + "/manifest");
+    if (!probe) TRIQS_RUNTIME_ERROR << "Template " << dir << " has no manifest";
+
+    templates::manifest_t m;
+    templates::template_check_t check;
+    try {
+      m     = templates::load_manifest(dir);
+      check = templates::check_against_template(m, dir);
+    } catch (std::invalid_argument const &e) { TRIQS_RUNTIME_ERROR << e.what(); }
+
+    gf_struct    = m.gf;
+    Delta_struct = m.delta;
+
+    // chi_struct: the common block structure of the correlators other than G, F_l, F_r and I
+    chi_struct.clear();
+    std::string chi_name;
+    for (auto const &[name, entries] : m.correlators) {
+      if (templates::has_gf_structure(name)) continue;
+      auto const s = m.correlator_structure(name);
+      if (chi_name.empty()) {
+        chi_struct = s;
+        chi_name   = name;
+      } else if (s != chi_struct)
+        TRIQS_RUNTIME_ERROR << dir << "/manifest: [correlators] " << name << " and " << chi_name
+                            << " have different block structures; chi_struct needs one";
+    }
+
+    // Spectrum lists of the NRG run, from the type of each correlator
+    std::map<char, std::vector<std::string>> lists;
+    for (auto const &[name, entries] : m.correlators)
+      for (auto const &entry : entries) {
+        auto &list = lists[check.correlator_type.at(entry.nrg_name)];
+        if (std::find(list.begin(), list.end(), entry.nrg_name) == list.end()) list.push_back(entry.nrg_name);
+      }
+    constr_params.ops    = join(m.ops);
+    constr_params.specs  = join(lists['s']);
+    constr_params.specd  = join(lists['d']);
+    constr_params.spect  = join(lists['t']);
+    constr_params.specq  = join(lists['q']);
+    constr_params.specot = join(lists['o']);
+    constr_params.params = join(m.params);
+    // Two coefficient channels per channel: a spin-polarized Wilson chain
+    constr_params.polarized = m.layout == "uncoupled" and static_cast<long>(m.coefficient_channels.size()) == 2 * m.channels;
+  }
+
   solver_core::solver_core(constr_params_t cp) : constr_params(cp) {
     if (world.rank() == 0)
       report_openMP(); // important for performance, so we report the settings here for easy inspection by the user
 
-    gf_struct = read_structure("gf_struct", true); // true=mandatory
-    Delta_struct = read_structure("Delta_struct", false); // false=optional
-    if (!has_struct(Delta_struct))
-      Delta_struct = gf_struct; // default to equal structure of Delta and G
-    TRIQS_ASSERT2(has_struct(Delta_struct), "Delta_struct must be defined. template corrupted?");
-    chi_struct = read_structure("chi_struct", false); // false=optional
-
-    // Read model-specific template info file
-    std::ifstream F(constr_params.get_model_dir() + "/info");
-    if (!F) TRIQS_RUNTIME_ERROR << "Failed to open template info file";
-    auto getline = [&F](const std::string &keyword) -> std::string {
-      std::string s;
-      std::getline(F, s);
-      auto pos = s.find(':');
-      std::string keyword_found = s.substr(0, pos);
-      TRIQS_ASSERT2(keyword == keyword_found, "template info file is corrupted");
-      std::string value = s.substr(pos+1);
-      return value;
-    };
-    constr_params.ops       = getline("ops");
-    constr_params.specs     = getline("specs");
-    constr_params.specd     = getline("specd");
-    constr_params.spect     = getline("spect");
-    constr_params.specq     = getline("specq");
-    constr_params.specot    = getline("specot");
-    constr_params.params    = getline("params");
-    constr_params.polarized = getline("polarized") == "true";
+    read_manifest();
 
     // Create the hybridization function on a logarithmic mesh
     log_mesh = refreq_log{cp.mesh_min, cp.mesh_max, cp.mesh_ratio};

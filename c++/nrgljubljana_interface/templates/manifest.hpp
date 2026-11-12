@@ -36,8 +36,11 @@ namespace nrgljubljana_interface::templates {
     std::string suffix;    // "", "u" or "d": the spin of a polarized spectrum
   };
 
-  /// Names of the logical correlators with a fixed meaning: the correlators of the self-energy trick
-  inline constexpr char const *self_energy_correlators[] = {"G", "F_l", "F_r", "I"};
+  /// G, F_l, F_r and I: the correlators with the block structure of G ([structure] gf); together they give Σ
+  inline constexpr char const *gf_correlators[] = {"G", "F_l", "F_r", "I"};
+
+  /// Whether the logical correlator name has the block structure of G (one of gf_correlators)
+  bool has_gf_structure(std::string_view name);
 
   struct manifest_t {
     // [template]

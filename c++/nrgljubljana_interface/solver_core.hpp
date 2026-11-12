@@ -85,6 +85,14 @@ namespace nrgljubljana_interface {
     gf_struct_t read_structure(const std::string &filename, bool mandatory);
 
     /**
+     * @brief Read and check the template's manifest, and set the block structures, the spectrum lists, the
+     * model parameters and the polarization from it.
+     *
+     * @details Fails if the template has no manifest or the manifest does not match the template.
+     */
+    C2PY_IGNORE void read_manifest();
+
+    /**
      * @brief Create a temporary working directory for a series of NRG runs.
      *
      * @param tempdir_ Base directory in which to create the temporary directory.

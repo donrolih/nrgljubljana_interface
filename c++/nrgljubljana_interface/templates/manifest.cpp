@@ -138,11 +138,14 @@ namespace nrgljubljana_interface::templates {
 
   std::string to_string(block_element_t const &e) { return e.block + "[" + std::to_string(e.i) + "," + std::to_string(e.j) + "]"; }
 
+  bool has_gf_structure(std::string_view name) {
+    return std::any_of(std::begin(gf_correlators), std::end(gf_correlators), [&](char const *s) { return name == s; });
+  }
+
   bool manifest_t::has_self_energy() const { return correlators.contains("F_l"); }
 
   block_structure_t manifest_t::correlator_structure(std::string const &name) const {
-    for (auto const *s : self_energy_correlators)
-      if (name == s) return gf;
+    if (has_gf_structure(name)) return gf;
     std::map<std::string, long> sizes;
     if (auto it = correlators.find(name); it != correlators.end())
       for (auto const &entry : it->second) {
@@ -236,8 +239,7 @@ namespace nrgljubljana_interface::templates {
       if (value.empty() or value.find_first_of(whitespace) != std::string::npos) fail(source, at, "expected one NRG correlator, got \"" + value + "\"");
       split_correlator(entry, m.ops, source, at);
       auto const &name = f[0];
-      if (std::find(std::begin(self_energy_correlators), std::end(self_energy_correlators), name) != std::end(self_energy_correlators))
-        check_in_structure(entry.element, m.gf, "gf", source, at);
+      if (has_gf_structure(name)) check_in_structure(entry.element, m.gf, "gf", source, at);
       auto &entries = m.correlators[name];
       for (auto const &other : entries)
         if (other.element == entry.element) fail(source, at, to_string(entry.element) + " of " + name + " given twice");
