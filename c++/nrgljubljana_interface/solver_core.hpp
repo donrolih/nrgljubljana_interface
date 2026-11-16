@@ -24,6 +24,7 @@
 #include "./params.hpp"
 #include "./types.hpp"
 #include "./templates/manifest.hpp"
+#include "./solver/request.hpp"
 
 #include <iostream>
 #include <fstream>
@@ -51,6 +52,9 @@ namespace nrgljubljana_interface {
     // The template's manifest, and the spectrum list (s, t, o, d, q) of each of its NRG correlators
     templates::manifest_t manifest;
     std::map<std::string, char> correlator_type;
+
+    // The request of the current solve
+    solve_request_t request;
 
     // Return reference to container_set
     container_set &result_set() { return static_cast<container_set &>(*this); }

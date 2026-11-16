@@ -134,8 +134,8 @@ namespace nrgljubljana_interface {
     /// Parameter for the Gaussian convolution step.
     double gamma = 0.2;
 
-    /// Method for calculating the dynamical quantities.
-    std::string method = "fdm";
+    /// Deprecated: FDM is the only method. Accepted values are "" (not set) and "fdm".
+    std::string method = "";
 
     /// Band rescaling factor (half-width of the support of the hybridisation function); set to mesh_max if negative.
     double bandrescale = -1.0;
