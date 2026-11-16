@@ -47,8 +47,11 @@ namespace nrgljubljana_interface {
   class solver_core : public container_set {
 
     private:
-    // Mpi Communicator
-    mpi::communicator world;
+    // The ranks that solve together: twists are split over them, and each holds the full result
+    mpi::communicator comm;
+
+    // Barrier on comm; no MPI call for a single rank
+    void sync();
 
     // The template's manifest, and the spectrum list (s, t, o, d, q) of each of its NRG correlators
     templates::manifest_t manifest;
@@ -71,6 +74,17 @@ namespace nrgljubljana_interface {
      * @param cp Construction parameters.
      */
     explicit solver_core(constr_params_t cp);
+
+    /**
+     * @brief Construct a solver that works on the given communicator.
+     *
+     * @details The twists are split over its ranks. With a single rank (e.g. MPI_COMM_SELF) the solver makes no
+     * collective MPI calls and solves all twists itself, so that independent solvers can run on different ranks.
+     *
+     * @param cp Construction parameters.
+     * @param c The communicator.
+     */
+    C2PY_IGNORE solver_core(constr_params_t cp, mpi::communicator c);
 
     // Delete assignement operator because of const members
     solver_core(solver_core const &s)            = default;

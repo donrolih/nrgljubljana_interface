@@ -131,8 +131,10 @@ namespace nrgljubljana_interface {
     constr_params.polarized = m.layout == "uncoupled" and static_cast<long>(m.coefficient_channels.size()) == 2 * m.channels;
   }
 
-  solver_core::solver_core(constr_params_t cp) : constr_params(cp) {
-    if (world.rank() == 0)
+  solver_core::solver_core(constr_params_t cp) : solver_core(std::move(cp), mpi::communicator{}) {}
+
+  solver_core::solver_core(constr_params_t cp, mpi::communicator c) : comm(c), constr_params(std::move(cp)) {
+    if (comm.rank() == 0)
       report_openMP(); // important for performance, so we report the settings here for easy inspection by the user
 
     read_manifest();
@@ -303,15 +305,27 @@ namespace nrgljubljana_interface {
     return ( getcwd(temp, sizeof(temp)) ? std::string(temp) : std::string("") );
   }
    
+  void solver_core::sync() {
+    if (comm.size() > 1) comm.barrier();
+  }
+
   void solver_core::solve(solve_params_t const &sp) {
+    // nrg_params as given before and after the solve: the values resolved for each twist are in its param file
+    struct restore_t {
+      nrg_params_t &target;
+      nrg_params_t saved;
+      ~restore_t() { target = saved; }
+    } restore_nrg_params{nrg_params, nrg_params};
+
     request = solve_request_t{};
     try {
       validate_request(request, manifest);
-      if (check_method(sp, request) and world.rank() == 0)
+      if (check_method(sp, request) and comm.rank() == 0)
         std::cerr << "Warning: solve_params.method is deprecated; FDM is the only method and always used\n";
     } catch (std::invalid_argument const &e) { TRIQS_RUNTIME_ERROR << e.what(); }
     auto const z = twist_values(request, sp.Nz);
     last_solve_params = sp;
+    if (last_solve_params->bandrescale < 0) last_solve_params->bandrescale = constr_params.mesh_max; // on every rank
     result.reset();
 
     // What was solved, as given (the values resolved for each twist are in its param file)
@@ -328,15 +342,15 @@ namespace nrgljubljana_interface {
     r.complete_z_average = complete_z_average(z, sp.Nz);
     container_set::operator=(container_set{});  // Reset the results
     std::string tempdir{};
-    if (world.rank() == 0) {
+    if (comm.rank() == 0) {
       std::cout << "Starting NRG solver\n";
       tempdir = create_tempdir("");  // Create a temporary directory for file-based interfacing (RAM disk is best)
     }
-    world.barrier(); // Ensures temporary directory is created
-    mpi::broadcast(tempdir, world);
+    sync(); // Ensures temporary directory is created
+    if (comm.size() > 1) mpi::broadcast(tempdir, comm);
     std::string cwd = get_current_dir();
     if (chdir(tempdir.c_str()) != 0) TRIQS_RUNTIME_ERROR << "chdir to tempdir failed.";
-    if (world.rank() == 0) {
+    if (comm.rank() == 0) {
       write_gamma();
       // we need a mock param file for 'adapt' tool
       generate_param_file(1.0);
@@ -344,28 +358,28 @@ namespace nrgljubljana_interface {
       call("./discretize", verbose);
       for (auto k : range(z.size())) instantiate(z[k], std::to_string(k + 1));
     }
-    world.barrier(); // Ensures the initialization scripts have completed
+    sync(); // Ensures the initialization scripts have completed
 
     // Perform the calculations in parallel
-    auto chunk = mpi::chunk(range(1, long(z.size()) + 1), world);
+    auto chunk = mpi::chunk(range(1, long(z.size()) + 1), comm);
     for (int i: chunk)
       solve_one(std::to_string(i));
 
-    world.barrier(); // Ensures all subcalculations are completed
+    sync(); // Ensures all subcalculations are completed
 
     // Raw results: every rank reads all twists (the working directory is shared)
     auto const spectra = requested_spectra(request, manifest, correlator_type);
     for (auto k : range(z.size())) r.twists.push_back(read_twist(std::to_string(k + 1), z[k], spectra, request.fdm, request.energies > 0));
     result = std::move(r);
     // Post-Processing in perl script
-    if (world.rank() == 0) {
+    if (comm.rank() == 0) {
       std::cout << "Post-processing results" << std::endl;
       call("./process", verbose);
     }
 
-    world.barrier(); // Ensures post-processing is completed
+    sync(); // Ensures post-processing is completed
     // Read Results into TRIQS Containers
-    if (world.rank() == 0)
+    if (comm.rank() == 0)
       std::cout << "Reading results from files" << std::endl;
     readexpv(int(z.size()));
     readtdfdm(int(z.size()));
@@ -386,10 +400,10 @@ namespace nrgljubljana_interface {
       Sigma_w = (*SigmaHartree_w) + (*I_w) - (*F_l_w) / (*G_w) * (*F_r_w);
     }
     // Cleanup
-    world.barrier(); // Ensures all processes have read the results before cleanup
+    sync(); // Ensures all processes have read the results before cleanup
     if (chdir(cwd.c_str()) != 0) TRIQS_RUNTIME_ERROR << "failed to return from tempdir";
-    world.barrier(); // Ensures all processes have chdired from temp dir before it is deleted
-    if (world.rank() == 0 && !keep_temp_dir) {
+    sync(); // Ensures all processes have chdired from temp dir before it is deleted
+    if (comm.rank() == 0 && !keep_temp_dir) {
         //      std::error_code ec;
         //      fs::remove_all(tempdir, ec);
         //      if (ec) std::cerr << "Warning: failed to remove the temporary directory." << std::endl;
@@ -430,7 +444,7 @@ namespace nrgljubljana_interface {
   // Creates input files for NRG iteration (param & data) by calling the "instantiate" script
   void solver_core::instantiate(double z, const std::string &taskdir) {
     std::cout << "Preparing z=" << z << " taskdir=" << taskdir << std::endl;
-    TRIQS_ASSERT(world.rank() == 0); // should not run in parallel!
+    TRIQS_ASSERT(comm.rank() == 0); // should not run in parallel!
     generate_param_file(z);
     if (mkdir(taskdir.c_str(), 0755) != 0) TRIQS_RUNTIME_ERROR << "failed to mkdir taskdir " << taskdir;
     call("./instantiate " + taskdir, verbose);
@@ -438,7 +452,7 @@ namespace nrgljubljana_interface {
 
   // Solve the problem for a single value of the twist parameter z
   void solver_core::solve_one(const std::string &taskdir) {
-    std::cout << "Solving taskdir=" << taskdir << " rank=" << world.rank() << std::endl;
+    std::cout << "Solving taskdir=" << taskdir << " rank=" << comm.rank() << std::endl;
     if (chdir(taskdir.c_str()) != 0) TRIQS_RUNTIME_ERROR << "failed to chdir to taskdir " << taskdir;
     // Solve the impurity model
     std::streambuf *old = std::cout.rdbuf();
