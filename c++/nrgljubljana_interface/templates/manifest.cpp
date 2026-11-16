@@ -191,6 +191,7 @@ namespace nrgljubljana_interface::templates {
     };
 
     manifest_t m;
+    m.text = std::string(text);
 
     // [template]
     if (required("template", "format") != "1") fail(source, where("template", "format"), "unknown format \"" + required("template", "format") + "\"");

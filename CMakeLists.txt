@@ -179,10 +179,12 @@ add_subdirectory(c++/${PROJECT_NAME})
 include(CMake/CPM.cmake)
 
 # NRG Ljubljana library
+set(NRGLJUBLJANA_REPOSITORY donrolih/nrgljubljana)
+set(NRGLJUBLJANA_GIT_TAG c928cc553ba5b764516bd6d632f2c6dcf3053c9f)
 CPMAddPackage(
   NAME nrgljubljana
-  GITHUB_REPOSITORY donrolih/nrgljubljana
-  GIT_TAG c928cc553ba5b764516bd6d632f2c6dcf3053c9f
+  GITHUB_REPOSITORY ${NRGLJUBLJANA_REPOSITORY}
+  GIT_TAG ${NRGLJUBLJANA_GIT_TAG}
   OPTIONS
     "SYM_MORE OFF"
     "SYM_ALL OFF"

@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include <h5/h5.hpp>
+
 #include <string>
 #include <vector>
 
@@ -14,7 +16,15 @@ namespace nrgljubljana_interface::nrg {
     std::vector<double> weight;
     std::vector<double> weight_imag; // empty unless is_complex
     bool is_complex = false;
+
+    bool operator==(spectrum_bins_t const &) const = default;
   };
+
+  /// Write spectrum_bins_t to HDF5
+  void h5_write(h5::group g, std::string const &name, spectrum_bins_t const &s);
+
+  /// Read spectrum_bins_t from HDF5
+  void h5_read(h5::group g, std::string const &name, spectrum_bins_t &s);
 
   /// Load a binary spectrum file. The layout cannot be detected from the file, so the caller states it:
   /// records of (frequency, weight) for a real spectrum, (frequency, Re weight, Im weight) for a complex one.

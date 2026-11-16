@@ -23,9 +23,11 @@
 #include "./container_set.hpp"
 #include "./params.hpp"
 #include "./types.hpp"
+#include "./templates/manifest.hpp"
 
 #include <iostream>
 #include <fstream>
+#include <map>
 #include <string>
 
 #include <triqs/gfs/hilbert_transform.hpp>
@@ -45,6 +47,10 @@ namespace nrgljubljana_interface {
     private:
     // Mpi Communicator
     mpi::communicator world;
+
+    // The template's manifest, and the spectrum list (s, t, o, d, q) of each of its NRG correlators
+    templates::manifest_t manifest;
+    std::map<std::string, char> correlator_type;
 
     // Return reference to container_set
     container_set &result_set() { return static_cast<container_set &>(*this); }

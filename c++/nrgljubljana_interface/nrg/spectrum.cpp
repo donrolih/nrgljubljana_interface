@@ -34,4 +34,21 @@ namespace nrgljubljana_interface::nrg {
     return s;
   }
 
+  void h5_write(h5::group g, std::string const &name, spectrum_bins_t const &s) {
+    auto grp = g.create_group(name);
+    h5_write(grp, "frequency", s.frequency);
+    h5_write(grp, "weight", s.weight);
+    h5_write(grp, "is_complex", s.is_complex);
+    if (s.is_complex) h5_write(grp, "weight_imag", s.weight_imag);
+  }
+
+  void h5_read(h5::group g, std::string const &name, spectrum_bins_t &s) {
+    auto grp = g.open_group(name);
+    h5_read(grp, "frequency", s.frequency);
+    h5_read(grp, "weight", s.weight);
+    h5_read(grp, "is_complex", s.is_complex);
+    s.weight_imag.clear();
+    if (s.is_complex) h5_read(grp, "weight_imag", s.weight_imag);
+  }
+
 } // namespace nrgljubljana_interface::nrg

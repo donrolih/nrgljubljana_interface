@@ -43,6 +43,9 @@ namespace nrgljubljana_interface::templates {
   bool has_gf_structure(std::string_view name);
 
   struct manifest_t {
+    /// The manifest text this was parsed from
+    std::string text;
+
     // [template]
     int format = 0;
     std::string model, symtype;

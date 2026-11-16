@@ -85,12 +85,13 @@ namespace nrgljubljana_interface {
     std::ifstream probe(dir + "/manifest");
     if (!probe) TRIQS_RUNTIME_ERROR << "Template " << dir << " has no manifest";
 
-    templates::manifest_t m;
     templates::template_check_t check;
     try {
-      m     = templates::load_manifest(dir);
-      check = templates::check_against_template(m, dir);
+      manifest = templates::load_manifest(dir);
+      check    = templates::check_against_template(manifest, dir);
     } catch (std::invalid_argument const &e) { TRIQS_RUNTIME_ERROR << e.what(); }
+    correlator_type = check.correlator_type;
+    auto const &m   = manifest;
 
     gf_struct    = m.gf;
     Delta_struct = m.delta;
