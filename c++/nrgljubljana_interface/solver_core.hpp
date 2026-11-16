@@ -25,6 +25,7 @@
 #include "./types.hpp"
 #include "./templates/manifest.hpp"
 #include "./solver/request.hpp"
+#include "./solver/result.hpp"
 
 #include <iostream>
 #include <fstream>
@@ -55,6 +56,9 @@ namespace nrgljubljana_interface {
 
     // The request of the current solve
     solve_request_t request;
+
+    // The result of the last solve
+    std::optional<solve_result_t> result;
 
     // Return reference to container_set
     container_set &result_set() { return static_cast<container_set &>(*this); }
@@ -101,6 +105,9 @@ namespace nrgljubljana_interface {
      * @details Fails if the template has no manifest or the manifest does not match the template.
      */
     C2PY_IGNORE void read_manifest();
+
+    /// The result of the last solve, if any
+    C2PY_IGNORE std::optional<solve_result_t> const &last_result() const { return result; }
 
     /**
      * @brief Create a temporary working directory for a series of NRG runs.

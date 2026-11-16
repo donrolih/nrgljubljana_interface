@@ -6,8 +6,8 @@ endforeach()
 
 # List of all tests, by CTest label: unit (no NRG run), solver (short NRG runs), long (manual)
 #file(GLOB_RECURSE all_tests RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.cpp)
-set(unit_tests refreq_log.cpp hilbert_transform.cpp nrg_libraries.cpp nrg_adapters.cpp parameter_file.cpp manifest.cpp solver_construction.cpp solve_request.cpp param_rendering.cpp)
-set(solver_tests siam.cpp solver_hdf5.cpp)
+set(unit_tests refreq_log.cpp hilbert_transform.cpp nrg_libraries.cpp nrg_adapters.cpp parameter_file.cpp manifest.cpp solver_construction.cpp solve_request.cpp param_rendering.cpp nrg_output.cpp)
+set(solver_tests siam.cpp solver_hdf5.cpp raw_results.cpp)
 set(long_tests)
 set(all_tests ${unit_tests} ${solver_tests} ${long_tests})
 
@@ -61,6 +61,16 @@ foreach(test ${all_tests})
     set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${ref_json})
   endif()
 endforeach()
+
+# The raw results must be the same on every rank (own directory: the serial run writes the same files)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/raw_results_np2)
+add_test(NAME raw_results_np2 COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2 ${MPIEXEC_PREFLAGS} $<TARGET_FILE:raw_results> ${MPIEXEC_POSTFLAGS}
+         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/raw_results_np2)
+set_property(TEST raw_results_np2 APPEND PROPERTY ENVIRONMENT
+  PATH=${nrgljubljana_BINARY_DIR}/tools:$ENV{PATH}
+  NRGIF_TEMPLATE_DIR=${PROJECT_SOURCE_DIR}/templates
+)
+set_property(TEST raw_results_np2 APPEND PROPERTY LABELS solver)
 
 # These tests include NRG Ljubljana headers directly
 target_link_libraries(nrg_libraries nrgljubljana::workflow nrgljubljana::numerics)

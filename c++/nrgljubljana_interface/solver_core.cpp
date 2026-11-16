@@ -46,6 +46,8 @@
 #include "openmp.hpp"
 #include "templates/manifest.hpp"
 #include "solver/param_file.hpp"
+#include "solver/collect.hpp"
+#include "nrg/revision.hpp"
 
 // std::filesystem is not production-ready as of 2020. As a workaround,
 // we remove temporary files using "rm".
@@ -310,6 +312,20 @@ namespace nrgljubljana_interface {
     } catch (std::invalid_argument const &e) { TRIQS_RUNTIME_ERROR << e.what(); }
     auto const z = twist_values(request, sp.Nz);
     last_solve_params = sp;
+    result.reset();
+
+    // What was solved, as given (the values resolved for each twist are in its param file)
+    solve_result_t r;
+    r.request            = request;
+    r.solve_params       = sp;
+    r.nrg_params         = nrg_params;
+    r.model              = constr_params.model;
+    r.symtype            = constr_params.symtype;
+    r.manifest           = manifest.text;
+    r.correlator_type    = correlator_type;
+    r.nrg_revision       = nrg::revision();
+    r.z                  = z;
+    r.complete_z_average = complete_z_average(z, sp.Nz);
     container_set::operator=(container_set{});  // Reset the results
     std::string tempdir{};
     if (world.rank() == 0) {
@@ -336,6 +352,11 @@ namespace nrgljubljana_interface {
       solve_one(std::to_string(i));
 
     world.barrier(); // Ensures all subcalculations are completed
+
+    // Raw results: every rank reads all twists (the working directory is shared)
+    auto const spectra = requested_spectra(request, manifest, correlator_type);
+    for (auto k : range(z.size())) r.twists.push_back(read_twist(std::to_string(k + 1), z[k], spectra, request.fdm, request.energies > 0));
+    result = std::move(r);
     // Post-Processing in perl script
     if (world.rank() == 0) {
       std::cout << "Post-processing results" << std::endl;

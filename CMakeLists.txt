@@ -172,6 +172,10 @@ message(STATUS "MPIEXEC_POSTFLAGS: ${MPIEXEC_POSTFLAGS}")
 # Find / Build dependencies
 add_subdirectory(deps)
 
+# NRG Ljubljana source, fetched below; the library also reports it (nrg::revision)
+set(NRGLJUBLJANA_REPOSITORY donrolih/nrgljubljana)
+set(NRGLJUBLJANA_GIT_TAG c928cc553ba5b764516bd6d632f2c6dcf3053c9f)
+
 # Build and install the library
 add_subdirectory(c++/${PROJECT_NAME})
 
@@ -179,8 +183,6 @@ add_subdirectory(c++/${PROJECT_NAME})
 include(CMake/CPM.cmake)
 
 # NRG Ljubljana library
-set(NRGLJUBLJANA_REPOSITORY donrolih/nrgljubljana)
-set(NRGLJUBLJANA_GIT_TAG c928cc553ba5b764516bd6d632f2c6dcf3053c9f)
 CPMAddPackage(
   NAME nrgljubljana
   GITHUB_REPOSITORY ${NRGLJUBLJANA_REPOSITORY}
