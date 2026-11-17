@@ -1,12 +1,12 @@
-#include "./request.hpp"
+#include "./options.hpp"
 
 #include <algorithm>
 #include <stdexcept>
 
 namespace nrgljubljana_interface {
 
-  void validate_request(solve_request_t const &r, templates::manifest_t const &m) {
-    auto const fail = [](std::string const &what) { throw std::invalid_argument("Invalid solve request: " + what); };
+  void validate_options(options_t const &r, templates::manifest_t const &m) {
+    auto const fail = [](std::string const &what) { throw std::invalid_argument("Invalid solve options: " + what); };
 
     if (r.correlators) {
       if (not r.fdm and not r.correlators->empty()) fail("correlators require fdm=true");
@@ -27,7 +27,7 @@ namespace nrgljubljana_interface {
     }
   }
 
-  std::vector<std::string> requested_correlators(solve_request_t const &r, templates::manifest_t const &m) {
+  std::vector<std::string> selected_correlators(options_t const &r, templates::manifest_t const &m) {
     if (r.correlators) return *r.correlators;
     std::vector<std::string> all;
     if (r.fdm)
@@ -35,7 +35,7 @@ namespace nrgljubljana_interface {
     return all;
   }
 
-  void h5_write(h5::group g, std::string const &name, solve_request_t const &r) {
+  void h5_write(h5::group g, std::string const &name, options_t const &r) {
     auto grp = g.create_group(name);
     h5_write(grp, "fdm", r.fdm);
     h5_write(grp, "correlators", r.correlators);
@@ -46,7 +46,7 @@ namespace nrgljubljana_interface {
     h5_write(grp, "keep_workdir", r.keep_workdir);
   }
 
-  void h5_read(h5::group g, std::string const &name, solve_request_t &r) {
+  void h5_read(h5::group g, std::string const &name, options_t &r) {
     auto grp = g.open_group(name);
     h5_read(grp, "fdm", r.fdm);
     r.correlators.reset();

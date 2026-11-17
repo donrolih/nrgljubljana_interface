@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "./request.hpp"
+#include "./options.hpp"
 #include "../nrg/output.hpp"
 #include "../nrg/spectrum.hpp"
 #include "../params.hpp"
@@ -31,9 +31,9 @@ namespace nrgljubljana_interface {
     energy_flow_t energy_flow;
   };
 
-  struct solve_result_t {
+  struct result_t {
     // What was solved
-    solve_request_t request;
+    options_t options;
     solve_params_t solve_params;
     nrg_params_t nrg_params;
     std::string model, symtype;
@@ -54,13 +54,13 @@ namespace nrgljubljana_interface {
     std::map<std::string, g_w_t> processed;
   };
 
-  /// Write solve_result_t to HDF5, with the raw spectral bins
-  void h5_write(h5::group g, std::string const &name, solve_result_t const &r);
+  /// Write result_t to HDF5, with the raw spectral bins
+  void h5_write(h5::group g, std::string const &name, result_t const &r);
 
-  /// Write solve_result_t to HDF5, with or without the raw spectral bins
-  void h5_write(h5::group g, std::string const &name, solve_result_t const &r, bool with_bins);
+  /// Write result_t to HDF5, with or without the raw spectral bins
+  void h5_write(h5::group g, std::string const &name, result_t const &r, bool with_bins);
 
-  /// Read solve_result_t from HDF5; a result written without bins reads with empty spectra
-  void h5_read(h5::group g, std::string const &name, solve_result_t &r);
+  /// Read result_t from HDF5; a result written without bins reads with empty spectra
+  void h5_read(h5::group g, std::string const &name, result_t &r);
 
 } // namespace nrgljubljana_interface

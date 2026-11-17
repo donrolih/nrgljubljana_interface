@@ -145,10 +145,10 @@ namespace nrgljubljana_interface {
     return F.str();
   }
 
-  void apply_request(solve_request_t const &r, templates::manifest_t const &m, std::map<std::string, char> const &correlator_type,
+  void apply_options(options_t const &r, templates::manifest_t const &m, std::map<std::string, char> const &correlator_type,
                      constr_params_t &cp, nrg_params_t &np) {
     std::map<char, std::vector<std::string>> lists;
-    auto const names = requested_correlators(r, m);
+    auto const names = selected_correlators(r, m);
     for (auto const &name : names)
       for (auto const &entry : m.correlators.at(name)) {
         auto &list = lists[correlator_type.at(entry.nrg_name)];
@@ -173,7 +173,7 @@ namespace nrgljubljana_interface {
     if (r.energies > 0) np.dumpannotated = static_cast<size_t>(r.energies);
   }
 
-  std::vector<double> twist_values(solve_request_t const &r, int Nz) {
+  std::vector<double> twist_values(options_t const &r, int Nz) {
     if (not r.z.empty()) return r.z;
     std::vector<double> z;
     for (int i = 1; i <= Nz; ++i) z.push_back(double(i) / Nz);
@@ -189,10 +189,10 @@ namespace nrgljubljana_interface {
     return true;
   }
 
-  bool check_method(solve_params_t const &sp, solve_request_t const &r) {
+  bool check_method(solve_params_t const &sp, options_t const &r) {
     if (sp.method.empty()) return false;
     if (sp.method != "fdm") throw std::invalid_argument("solve_params.method=\"" + sp.method + "\" is not supported; only \"fdm\"");
-    if (not r.fdm) throw std::invalid_argument("solve_params.method=\"fdm\" contradicts a request with fdm=false");
+    if (not r.fdm) throw std::invalid_argument("solve_params.method=\"fdm\" contradicts the options with fdm=false");
     return true;
   }
 

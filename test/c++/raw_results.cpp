@@ -1,5 +1,5 @@
 // Raw results of a solve (solver_core::last_result): what a default solve collects from its twists, that every
-// MPI rank holds the same, and what a forward-only and a single-twist request collect
+// MPI rank holds the same, and what a forward-only and a single-twist solve collect
 
 #include <nrgljubljana_interface/solver_core.hpp>
 
@@ -17,7 +17,7 @@ using namespace nrgljubljana_interface;
 
 namespace {
 
-  solver_core solve_siam(solve_request_t const &request = {}) {
+  solver_core solve_siam(options_t const &options = {}) {
     constr_params_t cp;
     cp.model      = "SIAM";
     cp.symtype    = "QS";
@@ -39,18 +39,18 @@ namespace {
     sp.keep             = 50;
     sp.keepenergy       = 6.0;
     sp.model_parameters = {{"U1", 0.5}, {"eps1", -0.24}};
-    S.solve(sp, request);
+    S.solve(sp, options);
     if (not S.last_result()) throw std::runtime_error("no result after a solve");
     return S;
   }
 
   // The result of a default solve, shared by the tests
-  solve_result_t const &default_result() {
-    static solve_result_t const r = *solve_siam().last_result();
+  result_t const &default_result() {
+    static result_t const r = *solve_siam().last_result();
     return r;
   }
 
-  void expect_same_raw(solve_result_t const &a, solve_result_t const &b) {
+  void expect_same_raw(result_t const &a, result_t const &b) {
     EXPECT_EQ(a.z, b.z);
     EXPECT_EQ(a.complete_z_average, b.complete_z_average);
     ASSERT_EQ(a.twists.size(), b.twists.size());
@@ -111,15 +111,15 @@ TEST(RawResults, DefaultSolve) {
   if (world.rank() == 0)
     for (int rank = 1; rank < world.size(); ++rank) {
       h5::file f("raw_results_rank" + std::to_string(rank) + ".h5", 'r');
-      expect_same_raw(r, h5::read<solve_result_t>(f, "r"));
+      expect_same_raw(r, h5::read<result_t>(f, "r"));
     }
 }
 
 TEST(RawResults, ForwardOnly) {
-  solve_request_t request;
-  request.fdm      = false;
-  request.energies = 5;
-  auto const S     = solve_siam(request);
+  options_t options;
+  options.fdm      = false;
+  options.energies = 5;
+  auto const S     = solve_siam(options);
   auto const &r    = *S.last_result();
 
   ASSERT_EQ(r.twists.size(), 2u);
@@ -142,9 +142,9 @@ TEST(RawResults, ForwardOnly) {
 }
 
 TEST(RawResults, SingleTwist) {
-  solve_request_t request;
-  request.z     = {0.5};
-  auto const S  = solve_siam(request);
+  options_t options;
+  options.z     = {0.5};
+  auto const S  = solve_siam(options);
   auto const &r = *S.last_result();
   auto const &d = default_result();
 

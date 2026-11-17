@@ -1,4 +1,4 @@
-// The NRG parameter file of a solve and how a request sets it (solver/param_file.hpp)
+// The NRG parameter file of a solve and how the options set it (solver/param_file.hpp)
 
 #include <gtest/gtest.h>
 
@@ -44,19 +44,19 @@ namespace {
     nrg::parameter_sections_t file; // the rendered parameter file, parsed
   };
 
-  rendered_t render(template_t const &t, solve_request_t const &r, nrg_params_t np = {}) {
+  rendered_t render(template_t const &t, options_t const &r, nrg_params_t np = {}) {
     constr_params_t cp;
     cp.model   = t.manifest.model;
     cp.symtype = t.manifest.symtype;
     solve_params_t sp;
     sp.model_parameters = {{"U1", 0.5}, {"eps1", -0.25}};
-    apply_request(r, t.manifest, t.correlator_type, cp, np);
+    apply_options(r, t.manifest, t.correlator_type, cp, np);
     return {cp, np, nrg::read_parameter_sections(render_param_file(cp, sp, np), "param")};
   }
 
 } // namespace
 
-TEST(ParamRendering, DefaultRequest) {
+TEST(ParamRendering, DefaultOptions) {
   auto const t = load("SIAM/QS");
   auto const r = render(t, {});
   auto const &p = r.file.at("param");
@@ -82,7 +82,7 @@ TEST(ParamRendering, ForwardOnly) {
   nrg_params_t np;
   np.dmnrg = true;
   np.cfs   = true;
-  solve_request_t req;
+  options_t req;
   req.fdm      = false;
   req.energies = 20;
   auto const p = render(t, req, np).file.at("param");
@@ -93,7 +93,7 @@ TEST(ParamRendering, ForwardOnly) {
 
 TEST(ParamRendering, SubsetOfCorrelators) {
   auto const t = load("SIAM/QS");
-  solve_request_t req;
+  options_t req;
   req.correlators = std::vector<std::string>{"G", "chi_NN"};
   auto const p    = render(t, req).file.at("param");
   EXPECT_EQ(p.at("specd"), "A_d-A_d");
@@ -105,8 +105,8 @@ TEST(ParamRendering, SubsetOfCorrelators) {
 TEST(ParamRendering, FdmWithoutCorrelators) {
   auto const t = load("SIAM/QS");
   nrg_params_t np;
-  np.fdmexpv = false; // the request decides
-  solve_request_t req;
+  np.fdmexpv = false; // the options decide
+  options_t req;
   req.correlators = std::vector<std::string>{};
   auto const p    = render(t, req, np).file.at("param");
   EXPECT_EQ(p.at("fdm"), "true");
@@ -124,7 +124,7 @@ TEST(ParamRendering, EnergiesZeroKeepsLowLevelValue) {
 
 TEST(ParamRendering, PolarizedSpectra) {
   auto const t = load("SIAM/QSZ");
-  solve_request_t req;
+  options_t req;
   req.correlators = std::vector<std::string>{"G", "chi_SS"};
   auto const p    = render(t, req).file.at("param");
   EXPECT_EQ(names(p.at("specd")), names("A_d-A_d-u A_d-A_d-d"));

@@ -61,7 +61,7 @@ namespace {
   }
 
   // broaden with the parameters of the solve gives the processed Green's functions exactly
-  void expect_same_as_solve(solve_result_t const &r) {
+  void expect_same_as_solve(result_t const &r) {
     for (auto const &name : correlators) {
       SCOPED_TRACE(name);
       EXPECT_BLOCK_GF_NEAR(broaden(r, name), r.processed.at(name), 0.0);
@@ -78,7 +78,7 @@ TEST(DeferredBroadening, SameAsSolve) {
     h5_write(f, "r", r);
   }
   h5::file f(result_file, 'r');
-  auto const s = h5::read<solve_result_t>(f, "r");
+  auto const s = h5::read<result_t>(f, "r");
   EXPECT_EQ(s.mesh, r.mesh);
   expect_same_as_solve(s);
 }
@@ -149,7 +149,7 @@ TEST(DeferredBroadening, SolverMethod) {
 // In a fresh process: only the file written by DeferredBroadening.SameAsSolve
 TEST(DeferredBroadeningFromFile, SameAsSolve) {
   h5::file f(result_file, 'r');
-  expect_same_as_solve(h5::read<solve_result_t>(f, "r"));
+  expect_same_as_solve(h5::read<result_t>(f, "r"));
 }
 
 MAKE_MAIN

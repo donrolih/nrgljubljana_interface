@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "./request.hpp"
+#include "./options.hpp"
 #include "./result.hpp"
 #include "../templates/manifest.hpp"
 
@@ -11,8 +11,8 @@
 
 namespace nrgljubljana_interface {
 
-  /// The NRG correlators a request computes, with their spectrum list (s, t, o, d, q)
-  std::map<std::string, char> requested_spectra(solve_request_t const &r, templates::manifest_t const &m,
+  /// The NRG correlators the options select, with their spectrum list (s, t, o, d, q)
+  std::map<std::string, char> selected_spectra(options_t const &r, templates::manifest_t const &m,
                                                 std::map<std::string, char> const &correlator_type);
 
   /**

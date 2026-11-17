@@ -1,6 +1,6 @@
-// Solve requests and results (solver/request.hpp, solver/result.hpp): validation and HDF5 round trips
+// Solve options and results (solver/options.hpp, solver/result.hpp): validation and HDF5 round trips
 
-#include <nrgljubljana_interface/solver/request.hpp>
+#include <nrgljubljana_interface/solver/options.hpp>
 #include <nrgljubljana_interface/solver/result.hpp>
 
 #include <triqs/test_tools/gfs.hpp>
@@ -37,10 +37,10 @@ chi_NN imp[0,0]=n_d-n_d
 imp[0,0]=SigmaHartree
 )");
 
-  // The error message of validate_request, or "" if the request is valid
-  std::string error_of(solve_request_t const &r) {
+  // The error message of validate_options, or "" if the options are valid
+  std::string error_of(options_t const &r) {
     try {
-      validate_request(r, manifest);
+      validate_options(r, manifest);
     } catch (std::invalid_argument const &e) { return e.what(); }
     return {};
   }
@@ -53,32 +53,32 @@ imp[0,0]=SigmaHartree
 
 // ---- Validation ----
 
-TEST(SolveRequest, DefaultsAreValid) {
+TEST(Options, DefaultsAreValid) {
   EXPECT_EQ(error_of({}), "");
-  EXPECT_EQ(requested_correlators({}, manifest), (names{"F_l", "F_r", "G", "I", "chi_NN"}));
+  EXPECT_EQ(selected_correlators({}, manifest), (names{"F_l", "F_r", "G", "I", "chi_NN"}));
 }
 
-TEST(SolveRequest, UnsetCorrelatorsFollowFdm) {
-  solve_request_t r;
+TEST(Options, UnsetCorrelatorsFollowFdm) {
+  options_t r;
   r.fdm = false;
   EXPECT_EQ(error_of(r), "");
-  EXPECT_TRUE(requested_correlators(r, manifest).empty());
+  EXPECT_TRUE(selected_correlators(r, manifest).empty());
   r.correlators = names{};
   EXPECT_EQ(error_of(r), "");
 }
 
-TEST(SolveRequest, CorrelatorsNeedFdm) {
-  solve_request_t r;
+TEST(Options, CorrelatorsNeedFdm) {
+  options_t r;
   r.fdm         = false;
   r.correlators = names{"G"};
   EXPECT_TRUE(contains(error_of(r), "correlators require fdm=true"));
 }
 
-TEST(SolveRequest, Correlators) {
-  solve_request_t r;
+TEST(Options, Correlators) {
+  options_t r;
   r.correlators = names{"G", "chi_NN"};
   EXPECT_EQ(error_of(r), "");
-  EXPECT_EQ(requested_correlators(r, manifest), (names{"G", "chi_NN"}));
+  EXPECT_EQ(selected_correlators(r, manifest), (names{"G", "chi_NN"}));
   r.correlators = names{"G", "chi_SS"};
   EXPECT_TRUE(contains(error_of(r), "unknown correlator \"chi_SS\""));
   r.correlators = names{"G", "G"};
@@ -87,8 +87,8 @@ TEST(SolveRequest, Correlators) {
   EXPECT_TRUE(contains(error_of(r), "unknown correlator"));
 }
 
-TEST(SolveRequest, BroadenAndBins) {
-  solve_request_t r;
+TEST(Options, BroadenAndBins) {
+  options_t r;
   r.broaden = false;
   EXPECT_EQ(error_of(r), "");
   r.keep_bins = false;
@@ -97,8 +97,8 @@ TEST(SolveRequest, BroadenAndBins) {
   EXPECT_EQ(error_of(r), "");
 }
 
-TEST(SolveRequest, EnergiesAndZ) {
-  solve_request_t r;
+TEST(Options, EnergiesAndZ) {
+  options_t r;
   r.energies = -1;
   EXPECT_TRUE(contains(error_of(r), "energies must not be negative"));
   r.energies = 10;
@@ -116,8 +116,8 @@ TEST(SolveRequest, EnergiesAndZ) {
 
 // ---- HDF5 ----
 
-TEST(SolveRequest, H5RoundTrip) {
-  solve_request_t r;
+TEST(Options, H5RoundTrip) {
+  options_t r;
   r.fdm          = true;
   r.correlators  = names{"G", "chi_NN"};
   r.broaden      = false;
@@ -125,23 +125,23 @@ TEST(SolveRequest, H5RoundTrip) {
   r.z            = {0.5, 1.0};
   r.keep_workdir = true;
   {
-    h5::file f("solve_request.h5", 'w');
+    h5::file f("options.h5", 'w');
     h5_write(f, "r", r);
-    h5_write(f, "default", solve_request_t{});
-    h5_write(f, "none", solve_request_t{.correlators = names{}});
+    h5_write(f, "default", options_t{});
+    h5_write(f, "none", options_t{.correlators = names{}});
   }
-  h5::file f("solve_request.h5", 'r');
-  EXPECT_EQ(h5::read<solve_request_t>(f, "r"), r);
-  EXPECT_EQ(h5::read<solve_request_t>(f, "default"), solve_request_t{}); // unset correlators stay unset
-  EXPECT_EQ(h5::read<solve_request_t>(f, "none"), solve_request_t{.correlators = names{}});
+  h5::file f("options.h5", 'r');
+  EXPECT_EQ(h5::read<options_t>(f, "r"), r);
+  EXPECT_EQ(h5::read<options_t>(f, "default"), options_t{}); // unset correlators stay unset
+  EXPECT_EQ(h5::read<options_t>(f, "none"), options_t{.correlators = names{}});
 }
 
 namespace {
 
-  solve_result_t sample_result() {
-    solve_result_t r;
-    r.request.correlators = names{"G"};
-    r.request.energies    = 2;
+  result_t sample_result() {
+    result_t r;
+    r.options.correlators = names{"G"};
+    r.options.energies    = 2;
     r.solve_params.T      = 1e-3;
     r.solve_params.Nz     = 2;
     r.solve_params.model_parameters = {{"U1", 0.5}, {"eps1", -0.25}};
@@ -177,8 +177,8 @@ namespace {
     return r;
   }
 
-  void expect_same(solve_result_t const &a, solve_result_t const &b, bool with_bins) {
-    EXPECT_EQ(a.request, b.request);
+  void expect_same(result_t const &a, result_t const &b, bool with_bins) {
+    EXPECT_EQ(a.options, b.options);
     EXPECT_EQ(a.solve_params.T, b.solve_params.T);
     EXPECT_EQ(a.solve_params.Nz, b.solve_params.Nz);
     EXPECT_EQ(a.solve_params.model_parameters, b.solve_params.model_parameters);
@@ -216,16 +216,16 @@ namespace {
 
 } // namespace
 
-TEST(SolveResult, H5RoundTrip) {
+TEST(Result, H5RoundTrip) {
   auto const r = sample_result();
   {
-    h5::file f("solve_result.h5", 'w');
+    h5::file f("result.h5", 'w');
     h5_write(f, "with", r);
     h5_write(f, "without", r, false);
   }
-  h5::file f("solve_result.h5", 'r');
-  expect_same(r, h5::read<solve_result_t>(f, "with"), true);
-  expect_same(r, h5::read<solve_result_t>(f, "without"), false);
+  h5::file f("result.h5", 'r');
+  expect_same(r, h5::read<result_t>(f, "with"), true);
+  expect_same(r, h5::read<result_t>(f, "without"), false);
 }
 
 MAKE_MAIN

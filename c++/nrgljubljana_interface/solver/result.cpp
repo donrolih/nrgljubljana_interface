@@ -107,11 +107,11 @@ namespace nrgljubljana_interface {
 
   } // namespace
 
-  void h5_write(h5::group g, std::string const &name, solve_result_t const &r) { h5_write(g, name, r, true); }
+  void h5_write(h5::group g, std::string const &name, result_t const &r) { h5_write(g, name, r, true); }
 
-  void h5_write(h5::group g, std::string const &name, solve_result_t const &r, bool with_bins) {
+  void h5_write(h5::group g, std::string const &name, result_t const &r, bool with_bins) {
     auto grp = g.create_group(name);
-    h5_write(grp, "request", r.request);
+    h5_write(grp, "options", r.options);
     h5_write(grp, "solve_params", r.solve_params);
     h5_write(grp, "nrg_params", r.nrg_params);
     h5_write(grp, "model", r.model);
@@ -131,9 +131,9 @@ namespace nrgljubljana_interface {
     h5_write(grp, "processed", r.processed);
   }
 
-  void h5_read(h5::group g, std::string const &name, solve_result_t &r) {
+  void h5_read(h5::group g, std::string const &name, result_t &r) {
     auto grp = g.open_group(name);
-    h5_read(grp, "request", r.request);
+    h5_read(grp, "options", r.options);
     h5_read(grp, "solve_params", r.solve_params);
     h5_read(grp, "nrg_params", r.nrg_params);
     h5_read(grp, "model", r.model);

@@ -42,12 +42,12 @@ namespace {
     return sp;
   }
 
-  solve_result_t solve(solver_core &S, double U) {
+  result_t solve(solver_core &S, double U) {
     S.solve(solve_params(U));
     return *S.last_result();
   }
 
-  void expect_same_raw(solve_result_t const &a, solve_result_t const &b) {
+  void expect_same_raw(result_t const &a, result_t const &b) {
     EXPECT_EQ(a.z, b.z);
     ASSERT_EQ(a.twists.size(), b.twists.size());
     for (std::size_t k = 0; k < a.twists.size(); ++k) {
@@ -89,7 +89,7 @@ TEST(IndependentSolves, SelfCommunicator) {
     for (int rank = 1; rank < world.size(); ++rank) {
       auto serial = make_solver(mpi::communicator{MPI_COMM_SELF});
       h5::file f("independent_solves_rank" + std::to_string(rank) + ".h5", 'r');
-      expect_same_raw(solve(serial, U_of_rank(rank)), h5::read<solve_result_t>(f, "r"));
+      expect_same_raw(solve(serial, U_of_rank(rank)), h5::read<result_t>(f, "r"));
     }
 }
 

@@ -35,7 +35,7 @@ namespace nrgljubljana_interface {
     bool is_reserved(std::string const &name) { return name == "Sigma" or name == "SigmaHartree"; }
 
     // One logical correlator from the bins of all twists
-    g_w_t broaden_correlator(solve_result_t const &r, templates::manifest_t const &m, std::string const &name, nrg::broadening_t const &b,
+    g_w_t broaden_correlator(result_t const &r, templates::manifest_t const &m, std::string const &name, nrg::broadening_t const &b,
                              triqs::mesh::refreq_log const &mesh) {
       auto const points = nrg::mesh_points(mesh);
       auto const s      = m.correlator_structure(name);
@@ -63,7 +63,7 @@ namespace nrgljubljana_interface {
     }
 
     // Twist average of the expectation value of the [hartree] operator of each element, constant in frequency
-    g_w_t hartree_term(solve_result_t const &r, templates::manifest_t const &m, triqs::mesh::refreq_log const &mesh) {
+    g_w_t hartree_term(result_t const &r, templates::manifest_t const &m, triqs::mesh::refreq_log const &mesh) {
       auto hartree = zero_gf(mesh, m.gf);
       for (auto const &[e, op] : m.hartree) {
         if (not op) continue;
@@ -82,14 +82,14 @@ namespace nrgljubljana_interface {
 
   } // namespace
 
-  void process(solve_result_t &r, templates::manifest_t const &m) {
+  void process(result_t &r, templates::manifest_t const &m) {
     r.expv  = twist_average(r.twists, &twist_result_t::customfdm);
     r.tdfdm = twist_average(r.twists, &twist_result_t::tdfdm);
     r.processed.clear();
-    if (not r.request.broaden or r.twists.empty()) return;
+    if (not r.options.broaden or r.twists.empty()) return;
 
     nrg::broadening_t const b{r.solve_params.alpha, r.solve_params.T, r.solve_params.gamma};
-    for (auto const &name : requested_correlators(r.request, m)) {
+    for (auto const &name : selected_correlators(r.options, m)) {
       if (is_reserved(name)) throw std::invalid_argument("correlator name " + name + " is reserved");
       r.processed[name] = broaden_correlator(r, m, name, b, r.mesh);
     }
@@ -106,7 +106,7 @@ namespace nrgljubljana_interface {
     r.processed["SigmaHartree"] = std::move(hartree);
   }
 
-  g_w_t broaden(solve_result_t const &r, std::string const &correlator, broadening_params_t const &b,
+  g_w_t broaden(result_t const &r, std::string const &correlator, broadening_params_t const &b,
                 std::optional<triqs::mesh::refreq_log> const &mesh) {
     auto const m = templates::parse_manifest(r.manifest, "the manifest of the result");
     if (is_reserved(correlator)) throw std::invalid_argument(correlator + " is not a correlator; it follows from G, F_l, F_r and I");

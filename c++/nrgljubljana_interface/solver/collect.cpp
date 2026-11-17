@@ -8,10 +8,10 @@
 
 namespace nrgljubljana_interface {
 
-  std::map<std::string, char> requested_spectra(solve_request_t const &r, templates::manifest_t const &m,
+  std::map<std::string, char> selected_spectra(options_t const &r, templates::manifest_t const &m,
                                                 std::map<std::string, char> const &correlator_type) {
     std::map<std::string, char> result;
-    for (auto const &name : requested_correlators(r, m))
+    for (auto const &name : selected_correlators(r, m))
       for (auto const &entry : m.correlators.at(name)) result[entry.nrg_name] = correlator_type.at(entry.nrg_name);
     return result;
   }

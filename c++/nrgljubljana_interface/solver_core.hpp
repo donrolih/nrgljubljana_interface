@@ -24,7 +24,7 @@
 #include "./params.hpp"
 #include "./types.hpp"
 #include "./templates/manifest.hpp"
-#include "./solver/request.hpp"
+#include "./solver/options.hpp"
 #include "./solver/result.hpp"
 #include "./solver/process.hpp"
 
@@ -55,17 +55,17 @@ namespace nrgljubljana_interface {
     void sync();
 
     // Fill the result containers (G_w, Sigma_w, expv, ...) from a processed result
-    void fill_containers(solve_result_t const &r);
+    void fill_containers(result_t const &r);
 
     // The template's manifest, and the spectrum list (s, t, o, d, q) of each of its NRG correlators
     templates::manifest_t manifest;
     std::map<std::string, char> correlator_type;
 
-    // The request of the current solve
-    solve_request_t request;
+    // The options of the current solve
+    options_t options;
 
     // The result of the last solve
-    std::optional<solve_result_t> result;
+    std::optional<result_t> result;
 
     // Return reference to container_set
     container_set &result_set() { return static_cast<container_set &>(*this); }
@@ -108,16 +108,16 @@ namespace nrgljubljana_interface {
     void solve(solve_params_t const &solve_params);
 
     /**
-     * @brief Solve the impurity problem as requested.
+     * @brief Solve the impurity problem with the given options.
      *
-     * @details What NRG Ljubljana computes and what the result holds follow the request; solve(solve_params) is
-     * this with the default request. A result container is set only for a correlator the solve broadened, except
+     * @details What NRG Ljubljana computes and what the result holds follow the options; solve(solve_params) is
+     * this with the default options. A result container is set only for a correlator the solve broadened, except
      * that one the template does not provide is zero (if its structure is not empty).
      *
      * @param solve_params Parameters specific to the NRGLjubljana run.
-     * @param request What to compute and return.
+     * @param options What to compute and return.
      */
-    C2PY_IGNORE void solve(solve_params_t const &solve_params, solve_request_t const &request);
+    C2PY_IGNORE void solve(solve_params_t const &solve_params, options_t const &options);
 
     /**
      * @brief Broaden the bins of a correlator of the last result again, on the solver mesh, and update the solver.
@@ -150,7 +150,7 @@ namespace nrgljubljana_interface {
     C2PY_IGNORE void read_manifest();
 
     /// The result of the last solve, if any
-    C2PY_IGNORE std::optional<solve_result_t> const &last_result() const { return result; }
+    C2PY_IGNORE std::optional<result_t> const &last_result() const { return result; }
 
     /**
      * @brief Create a temporary working directory for a series of NRG runs.

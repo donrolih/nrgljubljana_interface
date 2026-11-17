@@ -233,7 +233,7 @@ namespace nrgljubljana_interface {
     return ( getcwd(temp, sizeof(temp)) ? std::string(temp) : std::string("") );
   }
    
-  void solver_core::fill_containers(solve_result_t const &r) {
+  void solver_core::fill_containers(result_t const &r) {
     expv  = r.expv;
     tdfdm = r.tdfdm;
     // From the result, or zero if the template does not provide it
@@ -287,9 +287,9 @@ namespace nrgljubljana_interface {
     if (comm.size() > 1) comm.barrier();
   }
 
-  void solver_core::solve(solve_params_t const &sp) { solve(sp, solve_request_t{}); }
+  void solver_core::solve(solve_params_t const &sp) { solve(sp, options_t{}); }
 
-  void solver_core::solve(solve_params_t const &sp, solve_request_t const &req) {
+  void solver_core::solve(solve_params_t const &sp, options_t const &opts) {
     // nrg_params as given before and after the solve: the values resolved for each twist are in its param file
     struct restore_t {
       nrg_params_t &target;
@@ -297,20 +297,20 @@ namespace nrgljubljana_interface {
       ~restore_t() { target = saved; }
     } restore_nrg_params{nrg_params, nrg_params};
 
-    request = req;
+    options = opts;
     try {
-      validate_request(request, manifest);
-      if (check_method(sp, request) and comm.rank() == 0)
+      validate_options(options, manifest);
+      if (check_method(sp, options) and comm.rank() == 0)
         std::cerr << "Warning: solve_params.method is deprecated; FDM is the only method and always used\n";
     } catch (std::invalid_argument const &e) { TRIQS_RUNTIME_ERROR << e.what(); }
-    auto const z = twist_values(request, sp.Nz);
+    auto const z = twist_values(options, sp.Nz);
     last_solve_params = sp;
     if (last_solve_params->bandrescale < 0) last_solve_params->bandrescale = constr_params.mesh_max; // on every rank
     result.reset();
 
     // What was solved, as given (the values resolved for each twist are in its param file)
-    solve_result_t r;
-    r.request            = request;
+    result_t r;
+    r.options            = options;
     r.solve_params       = sp;
     r.nrg_params         = nrg_params;
     r.model              = constr_params.model;
@@ -349,14 +349,14 @@ namespace nrgljubljana_interface {
     sync(); // Ensures all subcalculations are completed
 
     // Raw results: every rank reads all twists (the working directory is shared)
-    auto const spectra = requested_spectra(request, manifest, correlator_type);
-    for (auto k : range(z.size())) r.twists.push_back(read_twist(std::to_string(k + 1), z[k], spectra, request.fdm, request.energies > 0));
+    auto const spectra = selected_spectra(options, manifest, correlator_type);
+    for (auto k : range(z.size())) r.twists.push_back(read_twist(std::to_string(k + 1), z[k], spectra, options.fdm, options.energies > 0));
 
     // Spectra and averages, on every rank from the same input
     try {
       process(r, manifest);
     } catch (std::exception const &e) { TRIQS_RUNTIME_ERROR << "Processing the results failed: " << e.what(); }
-    if (not request.keep_bins)
+    if (not options.keep_bins)
       for (auto &t : r.twists) t.spectra.clear();
     fill_containers(r);
     result = std::move(r);
@@ -365,7 +365,7 @@ namespace nrgljubljana_interface {
     sync(); // Ensures all processes have read the results before cleanup
     if (chdir(cwd.c_str()) != 0) TRIQS_RUNTIME_ERROR << "failed to return from tempdir";
     sync(); // Ensures all processes have chdired from temp dir before it is deleted
-    if (comm.rank() == 0 && !keep_temp_dir && !request.keep_workdir) {
+    if (comm.rank() == 0 && !keep_temp_dir && !options.keep_workdir) {
       std::error_code ec;
       std::filesystem::remove_all(tempdir, ec);
       if (ec) std::cerr << "Warning: failed to remove the temporary directory " << tempdir << ": " << ec.message() << std::endl;
@@ -462,9 +462,9 @@ namespace nrgljubljana_interface {
     set_params();
     // Check if all model parameters have been defined
     check_model_params(sp);
-    // Generate the parameter file; the request decides the spectrum lists and the density-matrix settings
+    // Generate the parameter file; the options decide the spectrum lists and the density-matrix settings
     auto cp_solve = cp;
-    apply_request(request, manifest, correlator_type, cp_solve, np);
+    apply_options(options, manifest, correlator_type, cp_solve, np);
     std::ofstream F("param");
     F << render_param_file(cp_solve, sp, np);
   }
