@@ -169,6 +169,7 @@ namespace {
     r.expv  = {{"n_d", 0.75}};
     r.tdfdm = {{"F", -0.75}};
     auto mesh = triqs::mesh::refreq_log{1e-3, 1.0, 1.5};
+    r.mesh    = mesh;
     g_w_t g{mesh, {{"imp", 1}}};
     for (auto w : mesh) g[0][w](0, 0) = 1.0 / (double(w) + 0.1i);
     r.processed["G"]     = g;
@@ -187,6 +188,7 @@ namespace {
     EXPECT_EQ(a.manifest, b.manifest);
     EXPECT_EQ(a.correlator_type, b.correlator_type);
     EXPECT_EQ(a.nrg_revision, b.nrg_revision);
+    EXPECT_EQ(a.mesh, b.mesh);
     EXPECT_EQ(a.z, b.z);
     EXPECT_EQ(a.complete_z_average, b.complete_z_average);
     ASSERT_EQ(a.twists.size(), b.twists.size());

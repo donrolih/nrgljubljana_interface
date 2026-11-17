@@ -26,6 +26,7 @@
 #include "./templates/manifest.hpp"
 #include "./solver/request.hpp"
 #include "./solver/result.hpp"
+#include "./solver/process.hpp"
 
 #include <iostream>
 #include <fstream>
@@ -105,6 +106,31 @@ namespace nrgljubljana_interface {
      * @param solve_params Parameters specific to the NRGLjubljana run.
      */
     void solve(solve_params_t const &solve_params);
+
+    /**
+     * @brief Solve the impurity problem as requested.
+     *
+     * @details What NRG Ljubljana computes and what the result holds follow the request; solve(solve_params) is
+     * this with the default request. A result container is set only for a correlator the solve broadened, except
+     * that one the template does not provide is zero (if its structure is not empty).
+     *
+     * @param solve_params Parameters specific to the NRGLjubljana run.
+     * @param request What to compute and return.
+     */
+    C2PY_IGNORE void solve(solve_params_t const &solve_params, solve_request_t const &request);
+
+    /**
+     * @brief Broaden the bins of a correlator of the last result again, on the solver mesh, and update the solver.
+     *
+     * @details As broaden(last_result(), correlator, b). The Green's function replaces that of the last result and
+     * the result container with its spectral density (G_w and A_w, ...). Other containers, Sigma_w among them, keep
+     * their broadening.
+     *
+     * @param correlator A logical correlator of the template.
+     * @param b Broadening parameters; unset ones are those of the solve.
+     * @return The Green's function of the correlator.
+     */
+    C2PY_IGNORE g_w_t broaden(std::string const &correlator, broadening_params_t const &b = {});
 
     /**
      * @brief Read the block structure of Green's function objects from a file.

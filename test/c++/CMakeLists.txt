@@ -7,7 +7,7 @@ endforeach()
 # List of all tests, by CTest label: unit (no NRG run), solver (short NRG runs), long (manual)
 #file(GLOB_RECURSE all_tests RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.cpp)
 set(unit_tests refreq_log.cpp hilbert_transform.cpp nrg_libraries.cpp nrg_adapters.cpp parameter_file.cpp manifest.cpp solver_construction.cpp solve_request.cpp param_rendering.cpp nrg_output.cpp broadening.cpp)
-set(solver_tests siam.cpp solver_hdf5.cpp raw_results.cpp independent_solves.cpp)
+set(solver_tests siam.cpp solver_hdf5.cpp raw_results.cpp independent_solves.cpp deferred_broadening.cpp)
 set(long_tests)
 set(all_tests ${unit_tests} ${solver_tests} ${long_tests})
 
@@ -82,6 +82,17 @@ set_property(TEST independent_solves_np2 APPEND PROPERTY ENVIRONMENT
   NRGIF_TEMPLATE_DIR=${PROJECT_SOURCE_DIR}/templates
 )
 set_property(TEST independent_solves_np2 APPEND PROPERTY LABELS solver)
+
+# Deferred broadening in a fresh process, from the file the first run writes
+add_test(NAME deferred_broadening_fresh COMMAND deferred_broadening --gtest_filter=DeferredBroadeningFromFile.*
+         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+set_property(TEST deferred_broadening_fresh APPEND PROPERTY ENVIRONMENT
+  PATH=${nrgljubljana_BINARY_DIR}/tools:$ENV{PATH}
+  NRGIF_TEMPLATE_DIR=${PROJECT_SOURCE_DIR}/templates
+)
+set_property(TEST deferred_broadening_fresh APPEND PROPERTY LABELS solver)
+set_tests_properties(deferred_broadening PROPERTIES FIXTURES_SETUP deferred_broadening_file)
+set_tests_properties(deferred_broadening_fresh PROPERTIES FIXTURES_REQUIRED deferred_broadening_file)
 
 # The broadening test compares with the broaden and kk tools
 add_dependencies(broadening broaden kk)

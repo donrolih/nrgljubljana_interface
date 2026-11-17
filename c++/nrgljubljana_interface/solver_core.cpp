@@ -49,7 +49,6 @@
 #include "templates/manifest.hpp"
 #include "solver/param_file.hpp"
 #include "solver/collect.hpp"
-#include "solver/process.hpp"
 #include "nrg/revision.hpp"
 
 namespace nrgljubljana_interface {
@@ -237,25 +236,30 @@ namespace nrgljubljana_interface {
   void solver_core::fill_containers(solve_result_t const &r) {
     expv  = r.expv;
     tdfdm = r.tdfdm;
-    auto const set = [&](std::optional<g_w_t> &member, std::string const &name, gf_struct_t const &s) {
+    // From the result, or zero if the template does not provide it
+    auto const set = [&](std::optional<g_w_t> &member, std::string const &name, gf_struct_t const &s, bool provided) {
+      member.reset();
       if (not has_struct(s)) return;
       if (auto it = r.processed.find(name); it != r.processed.end()) {
         member = it->second;
-      } else {
+      } else if (not provided) {
         member = g_w_t{log_mesh, s};
         for (auto &b : member->data()) b.data() = 0;
       }
     };
-    set(G_w, "G", gf_struct);
-    set(F_l_w, "F_l", gf_struct);
-    set(F_r_w, "F_r", gf_struct);
-    set(I_w, "I", gf_struct);
-    set(SigmaHartree_w, "SigmaHartree", gf_struct);
-    set(chi_NN_w, "chi_NN", chi_struct);
-    set(chi_SS_w, "chi_SS", chi_struct);
+    auto const provides = [&](std::string const &name) { return manifest.correlators.contains(name); };
+    bool const self_energy = std::ranges::all_of(templates::gf_correlators, provides);
+    set(G_w, "G", gf_struct, provides("G"));
+    set(F_l_w, "F_l", gf_struct, provides("F_l"));
+    set(F_r_w, "F_r", gf_struct, provides("F_r"));
+    set(I_w, "I", gf_struct, provides("I"));
+    set(SigmaHartree_w, "SigmaHartree", gf_struct, self_energy);
+    set(chi_NN_w, "chi_NN", chi_struct, provides("chi_NN"));
+    set(chi_SS_w, "chi_SS", chi_struct, provides("chi_SS"));
 
     // Spectral densities -Im X / pi of G, F_l, F_r and I
     auto const density = [](std::optional<g_w_t> &member, std::optional<g_w_t> const &g) {
+      member.reset();
       if (not g) return;
       member = *g;
       for (auto &b : member->data())
@@ -266,14 +270,26 @@ namespace nrgljubljana_interface {
     density(B_r_w, F_r_w);
     density(C_w, I_w);
 
+    Sigma_w.reset();
     if (auto it = r.processed.find("Sigma"); it != r.processed.end()) Sigma_w = it->second;
+  }
+
+  g_w_t solver_core::broaden(std::string const &correlator, broadening_params_t const &b) {
+    if (not result) TRIQS_RUNTIME_ERROR << "broaden: no result; solve first";
+    try {
+      result->processed[correlator] = nrgljubljana_interface::broaden(*result, correlator, b, log_mesh);
+    } catch (std::exception const &e) { TRIQS_RUNTIME_ERROR << "broaden: " << e.what(); }
+    fill_containers(*result);
+    return result->processed.at(correlator);
   }
 
   void solver_core::sync() {
     if (comm.size() > 1) comm.barrier();
   }
 
-  void solver_core::solve(solve_params_t const &sp) {
+  void solver_core::solve(solve_params_t const &sp) { solve(sp, solve_request_t{}); }
+
+  void solver_core::solve(solve_params_t const &sp, solve_request_t const &req) {
     // nrg_params as given before and after the solve: the values resolved for each twist are in its param file
     struct restore_t {
       nrg_params_t &target;
@@ -281,7 +297,7 @@ namespace nrgljubljana_interface {
       ~restore_t() { target = saved; }
     } restore_nrg_params{nrg_params, nrg_params};
 
-    request = solve_request_t{};
+    request = req;
     try {
       validate_request(request, manifest);
       if (check_method(sp, request) and comm.rank() == 0)
@@ -302,6 +318,7 @@ namespace nrgljubljana_interface {
     r.manifest           = manifest.text;
     r.correlator_type    = correlator_type;
     r.nrg_revision       = nrg::revision();
+    r.mesh               = log_mesh;
     r.z                  = z;
     r.complete_z_average = complete_z_average(z, sp.Nz);
     container_set::operator=(container_set{});  // Reset the results
@@ -337,7 +354,7 @@ namespace nrgljubljana_interface {
 
     // Spectra and averages, on every rank from the same input
     try {
-      process(r, manifest, log_mesh);
+      process(r, manifest);
     } catch (std::exception const &e) { TRIQS_RUNTIME_ERROR << "Processing the results failed: " << e.what(); }
     if (not request.keep_bins)
       for (auto &t : r.twists) t.spectra.clear();
@@ -348,7 +365,7 @@ namespace nrgljubljana_interface {
     sync(); // Ensures all processes have read the results before cleanup
     if (chdir(cwd.c_str()) != 0) TRIQS_RUNTIME_ERROR << "failed to return from tempdir";
     sync(); // Ensures all processes have chdired from temp dir before it is deleted
-    if (comm.rank() == 0 && !keep_temp_dir) {
+    if (comm.rank() == 0 && !keep_temp_dir && !request.keep_workdir) {
       std::error_code ec;
       std::filesystem::remove_all(tempdir, ec);
       if (ec) std::cerr << "Warning: failed to remove the temporary directory " << tempdir << ": " << ec.message() << std::endl;

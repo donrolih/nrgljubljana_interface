@@ -32,24 +32,21 @@ namespace nrgljubljana_interface {
       throw std::logic_error("block " + block + " not in the structure");
     }
 
-  } // namespace
+    bool is_reserved(std::string const &name) { return name == "Sigma" or name == "SigmaHartree"; }
 
-  void process(solve_result_t &r, templates::manifest_t const &m, triqs::mesh::refreq_log const &mesh) {
-    r.expv  = twist_average(r.twists, &twist_result_t::customfdm);
-    r.tdfdm = twist_average(r.twists, &twist_result_t::tdfdm);
-    r.processed.clear();
-    if (not r.request.broaden or r.twists.empty()) return;
-
-    auto const points = nrg::mesh_points(mesh);
-    nrg::broadening_t const b{r.solve_params.alpha, r.solve_params.T, r.solve_params.gamma};
-
-    for (auto const &name : requested_correlators(r.request, m)) {
-      if (name == "Sigma" or name == "SigmaHartree") throw std::invalid_argument("correlator name " + name + " is reserved");
-      auto const s = m.correlator_structure(name);
-      auto g       = zero_gf(mesh, s);
+    // One logical correlator from the bins of all twists
+    g_w_t broaden_correlator(solve_result_t const &r, templates::manifest_t const &m, std::string const &name, nrg::broadening_t const &b,
+                             triqs::mesh::refreq_log const &mesh) {
+      auto const points = nrg::mesh_points(mesh);
+      auto const s      = m.correlator_structure(name);
+      auto g            = zero_gf(mesh, s);
       for (auto const &entry : m.correlators.at(name)) {
         std::vector<nrg::spectrum_bins_t const *> twists;
-        for (auto const &t : r.twists) twists.push_back(&t.spectra.at(entry.nrg_name));
+        for (auto const &t : r.twists) {
+          auto const it = t.spectra.find(entry.nrg_name);
+          if (it == t.spectra.end()) throw std::runtime_error("the result holds no bins of " + entry.nrg_name + " (correlator " + name + ")");
+          twists.push_back(&it->second);
+        }
         auto const density = nrg::broaden(twists, points, b);
 
         auto const type      = r.correlator_type.at(entry.nrg_name);
@@ -62,33 +59,63 @@ namespace nrgljubljana_interface {
         nrg::from_table({points, re}, gb, entry.element.i, entry.element.j, nrg::part_t::real);
         nrg::from_table({points, im}, gb, entry.element.i, entry.element.j, nrg::part_t::imag);
       }
-      r.processed[name] = std::move(g);
+      return g;
     }
 
-    if (not(r.processed.contains("G") and r.processed.contains("F_l") and r.processed.contains("F_r") and r.processed.contains("I"))) return;
-
-    // Hartree term: twist average of the expectation value of the [hartree] operator, constant in frequency
-    auto hartree = zero_gf(mesh, m.gf);
-    for (auto const &[e, op] : m.hartree) {
-      if (not op) continue;
-      double value = 0;
-      for (auto const &t : r.twists) {
-        auto const it = t.customfdm.find(*op);
-        if (it == t.customfdm.end()) throw std::runtime_error("expectation value " + *op + " of [hartree] not in customfdm");
-        value += it->second;
+    // Twist average of the expectation value of the [hartree] operator of each element, constant in frequency
+    g_w_t hartree_term(solve_result_t const &r, templates::manifest_t const &m, triqs::mesh::refreq_log const &mesh) {
+      auto hartree = zero_gf(mesh, m.gf);
+      for (auto const &[e, op] : m.hartree) {
+        if (not op) continue;
+        double value = 0;
+        for (auto const &t : r.twists) {
+          auto const it = t.customfdm.find(*op);
+          if (it == t.customfdm.end()) throw std::runtime_error("expectation value " + *op + " of [hartree] not in customfdm");
+          value += it->second;
+        }
+        value /= double(r.twists.size());
+        auto &hb = hartree[block_index(m.gf, e.block)];
+        for (auto w : mesh) hb[w](e.i, e.j) = value;
       }
-      value /= double(r.twists.size());
-      auto &hb = hartree[block_index(m.gf, e.block)];
-      for (auto w : mesh) hb[w](e.i, e.j) = value;
+      return hartree;
     }
 
-    auto const &G = r.processed.at("G");
+  } // namespace
+
+  void process(solve_result_t &r, templates::manifest_t const &m) {
+    r.expv  = twist_average(r.twists, &twist_result_t::customfdm);
+    r.tdfdm = twist_average(r.twists, &twist_result_t::tdfdm);
+    r.processed.clear();
+    if (not r.request.broaden or r.twists.empty()) return;
+
+    nrg::broadening_t const b{r.solve_params.alpha, r.solve_params.T, r.solve_params.gamma};
+    for (auto const &name : requested_correlators(r.request, m)) {
+      if (is_reserved(name)) throw std::invalid_argument("correlator name " + name + " is reserved");
+      r.processed[name] = broaden_correlator(r, m, name, b, r.mesh);
+    }
+
+    for (auto const *name : templates::gf_correlators)
+      if (not r.processed.contains(name)) return;
+    auto hartree    = hartree_term(r, m, r.mesh);
+    auto const &G   = r.processed.at("G");
     auto const &F_l = r.processed.at("F_l");
     auto const &F_r = r.processed.at("F_r");
     auto const &I   = r.processed.at("I");
     g_w_t sigma                 = hartree + I - F_l / G * F_r;
     r.processed["Sigma"]        = std::move(sigma);
     r.processed["SigmaHartree"] = std::move(hartree);
+  }
+
+  g_w_t broaden(solve_result_t const &r, std::string const &correlator, broadening_params_t const &b,
+                std::optional<triqs::mesh::refreq_log> const &mesh) {
+    auto const m = templates::parse_manifest(r.manifest, "the manifest of the result");
+    if (is_reserved(correlator)) throw std::invalid_argument(correlator + " is not a correlator; it follows from G, F_l, F_r and I");
+    if (not m.correlators.contains(correlator)) throw std::invalid_argument("unknown correlator \"" + correlator + "\" (not in the manifest of the result)");
+    if (r.twists.empty()) throw std::runtime_error("the result holds no twists");
+
+    nrg::broadening_t nb{b.alpha.value_or(r.solve_params.alpha), r.solve_params.T, b.gamma.value_or(r.solve_params.gamma)};
+    nb.omega0_ratio = b.omega0_ratio;
+    return broaden_correlator(r, m, correlator, nb, mesh ? *mesh : r.mesh);
   }
 
 } // namespace nrgljubljana_interface

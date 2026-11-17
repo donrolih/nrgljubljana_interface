@@ -40,6 +40,7 @@ namespace nrgljubljana_interface {
     std::string manifest;                       // the template's manifest text
     std::map<std::string, char> correlator_type; // NRG correlator -> spectrum list (s, t, o, d, q)
     std::string nrg_revision;                   // NRG Ljubljana source revision
+    triqs::mesh::refreq_log mesh;               // the solver mesh: of processed, and the default of broaden
 
     // The twists
     std::vector<double> z;

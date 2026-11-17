@@ -121,6 +121,7 @@ namespace nrgljubljana_interface {
     for (auto const &[corr, t] : r.correlator_type) types[corr] = std::string(1, t);
     h5_write(grp, "correlator_type", types);
     h5_write(grp, "nrg_revision", r.nrg_revision);
+    h5_write(grp, "mesh", r.mesh);
     h5_write(grp, "z", r.z);
     h5_write(grp, "complete_z_average", r.complete_z_average);
     auto twists = grp.create_group("twists");
@@ -146,6 +147,7 @@ namespace nrgljubljana_interface {
       r.correlator_type[corr] = t.front();
     }
     h5_read(grp, "nrg_revision", r.nrg_revision);
+    h5_read(grp, "mesh", r.mesh);
     h5_read(grp, "z", r.z);
     h5_read(grp, "complete_z_average", r.complete_z_average);
     auto twists = grp.open_group("twists");

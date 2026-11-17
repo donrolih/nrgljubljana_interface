@@ -1,5 +1,5 @@
-// Raw results of a solve (solver_core::last_result): what a default solve collects from its twists, and that every
-// MPI rank holds the same
+// Raw results of a solve (solver_core::last_result): what a default solve collects from its twists, that every
+// MPI rank holds the same, and what a forward-only and a single-twist request collect
 
 #include <nrgljubljana_interface/solver_core.hpp>
 
@@ -17,7 +17,7 @@ using namespace nrgljubljana_interface;
 
 namespace {
 
-  solve_result_t solve_siam() {
+  solver_core solve_siam(solve_request_t const &request = {}) {
     constr_params_t cp;
     cp.model      = "SIAM";
     cp.symtype    = "QS";
@@ -39,9 +39,15 @@ namespace {
     sp.keep             = 50;
     sp.keepenergy       = 6.0;
     sp.model_parameters = {{"U1", 0.5}, {"eps1", -0.24}};
-    S.solve(sp);
+    S.solve(sp, request);
     if (not S.last_result()) throw std::runtime_error("no result after a solve");
-    return *S.last_result();
+    return S;
+  }
+
+  // The result of a default solve, shared by the tests
+  solve_result_t const &default_result() {
+    static solve_result_t const r = *solve_siam().last_result();
+    return r;
   }
 
   void expect_same_raw(solve_result_t const &a, solve_result_t const &b) {
@@ -67,7 +73,7 @@ namespace {
 
 TEST(RawResults, DefaultSolve) {
   mpi::communicator world;
-  auto const r = solve_siam();
+  auto const &r = default_result();
 
   EXPECT_EQ(r.z, (std::vector<double>{0.5, 1.0}));
   EXPECT_TRUE(r.complete_z_average);
@@ -107,6 +113,52 @@ TEST(RawResults, DefaultSolve) {
       h5::file f("raw_results_rank" + std::to_string(rank) + ".h5", 'r');
       expect_same_raw(r, h5::read<solve_result_t>(f, "r"));
     }
+}
+
+TEST(RawResults, ForwardOnly) {
+  solve_request_t request;
+  request.fdm      = false;
+  request.energies = 5;
+  auto const S     = solve_siam(request);
+  auto const &r    = *S.last_result();
+
+  ASSERT_EQ(r.twists.size(), 2u);
+  for (auto const &t : r.twists) {
+    EXPECT_TRUE(t.spectra.empty());
+    EXPECT_TRUE(t.customfdm.empty());
+    EXPECT_TRUE(t.tdfdm.empty());
+    EXPECT_GT(t.custom.values.extent(0), 0);
+    ASSERT_FALSE(t.energy_flow.empty());
+    for (auto const &step : t.energy_flow) {
+      EXPECT_FALSE(step.empty());
+      EXPECT_LE(step.size(), 5u);
+    }
+  }
+  EXPECT_TRUE(r.processed.empty());
+  EXPECT_TRUE(r.expv.empty());
+  EXPECT_FALSE(S.G_w);
+  EXPECT_FALSE(S.A_w);
+  EXPECT_FALSE(S.Sigma_w);
+}
+
+TEST(RawResults, SingleTwist) {
+  solve_request_t request;
+  request.z     = {0.5};
+  auto const S  = solve_siam(request);
+  auto const &r = *S.last_result();
+  auto const &d = default_result();
+
+  EXPECT_EQ(r.z, (std::vector<double>{0.5}));
+  EXPECT_FALSE(r.complete_z_average);
+  ASSERT_EQ(r.twists.size(), 1u);
+  ASSERT_EQ(d.twists[0].z, 0.5);
+  EXPECT_EQ(r.twists[0].spectra, d.twists[0].spectra);
+  EXPECT_EQ(r.twists[0].customfdm, d.twists[0].customfdm);
+  auto expv = d.twists[0].customfdm; // the average over one twist, without T
+  expv.erase("T");
+  EXPECT_EQ(r.expv, expv);
+  EXPECT_TRUE(r.processed.contains("G"));
+  EXPECT_TRUE(r.processed.contains("Sigma"));
 }
 
 MAKE_MAIN
