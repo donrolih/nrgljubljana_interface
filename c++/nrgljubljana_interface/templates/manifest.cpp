@@ -235,7 +235,7 @@ namespace nrgljubljana_interface::templates {
     for (auto const &[key, value] : section("correlators")) {
       auto const at = where("correlators", key);
       auto const f  = split_list(key);
-      if (f.size() != 2) fail(source, at, "expected \"<logical name> <block element>\"");
+      if (f.size() != 2) fail(source, at, "expected \"<correlator> <block element>\"");
       correlator_entry_t entry{parse_element(f[1], source, at), value, {}, {}, {}};
       if (value.empty() or value.find_first_of(whitespace) != std::string::npos) fail(source, at, "expected one NRG correlator, got \"" + value + "\"");
       split_correlator(entry, m.ops, source, at);

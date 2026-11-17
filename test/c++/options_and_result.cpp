@@ -83,7 +83,7 @@ TEST(Options, Correlators) {
   EXPECT_TRUE(contains(error_of(r), "unknown correlator \"chi_SS\""));
   r.correlators = names{"G", "G"};
   EXPECT_TRUE(contains(error_of(r), "correlator \"G\" given twice"));
-  r.correlators = names{"A_d-A_d"}; // NRG correlator strings are not logical names
+  r.correlators = names{"A_d-A_d"}; // NRG correlator strings are not correlator names
   EXPECT_TRUE(contains(error_of(r), "unknown correlator"));
 }
 
@@ -149,7 +149,7 @@ namespace {
     r.model               = "SIAM";
     r.symtype             = "QS";
     r.manifest            = manifest.text;
-    r.correlator_type     = {{"A_d-A_d", 'd'}, {"n_d-n_d", 's'}};
+    r.correlator_type     = {{"A_d-A_d", "d"}, {"n_d-n_d", "s"}};
     r.nrg_revision        = "donrolih/nrgljubljana@c928cc55";
     r.z                   = {0.5, 1.0};
     r.complete_z_average  = true;

@@ -28,7 +28,7 @@ namespace nrgljubljana_interface::templates {
   /// "name[i,j]"
   std::string to_string(block_element_t const &e);
 
-  /// One block element of a logical correlator and the NRG correlator that gives it
+  /// One block element of a correlator and the NRG correlator that gives it
   struct correlator_entry_t {
     block_element_t element;
     std::string nrg_name;  // e.g. "A_d-A_d-u"
@@ -39,7 +39,7 @@ namespace nrgljubljana_interface::templates {
   /// G, F_l, F_r and I: the correlators with the block structure of G ([structure] gf); together they give Σ
   inline constexpr char const *gf_correlators[] = {"G", "F_l", "F_r", "I"};
 
-  /// Whether the logical correlator name has the block structure of G (one of gf_correlators)
+  /// Whether the correlator name has the block structure of G (one of gf_correlators)
   bool has_gf_structure(std::string_view name);
 
   struct manifest_t {
@@ -60,7 +60,7 @@ namespace nrgljubljana_interface::templates {
     std::string layout = "uncoupled";
     std::vector<block_element_t> coefficient_channels;
 
-    // [correlators]: logical name -> entries, ordered by element
+    // [correlators]: correlator -> entries, ordered by element
     std::map<std::string, std::vector<correlator_entry_t>> correlators;
 
     // [hartree]: element -> operator whose expectation value is the Hartree term; nothing for "0" (no Hartree term)
@@ -72,7 +72,7 @@ namespace nrgljubljana_interface::templates {
     /// Whether the template gives F_l, F_r and I with G, and so the self-energy
     [[nodiscard]] bool has_self_energy() const;
 
-    /// The block structure of a logical correlator: gf for G, F_l, F_r and I; otherwise the blocks its entries
+    /// The block structure of a correlator: gf for G, F_l, F_r and I; otherwise the blocks its entries
     /// name, in alphabetical order, each sized by the largest index used in it
     [[nodiscard]] block_structure_t correlator_structure(std::string const &name) const;
   };

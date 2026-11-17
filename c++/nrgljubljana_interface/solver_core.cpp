@@ -118,7 +118,8 @@ namespace nrgljubljana_interface {
     constr_params.polarized = m.layout == "uncoupled" and static_cast<long>(m.coefficient_channels.size()) == 2 * m.channels;
   }
 
-  solver_core::solver_core(constr_params_t cp) : solver_core(std::move(cp), mpi::communicator{}) {}
+  solver_core::solver_core(constr_params_t cp, bool mpi)
+     : solver_core(std::move(cp), mpi ? ::mpi::communicator{} : ::mpi::communicator{MPI_COMM_SELF}) {}
 
   solver_core::solver_core(constr_params_t cp, mpi::communicator c) : comm(c), constr_params(std::move(cp)) {
     if (comm.rank() == 0)
@@ -316,7 +317,7 @@ namespace nrgljubljana_interface {
     r.model              = constr_params.model;
     r.symtype            = constr_params.symtype;
     r.manifest           = manifest.text;
-    r.correlator_type    = correlator_type;
+    for (auto const &[corr, t] : correlator_type) r.correlator_type[corr] = std::string(1, t);
     r.nrg_revision       = nrg::revision();
     r.mesh               = log_mesh;
     r.z                  = z;

@@ -7,7 +7,7 @@ endforeach()
 # List of all tests, by CTest label: unit (no NRG run), solver (short NRG runs), long (manual)
 set(unit_tests 9_hilbert_transform)
 set(solver_tests 1_SIAM_QS 2_SIAM_QSZ 3_2orb-UJ_QS 4_mesh_max=10 5_bandrescale 6_solver_h5io
-  7_solve_twice 8_solve_last)
+  7_solve_twice 8_solve_last 10_options_and_result 11_deferred_broadening)
 set(long_tests)
 set(all_tests ${unit_tests} ${solver_tests} ${long_tests})
 
@@ -52,3 +52,4 @@ add_mpi_test(MPI_SIAM_QS 1)
 add_mpi_test(MPI_SIAM_QS 2)
 add_mpi_test(MPI_SIAM_QS 3)
 add_mpi_test(MPI_SIAM_QS 4)
+add_mpi_test(MPI_independent_solvers 2)

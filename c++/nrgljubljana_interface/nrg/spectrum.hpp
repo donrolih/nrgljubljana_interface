@@ -12,9 +12,17 @@ namespace nrgljubljana_interface::nrg {
   /// Spectral bins (frequency, weight) of one correlator, in file order.
   /// For a complex spectrum, weight holds the real part and weight_imag the imaginary part of each weight.
   struct spectrum_bins_t {
+
+    /// Frequency of each bin
     std::vector<double> frequency;
+
+    /// Weight of each bin (its real part for a complex spectrum)
     std::vector<double> weight;
-    std::vector<double> weight_imag; // empty unless is_complex
+
+    /// Imaginary part of each weight; empty unless is_complex
+    std::vector<double> weight_imag;
+
+    /// Whether the spectrum is complex
     bool is_complex = false;
 
     bool operator==(spectrum_bins_t const &) const = default;

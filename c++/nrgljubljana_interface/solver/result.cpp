@@ -107,19 +107,24 @@ namespace nrgljubljana_interface {
 
   } // namespace
 
+  result_t result_t::without_bins() const {
+    auto r = *this;
+    for (auto &t : r.twists) t.spectra.clear();
+    return r;
+  }
+
   void h5_write(h5::group g, std::string const &name, result_t const &r) { h5_write(g, name, r, true); }
 
   void h5_write(h5::group g, std::string const &name, result_t const &r, bool with_bins) {
     auto grp = g.create_group(name);
+    h5::write_hdf5_format(grp, r);
     h5_write(grp, "options", r.options);
     h5_write(grp, "solve_params", r.solve_params);
     h5_write(grp, "nrg_params", r.nrg_params);
     h5_write(grp, "model", r.model);
     h5_write(grp, "symtype", r.symtype);
     h5_write(grp, "manifest", r.manifest);
-    std::map<std::string, std::string> types;
-    for (auto const &[corr, t] : r.correlator_type) types[corr] = std::string(1, t);
-    h5_write(grp, "correlator_type", types);
+    h5_write(grp, "correlator_type", r.correlator_type);
     h5_write(grp, "nrg_revision", r.nrg_revision);
     h5_write(grp, "mesh", r.mesh);
     h5_write(grp, "z", r.z);
@@ -139,13 +144,8 @@ namespace nrgljubljana_interface {
     h5_read(grp, "model", r.model);
     h5_read(grp, "symtype", r.symtype);
     h5_read(grp, "manifest", r.manifest);
-    std::map<std::string, std::string> types;
-    h5_read(grp, "correlator_type", types);
     r.correlator_type.clear();
-    for (auto const &[corr, t] : types) {
-      if (t.size() != 1) throw std::runtime_error("Corrupt correlator type \"" + t + "\" of " + corr);
-      r.correlator_type[corr] = t.front();
-    }
+    h5_read(grp, "correlator_type", r.correlator_type);
     h5_read(grp, "nrg_revision", r.nrg_revision);
     h5_read(grp, "mesh", r.mesh);
     h5_read(grp, "z", r.z);

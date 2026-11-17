@@ -18,7 +18,7 @@ namespace nrgljubljana_interface {
   /**
    * Set the parameters the options decide.
    *
-   * Spectrum lists (specs, specd, spect, specq, specot): the NRG correlators of the selected logical correlators,
+   * Spectrum lists (specs, specd, spect, specq, specot): the NRG correlators of the selected correlators,
    * by type; savebins on if any are selected. fdm=false: fdm, fdmexpv, dmnrg and cfs off. fdm=true: fdm and fdmexpv
    * on. energies > 0: dumpannotated=energies; otherwise dumpannotated is left as is.
    */

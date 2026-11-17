@@ -23,35 +23,85 @@ namespace nrgljubljana_interface {
 
   /// Raw data of one twist
   struct twist_result_t {
+
+    /// Twist value
     double z = 1;
-    std::string param;                                     // the rendered parameter file
-    std::map<std::string, nrg::spectrum_bins_t> spectra;   // NRG correlator -> bins
-    step_table_t custom, td;                               // per step
-    std::map<std::string, double> customfdm, tdfdm;        // FDM values
+
+    /// The rendered NRG Ljubljana parameter file
+    std::string param;
+
+    /// Spectral bins of each NRG correlator
+    std::map<std::string, nrg::spectrum_bins_t> spectra;
+
+    /// Expectation values per NRG step (custom)
+    step_table_t custom;
+
+    /// Thermodynamics per NRG step (td)
+    step_table_t td;
+
+    /// FDM expectation values (customfdm)
+    std::map<std::string, double> customfdm;
+
+    /// FDM thermodynamics (tdfdm)
+    std::map<std::string, double> tdfdm;
+
+    /// Lowest levels of each NRG step (empty unless options.energies > 0)
     energy_flow_t energy_flow;
   };
 
+  /// The result of a solve: what was solved, the raw data of each twist, their averages and the Green's functions
   struct result_t {
-    // What was solved
-    options_t options;
-    solve_params_t solve_params;
-    nrg_params_t nrg_params;
-    std::string model, symtype;
-    std::string manifest;                       // the template's manifest text
-    std::map<std::string, char> correlator_type; // NRG correlator -> spectrum list (s, t, o, d, q)
-    std::string nrg_revision;                   // NRG Ljubljana source revision
-    triqs::mesh::refreq_log mesh;               // the solver mesh: of processed, and the default of broaden
 
-    // The twists
+    /// Options of the solve
+    options_t options;
+
+    /// Solve parameters, as given
+    solve_params_t solve_params;
+
+    /// NRG parameters, as given (the values used for each twist are in its parameter file)
+    nrg_params_t nrg_params;
+
+    /// Model (template)
+    std::string model;
+
+    /// Symmetry type (template)
+    std::string symtype;
+
+    /// The manifest text of the template
+    std::string manifest;
+
+    /// Spectrum list of each NRG correlator: s, t, o, d or q
+    std::map<std::string, std::string> correlator_type;
+
+    /// NRG Ljubljana source revision
+    std::string nrg_revision;
+
+    /// The solver mesh: of processed, and the default of broaden
+    triqs::mesh::refreq_log mesh;
+
+    /// Twist values solved
     std::vector<double> z;
-    bool complete_z_average = false; // z is the full set i/Nz
+
+    /// Whether z is the full set i/Nz
+    bool complete_z_average = false;
+
+    /// Raw data of each twist
     std::vector<twist_result_t> twists;
 
-    // Averaged over the twists
-    std::map<std::string, double> expv, tdfdm;
+    /// FDM expectation values, averaged over the twists
+    std::map<std::string, double> expv;
 
-    // Logical correlator (and Sigma) -> Green's function on the solver mesh
+    /// FDM thermodynamics, averaged over the twists
+    std::map<std::string, double> tdfdm;
+
+    /// Green's function of each broadened correlator (and Sigma, SigmaHartree) on the solver mesh
     std::map<std::string, g_w_t> processed;
+
+    /// A copy without the raw spectral bins: smaller in HDF5, but cannot be broadened again
+    [[nodiscard]] result_t without_bins() const;
+
+    /// HDF5 format tag
+    static std::string hdf5_format() { return "NRGLJUBLJANA_INTERFACE_Result"; }
   };
 
   /// Write result_t to HDF5, with the raw spectral bins

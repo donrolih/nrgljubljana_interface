@@ -269,7 +269,7 @@ TEST(Manifest, BathValues) {
 }
 
 TEST(Manifest, CorrelatorEntries) {
-  EXPECT_TRUE(contains(error_of(replaced(siam_qs, "chi_NN imp[0,0]", "chi_NN")), "[correlators] chi_NN: expected \"<logical name> <block element>\""));
+  EXPECT_TRUE(contains(error_of(replaced(siam_qs, "chi_NN imp[0,0]", "chi_NN")), "[correlators] chi_NN: expected \"<correlator> <block element>\""));
   EXPECT_TRUE(contains(error_of(replaced(siam_qs, "chi_NN imp[0,0]", "chi_NN imp(0,0)")), "expected a block element"));
   EXPECT_TRUE(contains(error_of(replaced(siam_qs, "=n_d-n_d", "=n_d-n_x")), "\"n_d-n_x\" is not <op>-<op>"));
   EXPECT_TRUE(contains(error_of(replaced(siam_qs, "=n_d-n_d", "=n_d n_d")), "expected one NRG correlator"));

@@ -76,8 +76,10 @@ namespace nrgljubljana_interface {
      * @brief Construct an NRGLjubljana_interface solver.
      *
      * @param cp Construction parameters.
+     * @param mpi Solve on MPI_COMM_WORLD, splitting the twists over its ranks. If false, the solver makes no MPI
+     * calls and solves all twists itself, so that independent solvers can run on different ranks.
      */
-    explicit solver_core(constr_params_t cp);
+    explicit solver_core(constr_params_t cp, bool mpi = true);
 
     /**
      * @brief Construct a solver that works on the given communicator.
@@ -117,20 +119,21 @@ namespace nrgljubljana_interface {
      * @param solve_params Parameters specific to the NRGLjubljana run.
      * @param options What to compute and return.
      */
-    C2PY_IGNORE void solve(solve_params_t const &solve_params, options_t const &options);
+    void solve(solve_params_t const &solve_params, options_t const &options);
 
     /**
      * @brief Broaden the bins of a correlator of the last result again, on the solver mesh, and update the solver.
      *
-     * @details As broaden(last_result(), correlator, b). The Green's function replaces that of the last result and
-     * the result container with its spectral density (G_w and A_w, ...). Other containers, Sigma_w among them, keep
-     * their broadening.
+     * @details As broaden(last_result(), correlator, b), and the new Green's function is stored in the solver: it
+     * replaces the correlator in last_result().processed and in its container (G_w for "G", F_l_w for "F_l", ...),
+     * and the spectral density of that container is recomputed (A_w from G_w, B_l_w from F_l_w, ...). All other
+     * containers are unchanged; in particular Sigma_w still comes from the broadening of the solve.
      *
-     * @param correlator A logical correlator of the template.
+     * @param correlator A correlator of the template.
      * @param b Broadening parameters; unset ones are those of the solve.
      * @return The Green's function of the correlator.
      */
-    C2PY_IGNORE g_w_t broaden(std::string const &correlator, broadening_params_t const &b = {});
+    g_w_t broaden(std::string const &correlator, broadening_params_t const &b = {});
 
     /**
      * @brief Read the block structure of Green's function objects from a file.
@@ -149,8 +152,11 @@ namespace nrgljubljana_interface {
      */
     C2PY_IGNORE void read_manifest();
 
-    /// The result of the last solve, if any
+    /// The result of the last solve; std::nullopt before the first solve
     C2PY_IGNORE std::optional<result_t> const &last_result() const { return result; }
+
+    /// The result of the last solve (a copy); None before the first solve
+    C2PY_RENAME(last_result) std::optional<result_t> last_result_copy() const { return result; }
 
     /**
      * @brief Create a temporary working directory for a series of NRG runs.

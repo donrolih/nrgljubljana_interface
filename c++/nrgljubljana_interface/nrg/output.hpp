@@ -14,15 +14,24 @@ namespace nrgljubljana_interface::nrg {
 
   /// A table with one row per NRG step (custom, td): column names and values
   struct step_table_t {
+
+    /// Column names
     std::vector<std::string> columns;
-    nda::array<double, 2> values; // (step, column)
+
+    /// Values, indexed (step, column)
+    nda::array<double, 2> values;
   };
 
   /// A group of degenerate levels of one NRG step, as in annotated.dat
   struct energy_level_t {
+    /// Energy of the group
     double energy = 0;
-    std::vector<std::vector<int>> subspaces; // quantum numbers of each invariant subspace in the group
-    long degeneracy = 0;                     // total number of states, including multiplicity
+
+    /// Quantum numbers of each invariant subspace in the group
+    std::vector<std::vector<int>> subspaces;
+
+    /// Total number of states, including multiplicity
+    long degeneracy = 0;
 
     bool operator==(energy_level_t const &) const = default;
   };

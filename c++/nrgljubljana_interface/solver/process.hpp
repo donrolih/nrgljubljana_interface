@@ -32,14 +32,14 @@ namespace nrgljubljana_interface {
    *
    * Averages: expv and tdfdm, the mean over the twists of customfdm and tdfdm (without T).
    *
-   * Processed (if the options broaden): each selected logical correlator, as broaden(r, name) with the parameters
+   * Processed (if the options broaden): each selected correlator, as broaden(r, name) with the parameters
    * of the solve. With G, F_l, F_r and I also "SigmaHartree", the twist average of the [hartree] expectation values
    * (0 where none, constant in frequency), and "Sigma" = SigmaHartree + I - F_l G^-1 F_r.
    */
   void process(result_t &r, templates::manifest_t const &m);
 
   /**
-   * Broaden the stored bins of a logical correlator of a result into a Green's function, without running NRG
+   * Broaden the stored bins of a correlator of a result into a Green's function, without running NRG
    * Ljubljana.
    *
    * The Green's function has the structure from the manifest. Each listed element is the broadened spectral density

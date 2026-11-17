@@ -91,7 +91,7 @@ layout=uncoupled
 coefficient_channels=imp[0,0]
 
 [correlators]
-# <logical name> <block element> = <type>:<NRG correlator>
+# <correlator> <block element> = <type>:<NRG correlator>
 G imp[0,0]=d:A_d-A_d
 F_l imp[0,0]=d:self_d-A_d
 F_r imp[0,0]=d:A_d-self_d

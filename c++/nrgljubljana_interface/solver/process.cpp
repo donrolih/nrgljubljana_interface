@@ -34,7 +34,7 @@ namespace nrgljubljana_interface {
 
     bool is_reserved(std::string const &name) { return name == "Sigma" or name == "SigmaHartree"; }
 
-    // One logical correlator from the bins of all twists
+    // One correlator from the bins of all twists
     g_w_t broaden_correlator(result_t const &r, templates::manifest_t const &m, std::string const &name, nrg::broadening_t const &b,
                              triqs::mesh::refreq_log const &mesh) {
       auto const points = nrg::mesh_points(mesh);
@@ -50,7 +50,7 @@ namespace nrgljubljana_interface {
         auto const density = nrg::broaden(twists, points, b);
 
         auto const type      = r.correlator_type.at(entry.nrg_name);
-        bool const fermionic = type == 'd' or type == 'q';
+        bool const fermionic = type == "d" or type == "q";
         std::vector<double> im(density.size());
         for (std::size_t k = 0; k < density.size(); ++k) im[k] = fermionic ? -std::numbers::pi * density[k] : density[k];
         auto const re = nrg::kramers_kronig(points, im);

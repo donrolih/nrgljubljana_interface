@@ -29,9 +29,10 @@ TRIQS interface to the NRGLjubljana numerical renormalization group (NRG) impuri
 Given a hybridization function, computes spectral functions, Green's functions, the self-energy,
 susceptibilities and thermodynamic/expectation values for quantum impurity models (e.g. the SIAM).
 """
-from .solver import Solver
+from .solver import Solver, broaden
 from .solver_core import SolverCore, hilbert_transform_refreq, hilbert_transform_elementwise
+from .solver_core import OptionsT, ResultT, TwistResultT, BroadeningParamsT
 from triqs.mesh import MeshReFreqLog
 from triqs.gfs.descriptors import Flat, SemiCircular, Omega
 
-__all__ = ['Solver','SolverCore', 'MeshReFreqLog', 'Flat', 'SemiCircular', 'Omega']
+__all__ = ['Solver', 'SolverCore', 'broaden', 'OptionsT', 'ResultT', 'TwistResultT', 'BroadeningParamsT', 'MeshReFreqLog', 'Flat', 'SemiCircular', 'Omega']

@@ -18,7 +18,7 @@ namespace nrgljubljana_interface {
     /// Run the FDM sweep after the forward sweep (FDM expectation values, thermodynamics and spectra)
     bool fdm = true;
 
-    /// Logical correlators to compute (G, F_l, F_r, I, chi_SS, ...: names from the manifest).
+    /// Correlators to compute (G, F_l, F_r, I, chi_SS, ...: names from the manifest).
     /// Unset: all the template provides if fdm, none otherwise. Empty: none.
     std::optional<std::vector<std::string>> correlators = {};
 
@@ -48,7 +48,7 @@ namespace nrgljubljana_interface {
    */
   void validate_options(options_t const &r, templates::manifest_t const &m);
 
-  /// The logical correlators the options select: as listed, or by default all of the manifest's if fdm, else none
+  /// The correlators the options select: as listed, or by default all of the manifest's if fdm, else none
   std::vector<std::string> selected_correlators(options_t const &r, templates::manifest_t const &m);
 
   /// Write options_t to HDF5
