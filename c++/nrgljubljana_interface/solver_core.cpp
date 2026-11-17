@@ -33,6 +33,7 @@
 #include <utility>
 #include <deque>
 #include <map>
+#include <numbers>
 #include <vector>
 #include <iomanip>    // setprecision
 #include <limits>     // max_digits10, MAX_PATH
@@ -47,6 +48,7 @@
 #include "templates/manifest.hpp"
 #include "solver/param_file.hpp"
 #include "solver/collect.hpp"
+#include "solver/process.hpp"
 #include "nrg/revision.hpp"
 
 // std::filesystem is not production-ready as of 2020. As a workaround,
@@ -165,61 +167,7 @@ namespace nrgljubljana_interface {
     return _gf_struct;
   }
 
-  void solver_core::readGF(const std::string &name, std::optional<g_w_t> &G_w, gf_struct_t &_gf_struct) {
-    if (!has_struct(_gf_struct))
-      return;
-    G_w = g_w_t{log_mesh, _gf_struct};
-    for (int bl_idx : range(_gf_struct.size())) {
-      long bl_size = Delta_w[bl_idx].target_shape()[0];
-      for (auto [i, j] : product_range(bl_size, bl_size)) {
-        auto bl_name     = Delta_w.block_names()[bl_idx];
-        auto file_ending = std::string{"_"} + bl_name + "_" + std::to_string(i) + std::to_string(j) + ".dat";
-        std::string imGfilename = "im" + name + file_ending;
-        std::ifstream imG(imGfilename);
-        std::string reGfilename = "re" + name + file_ending;
-        std::ifstream reG(reGfilename);
-        if (imG && reG) {
-          double w, re, im;
-          for (auto mp : log_mesh) {
-            imG >> w >> im;
-            reG >> w >> re;
-            TRIQS_ASSERT2(abs(w-double(mp)) < 1e-8*abs(w), "frequency mismatch");
-            (*G_w)[bl_idx][mp](i, j) = re + 1i * im;
-          }
-        } else {
-          // If the files cannot be read (do not exist), the corresponding GF matrix component
-          // is zero-ed out.
-          for (auto mp : log_mesh) (*G_w)[bl_idx][mp](i, j) = 0.0;
-        }
-      }
-    }
-  }
   
-  void solver_core::readA(const std::string &name, std::optional<g_w_t> &A_w, gf_struct_t &_gf_struct) {
-    if (!has_struct(_gf_struct))
-      return;
-    A_w = g_w_t{log_mesh, _gf_struct};
-    for (int bl_idx : range(_gf_struct.size())) {
-      long bl_size = Delta_w[bl_idx].target_shape()[0];
-      for (auto [i, j] : product_range(bl_size, bl_size)) {
-        auto bl_name     = Delta_w.block_names()[bl_idx];
-        auto file_ending = std::string{"_"} + bl_name + "_" + std::to_string(i) + std::to_string(j) + ".dat";
-        std::string Afilename = name + file_ending;
-        std::ifstream A(Afilename);
-        if (A) {
-          double w, re;
-          for (auto mp : log_mesh) {
-            A >> w >> re;
-            TRIQS_ASSERT2(abs(w-double(mp)) < 1e-8*abs(w), "frequency mismatch");
-            (*A_w)[bl_idx][mp](i, j) = re;
-          }
-        } else {
-          for (auto mp : log_mesh) (*A_w)[bl_idx][mp](i, j) = 0.0;
-        }
-      }
-    }
-  }
-
   // Read expectation values and average over Nz runs
   void solver_core::readexpv(int Nz) {
     for (int cnt = 1; cnt <= Nz; cnt++) {
@@ -305,6 +253,41 @@ namespace nrgljubljana_interface {
     return ( getcwd(temp, sizeof(temp)) ? std::string(temp) : std::string("") );
   }
    
+  void solver_core::fill_containers(solve_result_t const &r) {
+    expv  = r.expv;
+    tdfdm = r.tdfdm;
+    auto const set = [&](std::optional<g_w_t> &member, std::string const &name, gf_struct_t const &s) {
+      if (not has_struct(s)) return;
+      if (auto it = r.processed.find(name); it != r.processed.end()) {
+        member = it->second;
+      } else {
+        member = g_w_t{log_mesh, s};
+        for (auto &b : member->data()) b.data() = 0;
+      }
+    };
+    set(G_w, "G", gf_struct);
+    set(F_l_w, "F_l", gf_struct);
+    set(F_r_w, "F_r", gf_struct);
+    set(I_w, "I", gf_struct);
+    set(SigmaHartree_w, "SigmaHartree", gf_struct);
+    set(chi_NN_w, "chi_NN", chi_struct);
+    set(chi_SS_w, "chi_SS", chi_struct);
+
+    // Spectral densities -Im X / pi of G, F_l, F_r and I
+    auto const density = [](std::optional<g_w_t> &member, std::optional<g_w_t> const &g) {
+      if (not g) return;
+      member = *g;
+      for (auto &b : member->data())
+        for (auto &x : b.data()) x = -x.imag() / std::numbers::pi;
+    };
+    density(A_w, G_w);
+    density(B_l_w, F_l_w);
+    density(B_r_w, F_r_w);
+    density(C_w, I_w);
+
+    if (auto it = r.processed.find("Sigma"); it != r.processed.end()) Sigma_w = it->second;
+  }
+
   void solver_core::sync() {
     if (comm.size() > 1) comm.barrier();
   }
@@ -370,35 +353,16 @@ namespace nrgljubljana_interface {
     // Raw results: every rank reads all twists (the working directory is shared)
     auto const spectra = requested_spectra(request, manifest, correlator_type);
     for (auto k : range(z.size())) r.twists.push_back(read_twist(std::to_string(k + 1), z[k], spectra, request.fdm, request.energies > 0));
+
+    // Spectra and averages, on every rank from the same input
+    try {
+      process(r, manifest, log_mesh);
+    } catch (std::exception const &e) { TRIQS_RUNTIME_ERROR << "Processing the results failed: " << e.what(); }
+    if (not request.keep_bins)
+      for (auto &t : r.twists) t.spectra.clear();
+    fill_containers(r);
     result = std::move(r);
-    // Post-Processing in perl script
-    if (comm.rank() == 0) {
-      std::cout << "Post-processing results" << std::endl;
-      call("./process", verbose);
-    }
 
-    sync(); // Ensures post-processing is completed
-    // Read Results into TRIQS Containers
-    if (comm.rank() == 0)
-      std::cout << "Reading results from files" << std::endl;
-    readexpv(int(z.size()));
-    readtdfdm(int(z.size()));
-    readGF("G", G_w, gf_struct);
-    readGF("F_l", F_l_w, gf_struct);
-    readGF("F_r", F_r_w, gf_struct);
-    readGF("I", I_w, gf_struct);
-    readGF("SigmaHartree", SigmaHartree_w, gf_struct);
-    readA("A", A_w, gf_struct);
-    readA("B_l", B_l_w, gf_struct);
-    readA("B_r", B_r_w, gf_struct);
-    readA("C", C_w, gf_struct);
-    readGF("SS", chi_SS_w, chi_struct);
-    readGF("NN", chi_NN_w, chi_struct);
-
-    // Post-Processing in C++ interface
-    if (has_struct(gf_struct)) {
-      Sigma_w = (*SigmaHartree_w) + (*I_w) - (*F_l_w) / (*G_w) * (*F_r_w);
-    }
     // Cleanup
     sync(); // Ensures all processes have read the results before cleanup
     if (chdir(cwd.c_str()) != 0) TRIQS_RUNTIME_ERROR << "failed to return from tempdir";

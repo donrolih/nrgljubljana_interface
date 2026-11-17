@@ -6,7 +6,7 @@
     "vs_reference": 0.0
   },
   "method": "max |a.data - b.data| over all blocks and points (as h5diff), per Green's function; runs at 1 and 8 BLAS threads (OpenBLAS via FlexiBLAS)",
-  "reference_from": "NRG Ljubljana 13e7aace (regenerated, see the commit that replaced siam.ref.h5)",
-  "measured_with": "NRG Ljubljana 13e7aace, TRIQS 4.0.2, foss/2026.1",
-  "date": "2026-11-09"
+  "reference_from": "The output of this test at 1 BLAS thread, processed in-process (NRG Ljubljana numerics: broadening, and Kramers-Kronig with the analytic kernel on Steffen interpolation). Replaces the reference from the process script, whose kk used QAG on Akima interpolation: the real parts and Sigma differ from it.",
+  "measured_with": "NRG Ljubljana c928cc55 (donrolih/nrgljubljana, template-operators), TRIQS 4.0.2, foss/2026.1",
+  "date": "2026-11-17"
 }

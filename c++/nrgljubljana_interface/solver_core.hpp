@@ -53,6 +53,9 @@ namespace nrgljubljana_interface {
     // Barrier on comm; no MPI call for a single rank
     void sync();
 
+    // Fill the result containers (G_w, Sigma_w, expv, ...) from a processed result
+    void fill_containers(solve_result_t const &r);
+
     // The template's manifest, and the spectrum list (s, t, o, d, q) of each of its NRG correlators
     templates::manifest_t manifest;
     std::map<std::string, char> correlator_type;
@@ -216,26 +219,6 @@ namespace nrgljubljana_interface {
      * @param Nz Number of discretization twists.
      */
     void readtdfdm(int Nz);
-
-    /**
-     * @brief Read a block Green's function from ``(im/re)name-block-ij.dat`` files.
-     *
-     * @param name Base name of the Green's function output files.
-     * @param G_w Container that receives the Green's function.
-     * @param _gf_struct Block structure of the Green's function.
-     */
-    C2PY_IGNORE void readGF(const std::string &name, std::optional<g_w_t> &G_w, gf_struct_t &_gf_struct);
-
-    /**
-     * @brief Read a block spectral function from ``name-block-ij.dat`` files.
-     *
-     * @details The spectral function is assumed to be purely real.
-     *
-     * @param name Base name of the spectral function output files.
-     * @param A_w Container that receives the spectral function.
-     * @param _gf_struct Block structure of the spectral function.
-     */
-    C2PY_IGNORE void readA(const std::string &name, std::optional<g_w_t> &A_w, gf_struct_t &_gf_struct);
 
     /// Read a scalar real-valued function name.dat
     // void readc(const std::string &name, std::optional<s_w_t> &s_w); // TO DO
