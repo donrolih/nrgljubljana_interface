@@ -10,8 +10,8 @@ list of all symmetry types can be found in nrgljubljana/nrginit/initial.m.
 
 Each "template directory" contains a parameter file "param", Hamiltonian description in a .m file,
 matrix representations of operators in files "data.in", "ham*", "op*", scripts for problem
-initialization ("prepare" and "instantiate", which makes calls to "discretize" and "wilson"), and
-postprocessing ("process"). Finally, there are some descriptor files, "info", "gf_struct" and
+initialization ("prepare" and "instantiate", which makes calls to "discretize" and "wilson").
+Finally, there are some descriptor files, "info", "gf_struct" and
 "cf_struct". Info file lists operators and spectral functions, parameters, and some optional
 parameters, while structure files describe the structure of the Green's function and dynamic
 susceptibility matrix.

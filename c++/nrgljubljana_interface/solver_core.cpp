@@ -27,6 +27,7 @@
 #include <algorithm>  // max
 #include <cmath>      // pow, log
 #include <cstdlib>    // system
+#include <filesystem>
 #include <sys/stat.h> // mkdir
 #include <iostream>
 #include <fstream>
@@ -50,21 +51,6 @@
 #include "solver/collect.hpp"
 #include "solver/process.hpp"
 #include "nrg/revision.hpp"
-
-// std::filesystem is not production-ready as of 2020. As a workaround,
-// we remove temporary files using "rm".
-//
-//#ifdef __has_include
-//#  if __has_include(<filesystem>)
-//#    include <filesystem>
-//namespace fs = std::filesystem;
-//#  elif __has_include(<experimental/filesystem>)
-//#    include <experimental/filesystem>
-//namespace fs = std::experimental::filesystem;
-//#  else
-//#    error "Missing <filesystem>"
-//#  endif
-//#endif
 
 namespace nrgljubljana_interface {
 
@@ -219,15 +205,10 @@ namespace nrgljubljana_interface {
     for (auto &i : tdfdm) { i.second /= Nz; } // calculate the average over discretization meshes
   }
 
-  inline void call(const std::string &command, bool verbose = true, bool exit_on_failure = true) {
+  inline void call(const std::string &command, bool verbose = true) {
     std::string s = command + (verbose ? "" : " >/dev/null");
     std::cout << "running " << s << std::endl;
-    if (system(s.c_str()) != 0) {
-      if (exit_on_failure) 
-        TRIQS_RUNTIME_ERROR << "Failure running NRGLjubljana_interface script: " << s;
-      else
-        std::cerr << "Warning: failure running NRGLjubljana_interface script: " << s << std::endl;
-    }
+    if (system(s.c_str()) != 0) TRIQS_RUNTIME_ERROR << "Failure running NRGLjubljana_interface script: " << s;
   }
 
   // Write Gamma=-Im(Delta_w) to a file
@@ -368,11 +349,9 @@ namespace nrgljubljana_interface {
     if (chdir(cwd.c_str()) != 0) TRIQS_RUNTIME_ERROR << "failed to return from tempdir";
     sync(); // Ensures all processes have chdired from temp dir before it is deleted
     if (comm.rank() == 0 && !keep_temp_dir) {
-        //      std::error_code ec;
-        //      fs::remove_all(tempdir, ec);
-        //      if (ec) std::cerr << "Warning: failed to remove the temporary directory." << std::endl;
-        //    Workaround:
-        call("rm -rf " + tempdir, verbose, false);
+      std::error_code ec;
+      std::filesystem::remove_all(tempdir, ec);
+      if (ec) std::cerr << "Warning: failed to remove the temporary directory " << tempdir << ": " << ec.message() << std::endl;
     }
   }
 

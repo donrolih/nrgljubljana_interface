@@ -83,6 +83,9 @@ set_property(TEST independent_solves_np2 APPEND PROPERTY ENVIRONMENT
 )
 set_property(TEST independent_solves_np2 APPEND PROPERTY LABELS solver)
 
+# The broadening test compares with the broaden and kk tools
+add_dependencies(broadening broaden kk)
+
 # These tests include NRG Ljubljana headers directly
 target_link_libraries(nrg_libraries nrgljubljana::workflow nrgljubljana::numerics)
 target_link_libraries(nrg_adapters nrgljubljana::numerics)

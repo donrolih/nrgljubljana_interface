@@ -72,7 +72,7 @@ The quantities that need to be computed are listed in file ``info``:
 
 .. literalinclude:: info
 
-Finally, NRGLjubljana_interface requires a number of initialization, wrapper and processing scripts.
+Finally, NRGLjubljana_interface requires a number of initialization and wrapper scripts.
 The first, ``prepare``, simply copies the required files to the temporary working directory:
 
 .. literalinclude:: prepare
@@ -89,8 +89,3 @@ from the symbolic-expression template ``data.in``:
 This script, in turn, calls another one that calculates the Wilson chain coefficients:
 
 .. literalinclude:: wilson
-
-The last script, ``process``, calculates averages over the twist parameter and performs the broadening
-of spectral functions:
-
-.. literalinclude:: process

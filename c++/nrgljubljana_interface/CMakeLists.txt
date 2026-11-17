@@ -35,18 +35,7 @@ target_link_libraries(${PROJECT_NAME}_c PUBLIC gsl blas_lapack)
 # Note: we link against blas_lapack to prevent problem reported in https://software.intel.com/en-us/forums/intel-math-kernel-library/topic/759670
 
 # Add tool dependencies
-add_dependencies(${PROJECT_NAME}_c adapt nrgchain matrix diag unitary broaden kk)
-
-# C++ filesystem library. Currently not used, keep commented out.
-#if((CMAKE_CXX_COMPILER_ID STREQUAL "GNU") AND (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "9.0.0"))
-#  target_link_libraries(${PROJECT_NAME}_c PRIVATE stdc++fs)
-#  message("[filesystem library] Using stdc++fs")
-#elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-#  target_link_libraries(${PROJECT_NAME}_c PRIVATE c++experimental c++fs)
-#  message("[filesystem library] Using c++experimenal c++fs")
-#else()
-#  message(FATAL_ERROR "Don't know how to handle filesystem dependency.")
-#endif()
+add_dependencies(${PROJECT_NAME}_c adapt nrgchain matrix diag unitary)
 
 # Install library and headers
 install(TARGETS ${PROJECT_NAME}_c EXPORT ${PROJECT_NAME}-targets DESTINATION ${CMAKE_INSTALL_LIBDIR})
