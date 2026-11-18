@@ -136,15 +136,6 @@ namespace nrgljubljana_interface {
     g_w_t broaden(std::string const &correlator, broadening_params_t const &b = {});
 
     /**
-     * @brief Read the block structure of Green's function objects from a file.
-     *
-     * @param filename File describing the block (gf) structure.
-     * @param mandatory If true, a missing file is an error.
-     * @return The Green's function block structure.
-     */
-    gf_struct_t read_structure(const std::string &filename, bool mandatory);
-
-    /**
      * @brief Read and check the template's manifest, and set the block structures, the spectrum lists, the
      * model parameters and the polarization from it.
      *

@@ -61,16 +61,18 @@ one part of the auxiliary operator ``self_d2`` takes the following form:
 
 .. literalinclude:: op.self_d2_0.3_-1.4
 
-We then need to define the structure of Green's functions, separately for
-Green's functions and for dynamical susceptibility functions, in ``gf_stuct``
-and ``chi_struct``, respectively. Here they are the same:
+The template is described for the solver in ``manifest``, the only file written by hand:
 
-.. literalinclude:: gf_struct
-.. literalinclude:: chi_struct
+.. literalinclude:: manifest
 
-The quantities that need to be computed are listed in file ``info``:
-
-.. literalinclude:: info
+- ``[template]``: model, symmetry type, channels and operators (checked against ``data.in``), and the model
+  parameters the template requires.
+- ``[structure]``: block structure of G (``gf``) and Δ (``delta``, default: as ``gf``); ``degeneracy`` of each block.
+- ``[bath]``: the Δ element of each bath channel.
+- ``[correlators]``: each element of a correlator (G, F_l, F_r, I, chi_NN, ...) and the NRG correlator that gives
+  it; the spectrum type is taken from ``data.in``.
+- ``[hartree]``: the expectation value giving the Hartree term of each element, or 0.
+- ``[levels]``: the model parameter of each level.
 
 Finally, NRGLjubljana_interface requires a number of initialization and wrapper scripts.
 The first, ``prepare``, simply copies the required files to the temporary working directory:

@@ -11,10 +11,9 @@ list of all symmetry types can be found in nrgljubljana/nrginit/initial.m.
 Each "template directory" contains a parameter file "param", Hamiltonian description in a .m file,
 matrix representations of operators in files "data.in", "ham*", "op*", scripts for problem
 initialization ("prepare" and "instantiate", which makes calls to "discretize" and "wilson").
-Finally, there are some descriptor files, "info", "gf_struct" and
-"cf_struct". Info file lists operators and spectral functions, parameters, and some optional
-parameters, while structure files describe the structure of the Green's function and dynamic
-susceptibility matrix.
+Finally, the file "manifest" describes the template for the solver: operators, model parameters, the
+block structures, and which NRG correlator gives each element of the Green's functions and
+susceptibilities (see the guide on defining models).
 
 To introduce a new Hamiltonian, one should add appropriate new directories under the "templates/"
 hierarchy and modify the files according to user's requirements. The new set of "data.in", "ham*"
@@ -33,15 +32,8 @@ also get in touch with the authors.
 Adding new quantities to be computed to existing model templates is quite simple. One needs to
 modify the "params" file, line "ops", where one adds the required operators. A set of operators is
 defined in nrgljubljana/nrginit/operators.m, and that file can be further extended. In addition,
-one should add the operators to line "ops" in the file "info". If additional dynamical quantities
-need to be computed, they should be added to appropriate "spec*" lines in the file "info". Here
-'s' stands for singlet, 'd' for doublet, 't' for triplet and 'q' for quadriplet operators, with
-respect to spin symmetry. For example, charge susceptibility <<n_d;n_d>> corresponds to "n_d-n_d"
-in line "specs", because the charge operator "n_d" is a spin singlet. Green's function
-<<d;d^\dag>> corresponds to "A_d-A_d" in line "specd", because creation/annihilation operators are
-doublets with respect to spin. Spin susceptibility in the presence of SU(2) symmetry correspond to
-"sigma_d-sigma_d" in line "spect", because the spin operators for a triplet; in the presence of
-U(1) it corresponds to "SZd-SZd" in line "specs", because the operator for the z-component of
-spin, SZd, in this case behaves as a "singlet".
+one should add the operators to line "ops" in section [template] of the "manifest". Dynamical
+quantities are listed in section [correlators]: each element of a correlator is given by an NRG
+correlator, for example "chi_NN imp[0,0]=n_d-n_d" for the charge susceptibility <<n_d;n_d>>.
 
 

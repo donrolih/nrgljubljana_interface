@@ -141,19 +141,6 @@ namespace nrgljubljana_interface {
 
   // -------------------------------------------------------------------------------
 
-  gf_struct_t solver_core::read_structure(const std::string &filename, bool mandatory = true) {
-    std::ifstream F(constr_params.get_model_dir() + "/" + filename);
-    if (mandatory && not F.is_open()) TRIQS_RUNTIME_ERROR << "Failed to open structure file " << filename;
-    gf_struct_t _gf_struct;
-    if (F) {
-      std::string bl_name;
-      int bl_size;
-      while (F >> bl_name >> bl_size) { _gf_struct.emplace_back(bl_name, bl_size); }
-    }
-    return _gf_struct;
-  }
-
-  
   // Read expectation values and average over Nz runs
   void solver_core::readexpv(int Nz) {
     for (int cnt = 1; cnt <= Nz; cnt++) {
