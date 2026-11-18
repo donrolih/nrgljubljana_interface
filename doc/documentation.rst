@@ -32,6 +32,7 @@ Miscelaneous
 .. toctree::
    :maxdepth: 1
 
+   options_results
    parallelization
    temporary
 
@@ -56,3 +57,6 @@ Links to all relevant solver parameters:
 * :doc:`Construction parameters <_ref/nrgljubljana_interface.solver_core.ConstrParamsT>`
 * :doc:`Solve parameters <_ref/nrgljubljana_interface.solver_core.SolveParamsT>`
 * :doc:`Low-level NRG parameters <_ref/nrgljubljana_interface.solver_core.NrgParamsT>`
+* :doc:`Solve options <_ref/nrgljubljana_interface.solver_core.OptionsT>`
+* :doc:`Solve result <_ref/nrgljubljana_interface.solver_core.ResultT>`
+* :doc:`Broadening parameters <_ref/nrgljubljana_interface.solver_core.BroadeningParamsT>`

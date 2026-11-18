@@ -15,4 +15,4 @@ scratch storage. The storage space requirement for TEMPDIR can be estimated from
 steps with the largest number of retained states: this number should be multiplied by a factor of 20-30. (This
 is only a rough estimate, YMMV.)
 
-
+The temporary directory is removed after the results are read, unless the solve option ``keep_workdir`` is set.

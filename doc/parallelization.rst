@@ -11,7 +11,8 @@ are set appropriately. Good choices are e.g. 4 or 8 threads.
 
 The calculations over the different values of the twist parameter :math:`z` (different interleaved discretization grids)
 are done in parallel using MPI parallelization. Good choice for the number of MPI processes is the value of ``Nz``, i.e.,
-the number of different grids.
+the number of different grids. With ``Solver(..., mpi=False)`` a solver makes no MPI calls and solves all twists
+itself, so that each MPI rank can solve a different problem.
 
 Finally, the diagonalisation of matrices can be OpenMP parallelized. This is, however, only beneficial for
 large-scale multi-orbital calculations and is quite seldom used. This is configured using the parameter ``diagth``
