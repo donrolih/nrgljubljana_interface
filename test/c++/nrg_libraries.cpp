@@ -14,7 +14,7 @@
 #include <string>
 #include <vector>
 
-static_assert(NRG::Workflow::workflow_api_version == 2, "nrgljubljana_interface requires NRG Ljubljana workflow API 2");
+static_assert(NRG::Workflow::workflow_api_version >= 3, "nrgljubljana_interface requires NRG Ljubljana workflow API 3 or later");
 
 using NRG::Numerics::Table;
 

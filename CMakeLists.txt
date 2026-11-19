@@ -174,7 +174,7 @@ add_subdirectory(deps)
 
 # NRG Ljubljana source, fetched below; the library also reports it (nrg::revision)
 set(NRGLJUBLJANA_REPOSITORY donrolih/nrgljubljana)
-set(NRGLJUBLJANA_GIT_TAG c928cc553ba5b764516bd6d632f2c6dcf3053c9f)
+set(NRGLJUBLJANA_GIT_TAG 6c332ecd7a778a96f9a835dbf677aa645d77d6eb)
 
 # Build and install the library
 add_subdirectory(c++/${PROJECT_NAME})
@@ -192,13 +192,13 @@ CPMAddPackage(
     "SYM_ALL OFF"
 )
 
-# The interface uses NRG Ljubljana's workflow API 2 (discretize, instantiate, solve, preparation checks)
+# The interface uses NRG Ljubljana's workflow API 3 or later (discretize, instantiate, solve, preparation checks)
 if(NOT TARGET nrgljubljana::workflow OR NOT TARGET nrgljubljana::numerics)
   message(FATAL_ERROR "NRG Ljubljana does not provide the nrgljubljana::workflow and nrgljubljana::numerics targets")
 endif()
 get_target_property(NRG_WORKFLOW_API nrgljubljana::workflow WORKFLOW_API_VERSION)
-if(NOT NRG_WORKFLOW_API STREQUAL "2")
-  message(FATAL_ERROR "nrgljubljana_interface requires NRG Ljubljana workflow API 2, found '${NRG_WORKFLOW_API}'")
+if(NOT NRG_WORKFLOW_API VERSION_GREATER_EQUAL 3)
+  message(FATAL_ERROR "nrgljubljana_interface requires NRG Ljubljana workflow API 3 or later, found '${NRG_WORKFLOW_API}'")
 endif()
 
 # Tests
