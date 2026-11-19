@@ -1,10 +1,12 @@
-// Broadening and Kramers-Kronig through NRG Ljubljana numerics (nrg/broadening.hpp) agree with the broaden and kk
-// tools, also for spectra with negative weights (off-diagonal correlators). Kramers-Kronig is the analytic kernel on
-// Steffen interpolation, which the kk tool computes with "-a analytic -i steffen" (its default is QAG on Akima).
+// Broadening and Kramers-Kronig through NRG Ljubljana numerics (nrg/broadening.hpp, nrg/kramers_kronig.hpp) agree
+// with the broaden and kk tools, also for spectra with negative weights (off-diagonal correlators). Kramers-Kronig is
+// the analytic kernel on Steffen interpolation, which the kk tool computes with "-a analytic -i steffen" (its default
+// is QAG on Akima).
 
 #include <gtest/gtest.h>
 
 #include <nrgljubljana_interface/nrg/broadening.hpp>
+#include <nrgljubljana_interface/nrg/kramers_kronig.hpp>
 #include <nrgljubljana_interface/nrg/output.hpp>
 
 #include <triqs/mesh.hpp>

@@ -1,4 +1,4 @@
-// Broadening of spectral bins and Kramers-Kronig transforms, through NRG Ljubljana numerics.
+// Broadening of spectral bins, through NRG Ljubljana numerics.
 
 #pragma once
 
@@ -21,8 +21,5 @@ namespace nrgljubljana_interface::nrg {
    * bins). The result holds one value per mesh point.
    */
   std::vector<double> broaden(std::vector<spectrum_bins_t const *> const &twists, std::vector<double> const &mesh, broadening_t const &b);
-
-  /// Kramers-Kronig transform of values on a mesh symmetric about zero: Im part to Re part, as the kk tool
-  std::vector<double> kramers_kronig(std::vector<double> const &mesh, std::vector<double> const &values);
 
 } // namespace nrgljubljana_interface::nrg

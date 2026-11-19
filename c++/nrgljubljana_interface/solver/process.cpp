@@ -2,6 +2,7 @@
 
 #include "../nrg/broadening.hpp"
 #include "../nrg/convert.hpp"
+#include "../nrg/kramers_kronig.hpp"
 
 #include <numbers>
 #include <stdexcept>
