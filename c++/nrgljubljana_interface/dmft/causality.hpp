@@ -6,18 +6,11 @@
 
 #pragma once
 
-#include "../../types.hpp"
+#include "./common.hpp"
 
-#include <nda/nda.hpp>
-
-#include <complex>
 #include <utility>
-#include <vector>
 
 namespace nrgljubljana_interface::dmft {
-
-  /// One matrix per block, in the order of the blocks
-  using block_matrices_t = std::vector<nda::matrix<std::complex<double>>>;
 
   /// The spectral part S = (F† − F)/(2i) of each block: Γ for Δ, −Im Σ for a 1x1 Σ, π A for G. Exactly Hermitian.
   g_w_t spectral_part(g_w_t const &F);

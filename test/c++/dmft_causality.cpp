@@ -1,4 +1,4 @@
-// Causality kernels (dmft/kernels/causality). No NRG run.
+// Causality functions (dmft/causality). No NRG run.
 //
 // The analytic test functions are bands with compact support, B(ω) = H_B(ω) − i S_B(ω) with
 // S_B(ω) = G0 (1 − ((ω − c)/D)²)² for |ω − c| < D, and the closed form of H_B = KK(−S_B). Inside the mesh there is
@@ -8,7 +8,7 @@
 
 #include <gtest/gtest.h>
 
-#include <nrgljubljana_interface/dmft/kernels/causality.hpp>
+#include <nrgljubljana_interface/dmft/causality.hpp>
 #include <nrgljubljana_interface/nrg/kramers_kronig.hpp>
 #include <nrgljubljana_interface/nrg/convert.hpp>
 

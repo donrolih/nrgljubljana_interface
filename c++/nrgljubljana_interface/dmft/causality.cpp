@@ -1,7 +1,7 @@
 #include "./causality.hpp"
 
-#include "../../nrg/kramers_kronig.hpp"
-#include "../../nrg/convert.hpp"
+#include "../nrg/kramers_kronig.hpp"
+#include "../nrg/convert.hpp"
 
 #include <nda/linalg.hpp>
 
@@ -10,7 +10,6 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
-#include <sstream>
 #include <stdexcept>
 #include <string>
 
@@ -29,25 +28,8 @@ namespace nrgljubljana_interface::dmft {
 
     std::size_t workers() { return static_cast<std::size_t>(std::max(1, omp_get_max_threads())); }
 
-    std::string number(double x) {
-      std::ostringstream os;
-      os.precision(12);
-      os << x;
-      return os.str();
-    }
-
-    void check_finite(g_w_t const &F, std::string const &function) {
-      for (long b = 0; b < long(F.size()); ++b) {
-        auto const &d   = F[b].data();
-        auto const &pts = F[b].mesh().points();
-        for (long k = 0; k < d.extent(0); ++k)
-          for (long i = 0; i < d.extent(1); ++i)
-            for (long j = 0; j < d.extent(2); ++j)
-              if (not std::isfinite(d(k, i, j).real()) or not std::isfinite(d(k, i, j).imag()))
-                throw std::invalid_argument(function + ": the function is not finite in block " + F.block_names()[b] + ", element ("
-                                            + std::to_string(i) + ", " + std::to_string(j) + "), at ω = " + number(pts[k]));
-      }
-    }
+    using detail::check_finite;
+    using detail::number;
 
     // The Hermitian part (F + F†)/2 and the spectral part (F† − F)/(2i) of one block, both exactly Hermitian
     void split(values_t const &d, values_t &H, values_t &S) {
@@ -102,29 +84,20 @@ namespace nrgljubljana_interface::dmft {
 
     // The high-frequency limit checked against F and symmetrized
     block_matrices_t checked_limit(g_w_t const &F, block_matrices_t const &limit) {
-      if (long(limit.size()) != long(F.size()))
-        throw std::invalid_argument("rebuild_hermitian_part: the high-frequency limit has " + std::to_string(limit.size())
-                                    + " matrices, the function " + std::to_string(F.size()) + " blocks");
+      detail::check_block_matrices(F, limit, "rebuild_hermitian_part", "the high-frequency limit");
       block_matrices_t result;
       for (long b = 0; b < long(F.size()); ++b) {
-        auto const &L    = limit[b];
-        auto const &name = F.block_names()[b];
-        long const n     = F[b].data().extent(1);
-        if (L.extent(0) != n or L.extent(1) != n)
-          throw std::invalid_argument("rebuild_hermitian_part: the high-frequency limit of block " + name + " is "
-                                      + std::to_string(L.extent(0)) + "x" + std::to_string(L.extent(1)) + ", the block "
-                                      + std::to_string(n) + "x" + std::to_string(n));
+        auto const &L = limit[b];
+        long const n  = L.extent(0);
         double scale = 0, asymmetry = 0;
         for (long i = 0; i < n; ++i)
           for (long j = 0; j < n; ++j) {
-            if (not std::isfinite(L(i, j).real()) or not std::isfinite(L(i, j).imag()))
-              throw std::invalid_argument("rebuild_hermitian_part: the high-frequency limit of block " + name + " is not finite");
             scale     = std::max(scale, std::abs(L(i, j)));
             asymmetry = std::max(asymmetry, std::abs(L(i, j) - std::conj(L(j, i))));
           }
         if (asymmetry > hermitian_tolerance * scale)
-          throw std::invalid_argument("rebuild_hermitian_part: the high-frequency limit of block " + name + " is not Hermitian (|L - L†| = "
-                                      + number(asymmetry) + ")");
+          throw std::invalid_argument("rebuild_hermitian_part: the high-frequency limit of block " + F.block_names()[b]
+                                      + " is not Hermitian (|L - L†| = " + number(asymmetry) + ")");
         nda::matrix<dcomplex> sym(n, n);
         for (long i = 0; i < n; ++i)
           for (long j = 0; j < n; ++j) sym(i, j) = (L(i, j) + std::conj(L(j, i))) / 2.0;

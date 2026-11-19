@@ -1,5 +1,6 @@
 #include "./process.hpp"
 
+#include "../dmft/self_energy.hpp"
 #include "../nrg/broadening.hpp"
 #include "../nrg/convert.hpp"
 #include "../nrg/kramers_kronig.hpp"
@@ -102,7 +103,15 @@ namespace nrgljubljana_interface {
     auto const &F_l = r.processed.at("F_l");
     auto const &F_r = r.processed.at("F_r");
     auto const &I   = r.processed.at("I");
-    g_w_t sigma                 = hartree + I - F_l / G * F_r;
+    dmft::block_matrices_t hartree_matrices;
+    for (long bl = 0; bl < long(hartree.size()); ++bl) {
+      auto const &d = hartree[bl].data();
+      nda::matrix<dcomplex> h(d.extent(1), d.extent(2));
+      for (long i = 0; i < d.extent(1); ++i)
+        for (long j = 0; j < d.extent(2); ++j) h(i, j) = d(0, i, j);
+      hartree_matrices.push_back(std::move(h));
+    }
+    g_w_t sigma                 = dmft::sigma_IFG(G, F_l, F_r, I, hartree_matrices);
     r.processed["Sigma"]        = std::move(sigma);
     r.processed["SigmaHartree"] = std::move(hartree);
   }
