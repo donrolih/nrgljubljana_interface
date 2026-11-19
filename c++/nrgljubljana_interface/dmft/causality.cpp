@@ -5,8 +5,6 @@
 
 #include <nda/linalg.hpp>
 
-#include <omp.h>
-
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -26,9 +24,8 @@ namespace nrgljubljana_interface::dmft {
     // A high-frequency limit is Hermitian if |L_ij − conj(L_ji)| is at most this times the largest |L_ij|
     constexpr double hermitian_tolerance = 1e-12;
 
-    std::size_t workers() { return static_cast<std::size_t>(std::max(1, omp_get_max_threads())); }
-
     using detail::check_finite;
+    using detail::workers;
     using detail::number;
 
     // The Hermitian part (F + F†)/2 and the spectral part (F† − F)/(2i) of one block, both exactly Hermitian

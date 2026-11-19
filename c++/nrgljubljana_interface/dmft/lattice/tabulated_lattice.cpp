@@ -1,0 +1,132 @@
+#include "./tabulated_lattice.hpp"
+
+#include "../../nrg/integrate.hpp"
+#include "../../nrg/lattice.hpp"
+#include "../../nrg/output.hpp"
+
+#include <algorithm>
+#include <cmath>
+#include <sstream>
+#include <stdexcept>
+
+namespace nrgljubljana_interface::dmft {
+
+  namespace {
+
+    // A DOS is normalized if its integral is within this of 1
+    constexpr double normalization_tolerance = 1e-8;
+
+    nrg::dos_table_t table(dos_t const &d) { return {d.energy, d.density}; }
+
+    void check_dos(dos_t const &d, std::string const &where) {
+      auto const prefix = "tabulated_lattice_t: the DOS" + where;
+      if (d.energy.size() != d.density.size())
+        throw std::invalid_argument(prefix + " has " + std::to_string(d.energy.size()) + " energies and " + std::to_string(d.density.size()) + " densities");
+      if (d.energy.size() < 3) throw std::invalid_argument(prefix + " has fewer than 3 points");
+      for (std::size_t k = 0; k < d.energy.size(); ++k) {
+        if (not std::isfinite(d.energy[k]) or not std::isfinite(d.density[k])) throw std::invalid_argument(prefix + " is not finite at point " + std::to_string(k));
+        if (d.density[k] < 0)
+          throw std::invalid_argument(prefix + " is negative at ε = " + detail::number(d.energy[k]) + " (" + detail::number(d.density[k]) + ")");
+        if (k > 0 and not(d.energy[k] > d.energy[k - 1]))
+          throw std::invalid_argument(prefix + ": the energies are not strictly increasing at point " + std::to_string(k));
+      }
+      double const norm = nrg::integrate(d.energy, d.density);
+      if (not(std::abs(norm - 1) <= normalization_tolerance))
+        throw std::invalid_argument(prefix + " is not normalized: its integral is " + detail::number(norm) + ", expected 1 within 1e-8");
+    }
+
+    double centroid(dos_t const &d) { return nrg::integrate_moment(table(d), 1); }
+
+  } // namespace
+
+  tabulated_lattice_t::tabulated_lattice_t(dos_t dos, double sigma_floor) : shared_(std::move(dos)), floor_(sigma_floor) {
+    detail::check_sigma_floor(floor_, "tabulated_lattice_t");
+    check_dos(*shared_, "");
+    centroid_[""] = {centroid(*shared_)};
+  }
+
+  tabulated_lattice_t::tabulated_lattice_t(std::map<std::string, std::vector<dos_t>> per_element, double sigma_floor)
+     : per_element_(std::move(per_element)), floor_(sigma_floor) {
+    detail::check_sigma_floor(floor_, "tabulated_lattice_t");
+    if (per_element_.empty()) throw std::invalid_argument("tabulated_lattice_t: no blocks");
+    for (auto const &[name, list] : per_element_) {
+      if (list.empty()) throw std::invalid_argument("tabulated_lattice_t: no DOS for block " + name);
+      for (std::size_t i = 0; i < list.size(); ++i) {
+        check_dos(list[i], " of block " + name + ", orbital " + std::to_string(i));
+        centroid_[name].push_back(centroid(list[i]));
+      }
+    }
+  }
+
+  dos_t const &tabulated_lattice_t::dos(std::string const &block, long orbital) const { return shared_ ? *shared_ : per_element_.at(block).at(orbital); }
+
+  void tabulated_lattice_t::check_structure(std::vector<std::string> const &names, std::vector<long> const &sizes, std::string const &function) const {
+    if (shared_) return;
+    for (std::size_t b = 0; b < names.size(); ++b) {
+      auto const it = per_element_.find(names[b]);
+      if (it == per_element_.end()) throw std::invalid_argument(function + ": no DOS for block " + names[b]);
+      if (long(it->second.size()) != sizes[b])
+        throw std::invalid_argument(function + ": block " + names[b] + " has " + std::to_string(sizes[b]) + " orbitals, the DOS map "
+                                    + std::to_string(it->second.size()));
+    }
+    for (auto const &[name, list] : per_element_)
+      if (std::find(names.begin(), names.end(), name) == names.end()) throw std::invalid_argument(function + ": a DOS for block " + name + ", not in the structure");
+  }
+
+  std::vector<g_w_t> tabulated_lattice_t::transform(g_w_t const &Sigma, double mu, unsigned max_moment, std::string const &function) const {
+    std::vector<long> sizes;
+    for (long b = 0; b < long(Sigma.size()); ++b) sizes.push_back(Sigma[b].data().extent(1));
+    check_structure(Sigma.block_names(), sizes, function);
+    auto const floor = floor_;
+    auto scalar = [this, floor](std::string const &block, long orbital, std::vector<double> const &mesh, std::vector<std::complex<double>> const &sigma,
+                                double m, unsigned moment) {
+      return nrg::hilbert_moment(table(dos(block, orbital)), mesh, sigma, m, floor, moment, detail::workers());
+    };
+    return detail::lattice_moments(Sigma, mu, max_moment, scalar, shared_.has_value(), function);
+  }
+
+  std::pair<g_w_t, g_w_t> tabulated_lattice_t::moments(g_w_t const &Sigma, double mu) const {
+    auto m = transform(Sigma, mu, 1, "tabulated_lattice_t");
+    return {std::move(m[0]), std::move(m[1])};
+  }
+
+  g_w_t tabulated_lattice_t::local_gf(g_w_t const &Sigma, double mu) const { return std::move(transform(Sigma, mu, 0, "tabulated_lattice_t")[0]); }
+
+  block_matrices_t tabulated_lattice_t::onsite_energy(triqs::gfs::gf_struct_t const &structure) const {
+    std::vector<std::string> names;
+    std::vector<long> sizes;
+    for (auto const &[name, n] : structure) {
+      names.push_back(name);
+      sizes.push_back(n);
+    }
+    check_structure(names, sizes, "tabulated_lattice_t");
+    block_matrices_t result;
+    for (std::size_t b = 0; b < names.size(); ++b) {
+      nda::matrix<std::complex<double>> m(sizes[b], sizes[b]);
+      m = 0;
+      for (long i = 0; i < sizes[b]; ++i) m(i, i) = shared_ ? centroid_.at("")[0] : centroid_.at(names[b])[i];
+      result.push_back(std::move(m));
+    }
+    return result;
+  }
+
+  dos_t tabulated_lattice_t::read_dos(std::string const &path) {
+    std::istringstream in(nrg::read_text_file(path));
+    dos_t d;
+    long number = 0;
+    for (std::string line; std::getline(in, line);) {
+      ++number;
+      auto const first = line.find_first_not_of(" \t\r");
+      if (first == std::string::npos or line[first] == '#') continue;
+      std::istringstream fields(line);
+      double e = 0, rho = 0;
+      std::string extra;
+      if (not(fields >> e >> rho) or (fields >> extra))
+        throw std::invalid_argument("read_dos: " + path + ", line " + std::to_string(number) + ": expected two numbers, energy and density");
+      d.energy.push_back(e);
+      d.density.push_back(rho);
+    }
+    return d;
+  }
+
+} // namespace nrgljubljana_interface::dmft

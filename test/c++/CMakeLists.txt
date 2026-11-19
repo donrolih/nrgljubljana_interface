@@ -6,7 +6,7 @@ endforeach()
 
 # List of all tests, by CTest label: unit (no NRG run), solver (short NRG runs), long (manual)
 #file(GLOB_RECURSE all_tests RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.cpp)
-set(unit_tests refreq_log.cpp hilbert_transform.cpp nrg_libraries.cpp nrg_adapters.cpp parameter_file.cpp manifest.cpp solver_construction.cpp options_and_result.cpp param_rendering.cpp nrg_output.cpp broadening.cpp dmft_causality.cpp dmft_self_energy.cpp dmft_measurements.cpp)
+set(unit_tests refreq_log.cpp hilbert_transform.cpp nrg_libraries.cpp nrg_adapters.cpp parameter_file.cpp manifest.cpp solver_construction.cpp options_and_result.cpp param_rendering.cpp nrg_output.cpp broadening.cpp dmft_causality.cpp dmft_self_energy.cpp dmft_measurements.cpp dmft_lattice.cpp)
 set(solver_tests siam.cpp solver_hdf5.cpp raw_results.cpp independent_solves.cpp deferred_broadening.cpp)
 set(long_tests)
 set(all_tests ${unit_tests} ${solver_tests} ${long_tests})

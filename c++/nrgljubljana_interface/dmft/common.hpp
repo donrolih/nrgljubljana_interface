@@ -7,6 +7,7 @@
 #include <nda/nda.hpp>
 
 #include <complex>
+#include <cstddef>
 #include <string>
 #include <vector>
 
@@ -19,6 +20,9 @@ namespace nrgljubljana_interface::dmft {
 
     /// A number for an error message
     std::string number(double x);
+
+    /// Workers for NRG Ljubljana numerics: the OpenMP thread count, at least 1
+    std::size_t workers();
 
     /// Throws std::invalid_argument "<function>: <what> is not finite in block B, element (i, j), at ω = x"
     void check_finite(g_w_t const &F, std::string const &function, std::string const &what = "the function");

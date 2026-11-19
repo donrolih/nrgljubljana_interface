@@ -1,5 +1,8 @@
 #include "./common.hpp"
 
+#include <omp.h>
+
+#include <algorithm>
 #include <cmath>
 #include <sstream>
 #include <stdexcept>
@@ -20,6 +23,8 @@ namespace nrgljubljana_interface::dmft::detail {
     os << x;
     return os.str();
   }
+
+  std::size_t workers() { return static_cast<std::size_t>(std::max(1, omp_get_max_threads())); }
 
   void check_finite(g_w_t const &F, std::string const &function, std::string const &what) {
     for (long b = 0; b < long(F.size()); ++b) {
