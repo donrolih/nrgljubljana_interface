@@ -80,8 +80,8 @@ namespace nrgljubljana_interface::dmft {
     }
 
     // The high-frequency limit checked against F and symmetrized
-    block_matrices_t checked_limit(g_w_t const &F, block_matrices_t const &limit) {
-      detail::check_block_matrices(F, limit, "rebuild_hermitian_part", "the high-frequency limit");
+    block_matrices_t checked_limit(g_w_t const &F, block_matrices_t const &limit, std::string const &function, std::string const &what) {
+      detail::check_block_matrices(F, limit, function, what);
       block_matrices_t result;
       for (long b = 0; b < long(F.size()); ++b) {
         auto const &L = limit[b];
@@ -93,8 +93,8 @@ namespace nrgljubljana_interface::dmft {
             asymmetry = std::max(asymmetry, std::abs(L(i, j) - std::conj(L(j, i))));
           }
         if (asymmetry > hermitian_tolerance * scale)
-          throw std::invalid_argument("rebuild_hermitian_part: the high-frequency limit of block " + F.block_names()[b]
-                                      + " is not Hermitian (|L - L†| = " + number(asymmetry) + ")");
+          throw std::invalid_argument(function + ": " + what + " of block " + F.block_names()[b] + " is not Hermitian (|L - L†| = "
+                                      + number(asymmetry) + ")");
         nda::matrix<dcomplex> sym(n, n);
         for (long i = 0; i < n; ++i)
           for (long j = 0; j < n; ++j) sym(i, j) = (L(i, j) + std::conj(L(j, i))) / 2.0;
@@ -103,35 +103,16 @@ namespace nrgljubljana_interface::dmft {
       return result;
     }
 
-  } // namespace
-
-  g_w_t spectral_part(g_w_t const &F) {
-    g_w_t S = F;
-    for (long b = 0; b < long(F.size()); ++b) {
-      values_t H, s;
-      split(F[b].data(), H, s);
-      S[b].data() = s;
-    }
-    return S;
-  }
-
-  std::pair<g_w_t, causality_report_t> causal_projection(g_w_t const &F, double floor) {
-    if (not std::isfinite(floor) or floor < 0) throw std::invalid_argument("causal_projection: the floor must be finite and >= 0, got " + number(floor));
-    check_finite(F, "causal_projection");
-
-    g_w_t result = F;
-    causality_report_t report;
-    for (long b = 0; b < long(F.size()); ++b) {
-      auto const &d = F[b].data();
-      long const nw = d.extent(0), n = d.extent(1);
-      values_t H, S;
-      split(d, H, S);
-      values_t Sp = S, dS(nw, n, n);
+    // Raise the eigenvalues of the spectral part S of one block below floor to it: S' = S + δS. An eigenvalue counts
+    // as below only by more than floor_tolerance times the largest |F_ij(ω)| (scale). Returns whether any was raised.
+    bool project(values_t const &S, values_t const &scale, double floor, values_t &Sp, values_t &dS, causality_report_t &report) {
+      long const nw = S.extent(0), n = S.extent(1);
+      Sp          = S;
+      dS          = values_t(nw, n, n);
       dS          = 0;
       bool raised = false;
-
       for (long k = 0; k < nw; ++k) {
-        double const limit = floor - floor_tolerance * largest_abs(d, k);
+        double const limit = floor - floor_tolerance * largest_abs(scale, k);
         if (n == 1) {
           double const lambda = S(k, 0, 0).real();
           if (not(lambda < limit)) continue;
@@ -163,7 +144,46 @@ namespace nrgljubljana_interface::dmft {
         report.projected_points++;
         report.largest_violation = std::max(report.largest_violation, floor - lambda(0));
       }
-      if (not raised) continue;
+      return raised;
+    }
+
+    // F = L + KK(−S) − iS on the points of a mesh, for one block
+    void rebuild(values_t const &S, nda::matrix<dcomplex> const &L, std::vector<double> const &points, values_t &out) {
+      long const nw = S.extent(0), n = S.extent(1);
+      auto const K  = kk_minus(S, points);
+      for (long k = 0; k < nw; ++k)
+        for (long i = 0; i < n; ++i)
+          for (long j = 0; j < n; ++j) out(k, i, j) = combine(L(i, j) + K(k, i, j), S(k, i, j));
+    }
+
+    void check_floor(double floor, std::string const &function) {
+      if (not std::isfinite(floor) or floor < 0) throw std::invalid_argument(function + ": the floor must be finite and >= 0, got " + number(floor));
+    }
+
+  } // namespace
+
+  g_w_t spectral_part(g_w_t const &F) {
+    g_w_t S = F;
+    for (long b = 0; b < long(F.size()); ++b) {
+      values_t H, s;
+      split(F[b].data(), H, s);
+      S[b].data() = s;
+    }
+    return S;
+  }
+
+  std::pair<g_w_t, causality_report_t> causal_projection(g_w_t const &F, double floor) {
+    check_floor(floor, "causal_projection");
+    check_finite(F, "causal_projection");
+
+    g_w_t result = F;
+    causality_report_t report;
+    for (long b = 0; b < long(F.size()); ++b) {
+      auto const &d = F[b].data();
+      long const nw = d.extent(0), n = d.extent(1);
+      values_t H, S, Sp, dS;
+      split(d, H, S);
+      if (not project(S, d, floor, Sp, dS, report)) continue;
 
       auto const K = kk_minus(dS, nrg::mesh_points(F[b].mesh()));
       auto &out    = result[b].data();
@@ -176,21 +196,45 @@ namespace nrgljubljana_interface::dmft {
 
   g_w_t rebuild_hermitian_part(g_w_t const &F, block_matrices_t const &high_frequency_limit) {
     check_finite(F, "rebuild_hermitian_part");
-    auto const limit = checked_limit(F, high_frequency_limit);
+    auto const limit = checked_limit(F, high_frequency_limit, "rebuild_hermitian_part", "the high-frequency limit");
 
     g_w_t result = F;
     for (long b = 0; b < long(F.size()); ++b) {
-      auto const &d = F[b].data();
-      long const nw = d.extent(0), n = d.extent(1);
       values_t H, S;
-      split(d, H, S);
-      auto const K = kk_minus(S, nrg::mesh_points(F[b].mesh()));
-      auto &out    = result[b].data();
-      for (long k = 0; k < nw; ++k)
-        for (long i = 0; i < n; ++i)
-          for (long j = 0; j < n; ++j) out(k, i, j) = combine(limit[b](i, j) + K(k, i, j), S(k, i, j));
+      split(F[b].data(), H, S);
+      rebuild(S, limit[b], nrg::mesh_points(F[b].mesh()), result[b].data());
     }
     return result;
+  }
+
+  std::pair<g_w_t, causality_report_t> hybridization_from_gamma(g_w_t const &Gamma, block_matrices_t const &onsite_energy, double floor) {
+    std::string const function = "hybridization_from_gamma";
+    check_floor(floor, function);
+    check_finite(Gamma, function, "Gamma");
+    auto const limit = checked_limit(Gamma, onsite_energy, function, "the on-site energy");
+    for (long b = 0; b < long(Gamma.size()); ++b) {
+      auto const &d = Gamma[b].data();
+      for (long k = 0; k < d.extent(0); ++k)
+        for (long i = 0; i < d.extent(1); ++i)
+          for (long j = 0; j < d.extent(2); ++j)
+            if (std::abs(d(k, i, j) - std::conj(d(k, j, i))) > hermitian_tolerance * largest_abs(d, k))
+              throw std::invalid_argument(function + ": Gamma is not Hermitian in block " + Gamma.block_names()[b] + " at ω = "
+                                          + number(Gamma[b].mesh().points()[k]));
+    }
+
+    g_w_t result = Gamma;
+    causality_report_t report;
+    for (long b = 0; b < long(Gamma.size()); ++b) {
+      auto const &d = Gamma[b].data();
+      long const nw = d.extent(0), n = d.extent(1);
+      values_t S(nw, n, n), Sp, dS;
+      for (long k = 0; k < nw; ++k)
+        for (long i = 0; i < n; ++i)
+          for (long j = 0; j < n; ++j) S(k, i, j) = i == j ? dcomplex{d(k, i, i).real(), 0.0} : (d(k, i, j) + std::conj(d(k, j, i))) / 2.0;
+      project(S, d, floor, Sp, dS, report);
+      rebuild(Sp, limit[b], nrg::mesh_points(Gamma[b].mesh()), result[b].data());
+    }
+    return {std::move(result), report};
   }
 
   block_matrices_t high_frequency_limit(g_w_t const &F) {

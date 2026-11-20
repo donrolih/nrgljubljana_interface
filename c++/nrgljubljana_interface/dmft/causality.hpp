@@ -55,4 +55,15 @@ namespace nrgljubljana_interface::dmft {
    */
   block_matrices_t high_frequency_limit(g_w_t const &F);
 
+  /**
+   * The hybridization from a spectral part Γ, e.g. after mixing: the eigenvalues of Γ below floor raised to it (Γ'),
+   * then Δ = ⟨h⟩ + KK(−Γ') − iΓ' with the on-site energy ⟨h⟩ (one matrix per block, symmetrized). The same as
+   * rebuild_hermitian_part(causal_projection(−iΓ, floor).first, ⟨h⟩), without the correction that the rebuild
+   * discards.
+   *
+   * Throws std::invalid_argument for a negative or non-finite floor, a non-finite or non-Hermitian Γ (to 1e-12 of its
+   * largest element), and on-site energies of the wrong number or size.
+   */
+  std::pair<g_w_t, causality_report_t> hybridization_from_gamma(g_w_t const &Gamma, block_matrices_t const &onsite_energy, double floor);
+
 } // namespace nrgljubljana_interface::dmft
