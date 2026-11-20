@@ -59,7 +59,7 @@ namespace nrgljubljana_interface::dmft {
                                        std::string const &function);
 
     /// Throws std::invalid_argument unless the floor of Im Σ is finite and at least what NRG Ljubljana accepts
-    void check_sigma_floor(double floor, std::string const &function);
+    void check_Sigma_floor(double floor, std::string const &function);
 
   } // namespace detail
 

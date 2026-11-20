@@ -85,11 +85,11 @@ TEST(Convergence, Window) {
   run_t run{convergence_t{params()}};
   auto const r1 = run.step(0);
   EXPECT_FALSE(r1.distance.has_value());
-  EXPECT_EQ(r1.decision, "continue");
+  EXPECT_EQ(r1.status, "continue");
   EXPECT_EQ(r1.window_samples, 0);
-  std::vector<std::string> decisions;
-  for (double d : {1e-3, 5e-7, 5e-7, 5e-7, 2e-6, 5e-7, 5e-7, 5e-7}) decisions.push_back(run.step(d).decision);
-  EXPECT_EQ(decisions, (std::vector<std::string>{"continue", "continue", "continue", "converged", "continue", "continue", "continue", "converged"}));
+  std::vector<std::string> statuses;
+  for (double d : {1e-3, 5e-7, 5e-7, 5e-7, 2e-6, 5e-7, 5e-7, 5e-7}) statuses.push_back(run.step(d).status);
+  EXPECT_EQ(statuses, (std::vector<std::string>{"continue", "continue", "continue", "converged", "continue", "continue", "continue", "converged"}));
   EXPECT_NEAR(*run.step(5e-7).distance, 5e-7, 1e-12);
   EXPECT_EQ(run.convergence.history().size(), 9u);
 }
@@ -97,21 +97,21 @@ TEST(Convergence, Window) {
 TEST(Convergence, Iterations) {
   {
     run_t run{convergence_t{params(6)}};
-    std::vector<std::string> decisions;
-    for (double d : {0.0, 5e-7, 5e-7, 5e-7, 5e-7, 5e-7}) decisions.push_back(run.step(d).decision);
-    EXPECT_EQ(decisions, (std::vector<std::string>{"continue", "continue", "continue", "continue", "continue", "converged"}));
+    std::vector<std::string> statuses;
+    for (double d : {0.0, 5e-7, 5e-7, 5e-7, 5e-7, 5e-7}) statuses.push_back(run.step(d).status);
+    EXPECT_EQ(statuses, (std::vector<std::string>{"continue", "continue", "continue", "continue", "continue", "converged"}));
   }
   {
     run_t run{convergence_t{params(1, 3)}};
-    std::vector<std::string> decisions;
-    for (double d : {0.0, 1e-3, 1e-3}) decisions.push_back(run.step(d).decision);
-    EXPECT_EQ(decisions.back(), "stop");
+    std::vector<std::string> statuses;
+    for (double d : {0.0, 1e-3, 1e-3}) statuses.push_back(run.step(d).status);
+    EXPECT_EQ(statuses.back(), "stop");
   }
   {
     run_t run{convergence_t{params(1, 4)}};
-    std::vector<std::string> decisions;
-    for (double d : {0.0, 5e-7, 5e-7, 5e-7}) decisions.push_back(run.step(d).decision);
-    EXPECT_EQ(decisions.back(), "converged"); // converging at max_iter is not a stop
+    std::vector<std::string> statuses;
+    for (double d : {0.0, 5e-7, 5e-7, 5e-7}) statuses.push_back(run.step(d).status);
+    EXPECT_EQ(statuses.back(), "converged"); // converging at max_iter is not a stop
   }
 }
 
@@ -122,14 +122,14 @@ TEST(Convergence, FillingAndMu) {
     for (double d : {0.0, 5e-7, 5e-7, 5e-7}) r = run.step(d, filling, goal, mu_step);
     return r;
   };
-  EXPECT_EQ(last(0.8, 0.8, 0.0).decision, "converged");
+  EXPECT_EQ(last(0.8, 0.8, 0.0).status, "converged");
   auto const off = last(0.80001, 0.8, 0.0);
-  EXPECT_EQ(off.decision, "continue");
+  EXPECT_EQ(off.status, "continue");
   EXPECT_FALSE(off.filling_ok);
   auto const moving = last(0.8, 0.8, 1e-6);
-  EXPECT_EQ(moving.decision, "continue");
+  EXPECT_EQ(moving.status, "continue");
   EXPECT_FALSE(moving.mu_ok);
-  EXPECT_EQ(last(0.80001, std::nullopt, 1e-6).decision, "converged"); // fixed μ: not checked
+  EXPECT_EQ(last(0.80001, std::nullopt, 1e-6).status, "converged"); // fixed μ: not checked
 }
 
 TEST(Convergence, ImpurityLatticeGate) {
@@ -143,24 +143,24 @@ TEST(Convergence, ImpurityLatticeGate) {
     return r;
   };
   auto const ungated = last(std::nullopt);
-  EXPECT_EQ(ungated.decision, "converged");
+  EXPECT_EQ(ungated.status, "converged");
   EXPECT_NEAR(ungated.distance_imp_loc, 1e-4, 1e-12);
   auto const gated = last(1e-5);
-  EXPECT_EQ(gated.decision, "continue");
+  EXPECT_EQ(gated.status, "continue");
   EXPECT_FALSE(gated.imp_loc_ok);
 }
 
-// Interrupted after three iterations, written and read into a new object: the same decisions as without
+// Interrupted after three iterations, written and read into a new object: the same statuses as without
 TEST(Convergence, Checkpoint) {
   std::vector<double> const distances{0.0, 1e-3, 5e-7, 5e-7, 5e-7, 5e-7};
   run_t full{convergence_t{params()}};
   std::vector<std::string> expected;
-  for (double d : distances) expected.push_back(full.step(d).decision);
+  for (double d : distances) expected.push_back(full.step(d).status);
 
   std::string const path = "dmft_convergence.h5";
   run_t first{convergence_t{params()}};
-  std::vector<std::string> decisions;
-  for (std::size_t i = 0; i < 3; ++i) decisions.push_back(first.step(distances[i]).decision);
+  std::vector<std::string> statuses;
+  for (std::size_t i = 0; i < 3; ++i) statuses.push_back(first.step(distances[i]).status);
   {
     h5::file f(path, 'w');
     first.convergence.h5_write(h5::group(f), "convergence");
@@ -173,8 +173,8 @@ TEST(Convergence, Checkpoint) {
     h5_read(h5::group(f).open_group("convergence"), "params", p);
     EXPECT_EQ(p.window, 3);
   }
-  for (std::size_t i = 3; i < distances.size(); ++i) decisions.push_back(second.step(distances[i]).decision);
-  EXPECT_EQ(decisions, expected);
+  for (std::size_t i = 3; i < distances.size(); ++i) statuses.push_back(second.step(distances[i]).status);
+  EXPECT_EQ(statuses, expected);
   std::filesystem::remove(path);
 }
 

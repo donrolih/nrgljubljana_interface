@@ -28,9 +28,8 @@ the python :download:`script <aim.py>`:
 
 Running this script takes a few minutes and generates an
 HDF5 archive file called :file:`aim_solution.h5`. This file contains
-the impurity spectral function, Green's function, auxiliary Green's function,
-self-energy, and expectation values of local variables, here
-:math:`\langle n \rangle` and :math:`\langle n^2 \rangle`. Let us plot
+the impurity spectral function, Green's function, self-energy, the expectation values of local variables, here
+:math:`\langle n \rangle` and :math:`\langle n^2 \rangle`, and the result object of the solve. Let us plot
 the spectral function:
 
 .. plot:: guide/aim_plot.py
@@ -43,19 +42,19 @@ spectral function.
 Let us now go through the script in some more detail:
 
 .. literalinclude:: aim.py
-  :lines: 1-2
+  :lines: 1-3
 
-These lines import the classes to run the NRG solver and to store the results
-in a HDF5 archive file.
+These lines import the classes to run the NRG solver, two functions of the DMFT layer
+(:ref:`dmft`), and the class to store the results in a HDF5 archive file.
 
 .. literalinclude:: aim.py
-  :lines: 5-7
+  :lines: 6-8
 
 These lines define the impurity parameters, the (half)bandwidth :math:`D=1`,
 and the physical temperature :math:`T`.
 
 .. literalinclude:: aim.py
-  :lines: 10
+  :lines: 11
 
 Here we construct the Solver object. The most important parameters here
 are the model name and its symmetry type, as well as the mesh parameters which
@@ -68,7 +67,7 @@ within Solver are correctly initialized, and in particular that the block struct
 of all Green's function objects is consistent.
 
 .. literalinclude:: aim.py
-  :lines: 13
+  :lines: 14
 
 This line defines, in addition to the physical temperature,
 the key solve parameters which affect the quality of the results: the
@@ -89,28 +88,41 @@ Finally, we have set the model parameters. These are contained in a separate Pyt
 dictionary:
 
 .. literalinclude:: aim.py
-  :lines: 16-17
+  :lines: 17-18
 
 The hybridisation function is set by the following line:
 
 .. literalinclude:: aim.py
-  :lines: 20
+  :lines: 21
 
-We can now call the solver...
-
-.. literalinclude:: aim.py
-  :lines: 23
-
-... and store the results in an HDF5 archive:
+We can now call the solver:
 
 .. literalinclude:: aim.py
-  :lines: 26-31
+  :lines: 24
 
-The expectation values can be accessed through the Python dictionary
-``S.expv``:
+The solve options are given next to the solve parameters (see :ref:`options_results`). Here ``correlators``
+selects the four correlators from which the self-energy is computed, :math:`\Sigma = \Sigma_H + I - F_l G^{-1} F_r`;
+the template provides more (for example the charge and spin susceptibilities), which are then not computed.
+
+The spectral bins of each correlator are kept in the result of the solve, so a correlator can be broadened again,
+here with a wider broadening, without running NRG:
 
 .. literalinclude:: aim.py
-  :lines: 33
+  :lines: 27
+
+This replaces ``S.G_w`` and ``S.A_w``; ``S.Sigma_w`` is still that of the solve. The results are stored in an HDF5
+archive, together with the result object of the solve (options, parameters, expectation values, the broadened
+correlators). ``without_bins()`` leaves out the spectral bins, most of the size of a result; a result
+stored with its bins can be broadened again later.
+
+.. literalinclude:: aim.py
+  :lines: 30-35
+
+Finally, the occupancy computed from the Green's function, with the spin degeneracy of the block, is compared with
+the expectation value ``S.expv["n_d"]`` from NRG, and the spectral weight of :math:`A(\omega)` is checked:
+
+.. literalinclude:: aim.py
+  :lines: 38-39
 
 A version of this example can also be found in ``tutorial/1_AIM``
 in the form of a Python script and a Jupyter (IPython) notebook.

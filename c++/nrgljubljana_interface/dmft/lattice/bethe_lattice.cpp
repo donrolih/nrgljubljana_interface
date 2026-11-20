@@ -7,10 +7,10 @@
 
 namespace nrgljubljana_interface::dmft {
 
-  bethe_lattice_t::bethe_lattice_t(double half_bandwidth, double sigma_floor) : D_(half_bandwidth), floor_(sigma_floor) {
+  bethe_lattice_t::bethe_lattice_t(double half_bandwidth, double Sigma_floor) : D_(half_bandwidth), floor_(Sigma_floor) {
     if (not std::isfinite(D_) or D_ <= 0)
       throw std::invalid_argument("bethe_lattice_t: the half-bandwidth must be positive and finite, got " + detail::number(D_));
-    detail::check_sigma_floor(floor_, "bethe_lattice_t");
+    detail::check_Sigma_floor(floor_, "bethe_lattice_t");
   }
 
   detail::scalar_moment_t bethe_lattice_t::scalar() const {
@@ -38,7 +38,7 @@ namespace nrgljubljana_interface::dmft {
   std::string bethe_lattice_t::description() const {
     std::ostringstream os;
     os.precision(17);
-    os << "bethe half_bandwidth=" << D_ << " sigma_floor=" << floor_;
+    os << "bethe half_bandwidth=" << D_ << " Sigma_floor=" << floor_;
     return os.str();
   }
 

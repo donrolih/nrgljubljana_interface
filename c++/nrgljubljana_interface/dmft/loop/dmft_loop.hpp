@@ -28,7 +28,7 @@ namespace nrgljubljana_interface::dmft {
     /// What each solve computes; must give G, F_l, F_r and I broadened, for the full set of z
     options_t options = {};
     /// Floors of the spectral parts of Δ and Σ
-    double Gamma_floor = 1e-6, sigma_floor = 1e-12;
+    double Gamma_floor = 1e-6, Sigma_floor = 1e-12;
     /// Directory of the files of the run (rank 0): checkpoint.h5, history.h5, stats.dat; empty: no files
     std::string run_dir = {};
     /// Append each iteration to history.h5
@@ -46,14 +46,14 @@ namespace nrgljubljana_interface::dmft {
     /// μ of the solve, μ for the next iteration, and the filling at μ
     double mu = 0, mu_next = 0, filling = 0;
     /// The causal projections of Σ and of the next Δ
-    causality_report_t sigma_projection = {}, delta_projection = {};
+    causality_report_t Sigma_projection = {}, Delta_projection = {};
     mu_report_t mu_report = {};
     mix_report_t mix_report = {};
     convergence_result_t convergence = {};
     /// Expectation values of the solve
     std::map<std::string, double> expv = {};
-    /// The next Δ could not be prepared after a terminal decision; Δ is kept
-    bool kept_delta = false;
+    /// The next Δ could not be prepared after a terminal status; Δ is kept
+    bool kept_Delta = false;
 
     static std::string hdf5_format() { return "NRGLJUBLJANA_INTERFACE_StepResult"; }
   };
@@ -64,8 +64,8 @@ namespace nrgljubljana_interface::dmft {
   /**
    * The DMFT loop. One step: the impurity levels ⟨h⟩_ii − μ from the manifest's [levels]; the solve with Δ; Σ
    * made causal; G_loc at μ; μ_next from the μ control (or from the mixer, when it moves μ); (G_loc, Δ_out) at
-   * μ_next; the convergence decision with G_imp = impurity_gf(Δ, Σ, −μ); Γ and Γ_out mixed and the next Δ
-   * from hybridization_from_Gamma. Rank 0 broadcasts Δ_mix, μ_next and the decision.
+   * μ_next; the convergence status with G_imp = impurity_gf(Δ, Σ, −μ); Γ and Γ_out mixed and the next Δ
+   * from hybridization_from_Gamma. Rank 0 broadcasts Δ_mix, μ_next and the status.
    *
    * Without a μ control μ stays fixed and the filling is still measured. Construction throws std::invalid_argument
    * for options that do not give G, F_l, F_r and I broadened for the full set of z, a manifest without a level for
@@ -105,7 +105,7 @@ namespace nrgljubljana_interface::dmft {
     /// One iteration; throws std::logic_error before initialize
     step_result_t step();
 
-    /// Steps until the decision is converged or stop, or max_steps (0: no limit) steps were taken; the last decision
+    /// Steps until the status is converged or stop, or max_steps (0: no limit) steps were taken; the last status
     std::string run(long max_steps = 0);
 
     /// Called with the result of each step, after it is committed

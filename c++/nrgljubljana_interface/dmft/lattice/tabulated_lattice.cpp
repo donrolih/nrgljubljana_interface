@@ -62,15 +62,15 @@ namespace nrgljubljana_interface::dmft {
 
   } // namespace
 
-  tabulated_lattice_t::tabulated_lattice_t(dos_t dos, double sigma_floor) : shared_(std::move(dos)), floor_(sigma_floor) {
-    detail::check_sigma_floor(floor_, "tabulated_lattice_t");
+  tabulated_lattice_t::tabulated_lattice_t(dos_t dos, double Sigma_floor) : shared_(std::move(dos)), floor_(Sigma_floor) {
+    detail::check_Sigma_floor(floor_, "tabulated_lattice_t");
     check_dos(*shared_, "");
     centroid_[""] = {centroid(*shared_)};
   }
 
-  tabulated_lattice_t::tabulated_lattice_t(std::map<std::string, std::vector<dos_t>> per_element, double sigma_floor)
-     : per_element_(std::move(per_element)), floor_(sigma_floor) {
-    detail::check_sigma_floor(floor_, "tabulated_lattice_t");
+  tabulated_lattice_t::tabulated_lattice_t(std::map<std::string, std::vector<dos_t>> per_element, double Sigma_floor)
+     : per_element_(std::move(per_element)), floor_(Sigma_floor) {
+    detail::check_Sigma_floor(floor_, "tabulated_lattice_t");
     if (per_element_.empty()) throw std::invalid_argument("tabulated_lattice_t: no blocks");
     for (auto const &[name, list] : per_element_) {
       if (list.empty()) throw std::invalid_argument("tabulated_lattice_t: no DOS for block " + name);
@@ -91,7 +91,7 @@ namespace nrgljubljana_interface::dmft {
       for (auto const &[name, list] : per_element_)
         for (std::size_t i = 0; i < list.size(); ++i) os << " " << name << "[" << i << "]: " << describe(list[i]) << ";";
     }
-    os << " sigma_floor=" << floor_;
+    os << " Sigma_floor=" << floor_;
     return os.str();
   }
 

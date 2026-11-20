@@ -13,10 +13,10 @@ namespace nrgljubljana_interface::dmft {
    * F_l, F_r and I must have the structure and mesh of G. Throws std::invalid_argument for a mismatch, a non-finite
    * input, a wrong number or size of Hartree matrices, and a singular G (naming the block and the frequency).
    */
-  g_w_t sigma_IFG(g_w_t const &G, g_w_t const &F_l, g_w_t const &F_r, g_w_t const &I, block_matrices_t const &sigma_hartree);
+  g_w_t Sigma_IFG(g_w_t const &G, g_w_t const &F_l, g_w_t const &F_r, g_w_t const &I, block_matrices_t const &Sigma_Hartree);
 
-  /// The self-energy Σ = F_l G⁻¹, the estimator without I and F_r. Errors as for sigma_IFG.
-  g_w_t sigma_FG(g_w_t const &G, g_w_t const &F_l);
+  /// The self-energy Σ = F_l G⁻¹, the estimator without I and F_r. Errors as for Sigma_IFG.
+  g_w_t Sigma_FG(g_w_t const &G, g_w_t const &F_l);
 
   /**
    * The impurity Green's function from the impurity Dyson equation, G = (G0⁻¹ − Σ)⁻¹ with G0⁻¹ = ω − h_imp − Δ,

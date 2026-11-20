@@ -37,32 +37,31 @@ namespace nrgljubljana_interface::dmft {
 
   } // namespace
 
-  g_w_t sigma_IFG(g_w_t const &G, g_w_t const &F_l, g_w_t const &F_r, g_w_t const &I, block_matrices_t const &sigma_hartree) {
-    std::string const function = "sigma_IFG";
+  g_w_t Sigma_IFG(g_w_t const &G, g_w_t const &F_l, g_w_t const &F_r, g_w_t const &I, block_matrices_t const &Sigma_Hartree) {
+    std::string const function = "Sigma_IFG";
     detail::check_same_structure(F_l, G, function, "F_l", "G");
     detail::check_same_structure(F_r, G, function, "F_r", "G");
     detail::check_same_structure(I, G, function, "I", "G");
-    detail::check_block_matrices(G, sigma_hartree, function, "the Hartree term");
+    detail::check_block_matrices(G, Sigma_Hartree, function, "the Hartree term");
     detail::check_finite(G, function, "G");
     detail::check_finite(F_l, function, "F_l");
     detail::check_finite(F_r, function, "F_r");
     detail::check_finite(I, function, "I");
     check_invertible(G, function, "G");
 
-    auto const hartree = detail::constant_gf(G, sigma_hartree);
-    g_w_t sigma        = hartree + I - F_l / G * F_r;
-    return checked_result(std::move(sigma), function);
+    g_w_t Sigma = detail::constant_gf(G, Sigma_Hartree) + I - F_l / G * F_r;
+    return checked_result(std::move(Sigma), function);
   }
 
-  g_w_t sigma_FG(g_w_t const &G, g_w_t const &F_l) {
-    std::string const function = "sigma_FG";
+  g_w_t Sigma_FG(g_w_t const &G, g_w_t const &F_l) {
+    std::string const function = "Sigma_FG";
     detail::check_same_structure(F_l, G, function, "F_l", "G");
     detail::check_finite(G, function, "G");
     detail::check_finite(F_l, function, "F_l");
     check_invertible(G, function, "G");
 
-    g_w_t sigma = F_l / G;
-    return checked_result(std::move(sigma), function);
+    g_w_t Sigma = F_l / G;
+    return checked_result(std::move(Sigma), function);
   }
 
   g_w_t impurity_gf(g_w_t const &Delta, g_w_t const &Sigma, block_matrices_t const &h_imp) {

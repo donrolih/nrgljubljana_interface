@@ -31,8 +31,8 @@ namespace nrgljubljana_interface::dmft {
    */
   class tabulated_lattice_t : public lattice_t {
    public:
-    explicit tabulated_lattice_t(dos_t dos, double sigma_floor = 1e-12);
-    explicit tabulated_lattice_t(std::map<std::string, std::vector<dos_t>> per_element, double sigma_floor = 1e-12);
+    explicit tabulated_lattice_t(dos_t dos, double Sigma_floor = 1e-12);
+    explicit tabulated_lattice_t(std::map<std::string, std::vector<dos_t>> per_element, double Sigma_floor = 1e-12);
 
     std::pair<g_w_t, g_w_t> moments(g_w_t const &Sigma, double mu) const override;
     g_w_t local_gf(g_w_t const &Sigma, double mu) const override;
@@ -40,7 +40,7 @@ namespace nrgljubljana_interface::dmft {
     /// The kind (shared or per element), the number of points and a checksum of each table, and the floor
     [[nodiscard]] std::string description() const override;
 
-    [[nodiscard]] double sigma_floor() const { return floor_; }
+    [[nodiscard]] double Sigma_floor() const { return floor_; }
 
     /// A DOS from a file of two columns, energy and density; blank lines and lines starting with # are skipped
     static dos_t read_dos(std::string const &path);

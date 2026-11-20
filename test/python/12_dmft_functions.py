@@ -10,11 +10,11 @@ from h5 import HDFArchive
 from triqs.gfs import Gf, BlockGf
 from nrgljubljana_interface import MeshReFreqLog
 from nrgljubljana_interface.dmft import (causal_projection, spectral_part, high_frequency_limit, rebuild_hermitian_part,
-                                         hybridization_from_Gamma, sigma_FG, sigma_IFG, impurity_gf, occupancy,
+                                         hybridization_from_Gamma, Sigma_FG, Sigma_IFG, impurity_gf, occupancy,
                                          spectral_weight, spectral_distance, hilbert_transform, BetheLattice,
                                          TabulatedLattice, CallableLattice, DosT, LinearMixer, MuControl,
                                          Convergence, MuControlParamsT, ConvergenceParamsT, LoopParamsT, StepResultT,
-                                         CausalityReportT)
+                                         CausalityReportT, MuInputT, MixInputT)
 
 D = 1.0
 
@@ -134,14 +134,14 @@ class test_dmft_functions(unittest.TestCase):
 
         F = G.copy()
         F['imp'].data[:] = self.Sigma['imp'].data * G['imp'].data
-        np.testing.assert_allclose(sigma_FG(G, F)['imp'].data, self.Sigma['imp'].data, rtol=1e-10)
+        np.testing.assert_allclose(Sigma_FG(G, F)['imp'].data, self.Sigma['imp'].data, rtol=1e-10)
 
         # Σ = Σ_H + I − F_l G⁻¹ F_r with F_l = F_r = 0 and I = Σ − Σ_H
         zero = G.copy()
         zero.zero()
         I = self.Sigma.copy()
         I['imp'].data[:] -= 0.25
-        np.testing.assert_allclose(sigma_IFG(G, zero, zero, I, [np.array([[0.25]], dtype=complex)])['imp'].data, self.Sigma['imp'].data, rtol=1e-12)
+        np.testing.assert_allclose(Sigma_IFG(G, zero, zero, I, [np.array([[0.25]], dtype=complex)])['imp'].data, self.Sigma['imp'].data, rtol=1e-12)
 
     def test_measurements(self):
         G = BetheLattice(D).local_gf(self.block_gf(lambda w: -1e-3j * np.ones_like(w)), 0.0)
@@ -151,6 +151,24 @@ class test_dmft_functions(unittest.TestCase):
         self.assertAlmostEqual(n.total, 1.0, delta=1e-2)
         self.assertEqual(spectral_distance(G, G).max, 0.0)
 
+    # --- the loop controls one by one, as in a loop written in Python
+
+    def test_modular_controls(self):
+        lattice = BetheLattice(D)
+        Sigma = self.block_gf(lambda w: -0.01j * np.ones_like(w))
+        mu_control = MuControl(goal=0.8, maxdx=0.05, weight_tol=2e-2)
+        adjusted = mu_control.adjust(MuInputT(Sigma=Sigma, mu=0.0, T=0.01, degeneracy={'imp': 2}), lattice)
+        self.assertAlmostEqual(adjusted.filling, 1.0, delta=2e-2)  # half filling at μ = 0
+        self.assertLess(adjusted.mu_next, 0.0)                     # towards the goal 0.8
+        self.assertGreaterEqual(adjusted.mu_next, -0.05 - 1e-12)
+
+        _, Delta = lattice.self_consistency(Sigma, 0.0)
+        _, Delta_out = lattice.self_consistency(Sigma, adjusted.mu_next)
+        Gamma, Gamma_out = spectral_part(Delta), spectral_part(Delta_out)
+        mixed = LinearMixer(0.5).mix(MixInputT(iteration=1, Gamma=Gamma, Gamma_out=Gamma_out, mu=0.0, filling=adjusted.filling))
+        np.testing.assert_allclose(mixed.Gamma_mix['imp'].data, 0.5 * (Gamma['imp'].data + Gamma_out['imp'].data), atol=1e-14)
+        self.assertEqual(mixed.report.method, "linear")
+
     # --- parameters and reports in HDF5
 
     def test_h5_round_trip(self):
@@ -158,7 +176,7 @@ class test_dmft_functions(unittest.TestCase):
         conv_params = ConvergenceParamsT(eps=1e-5, window=4, eps_imp_loc=1e-3)
         loop_params = LoopParamsT(Gamma_floor=1e-5, run_dir="run", keep_history=False)
         report = CausalityReportT(projected_points=3, largest_violation=0.25)
-        step = StepResultT(iteration=4, mu=0.1, mu_next=0.12, filling=0.8, kept_delta=True)
+        step = StepResultT(iteration=4, mu=0.1, mu_next=0.12, filling=0.8, kept_Delta=True)
         with HDFArchive("12_dmft_functions.out.h5", 'w') as ar:
             ar["mu_params"] = mu_params
             ar["conv_params"] = conv_params
@@ -177,7 +195,7 @@ class test_dmft_functions(unittest.TestCase):
             self.assertEqual(ar["report"].largest_violation, 0.25)
             self.assertEqual(ar["step"].iteration, 4)
             self.assertEqual(ar["step"].mu_next, 0.12)
-            self.assertTrue(ar["step"].kept_delta)
+            self.assertTrue(ar["step"].kept_Delta)
 
     # --- loop controls from keyword arguments, and C++ errors in Python
 

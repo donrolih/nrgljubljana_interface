@@ -60,8 +60,8 @@ namespace nrgljubljana_interface::dmft {
     }
 
     void write_reports(h5::group g, step_result_t const &r) {
-      h5_write(g, "sigma_projection", r.sigma_projection);
-      h5_write(g, "delta_projection", r.delta_projection);
+      h5_write(g, "Sigma_projection", r.Sigma_projection);
+      h5_write(g, "Delta_projection", r.Delta_projection);
       h5_write(g, "mu", r.mu_report);
       h5_write(g, "mix", r.mix_report);
       h5_write(g, "convergence", r.convergence);
@@ -69,8 +69,8 @@ namespace nrgljubljana_interface::dmft {
     }
 
     void read_reports(h5::group g, step_result_t &r) {
-      h5_read(g, "sigma_projection", r.sigma_projection);
-      h5_read(g, "delta_projection", r.delta_projection);
+      h5_read(g, "Sigma_projection", r.Sigma_projection);
+      h5_read(g, "Delta_projection", r.Delta_projection);
       h5_read(g, "mu", r.mu_report);
       h5_read(g, "mix", r.mix_report);
       h5_read(g, "convergence", r.convergence);
@@ -142,7 +142,7 @@ namespace nrgljubljana_interface::dmft {
     auto const &m = solver_.manifest();
     check_options(params_, m);
     check_manifest(m, params_.solve_params);
-    if (not(std::isfinite(params_.Gamma_floor) and params_.Gamma_floor >= 0) or not(std::isfinite(params_.sigma_floor) and params_.sigma_floor >= 0))
+    if (not(std::isfinite(params_.Gamma_floor) and params_.Gamma_floor >= 0) or not(std::isfinite(params_.Sigma_floor) and params_.Sigma_floor >= 0))
       throw std::invalid_argument("dmft_loop: the floors must be finite and >= 0");
     onsite_    = lattice_.onsite_energy(m.gf);
     degeneracy_ = m.degeneracy;
@@ -188,7 +188,7 @@ namespace nrgljubljana_interface::dmft {
     auto const &m = solver_.manifest();
     g_w_t const reference{solver_.mesh(), m.gf};
     detail::check_same_structure(Sigma0, reference, "dmft_loop", "Sigma0", "G");
-    auto const Sigma         = causal_projection(Sigma0, params_.sigma_floor).first;
+    auto const Sigma         = causal_projection(Sigma0, params_.Sigma_floor).first;
     auto const [G0, Delta0]  = lattice_.self_consistency(Sigma, mu0);
     Delta_             = hybridization_from_Gamma(spectral_part(Delta0), onsite_, params_.Gamma_floor).first;
     mu_                      = mu0;
@@ -224,10 +224,10 @@ namespace nrgljubljana_interface::dmft {
     options_t options;
     h5::read(params, "options", options);
     if (not(options == params_.options)) differences.emplace_back("the options");
-    double Gamma_floor = 0, sigma_floor = 0;
+    double Gamma_floor = 0, Sigma_floor = 0;
     h5::read(params, "Gamma_floor", Gamma_floor);
-    h5::read(params, "sigma_floor", sigma_floor);
-    if (Gamma_floor != params_.Gamma_floor or sigma_floor != params_.sigma_floor) differences.emplace_back("the floors");
+    h5::read(params, "Sigma_floor", Sigma_floor);
+    if (Gamma_floor != params_.Gamma_floor or Sigma_floor != params_.Sigma_floor) differences.emplace_back("the floors");
     mu_control_params_t mp;
     h5_read(params, "mu_control", mp);
     if (not(mp == mu_control_.params())) differences.emplace_back("the μ-control parameters");
@@ -314,8 +314,8 @@ namespace nrgljubljana_interface::dmft {
     auto const found   = result.processed.find("Sigma");
     if (found == result.processed.end()) throw std::runtime_error("dmft_loop: the solve gave no Σ");
     r.expv                 = result.expv;
-    auto [Sigma, sigma_rep] = causal_projection(found->second, params_.sigma_floor);
-    r.sigma_projection     = sigma_rep;
+    auto [Sigma, Sigma_report] = causal_projection(found->second, params_.Sigma_floor);
+    r.Sigma_projection     = Sigma_report;
 
     // 4–6: G_loc at μ, μ_next, Δ_out
     auto const G_loc      = lattice_.local_gf(Sigma, mu_);
@@ -338,7 +338,7 @@ namespace nrgljubljana_interface::dmft {
     double const mu_step = mixer_mu ? last_mu_step_ : adjusted.mu_next - mu_;
     r.convergence        = convergence_.decide({n, G_loc, G_loc_previous_, G_imp, adjusted.filling, mu_control_.params().goal, mu_step});
 
-    // 8: the next Δ, also after a terminal decision
+    // 8: the next Δ, also after a terminal status
     g_w_t Delta_mix = *Delta_;
     double mu_next   = mu_;
     try {
@@ -348,19 +348,19 @@ namespace nrgljubljana_interface::dmft {
       mu_next             = mixer_mu ? *mixed.mu_next : adjusted.mu_next;
       auto [next, report] = hybridization_from_Gamma(mixed.Gamma_mix, onsite_, params_.Gamma_floor);
       Delta_mix          = std::move(next);
-      r.delta_projection  = report;
+      r.Delta_projection  = report;
     } catch (std::exception const &) {
-      if (r.convergence.decision == "continue") throw;
+      if (r.convergence.status == "continue") throw;
       Delta_mix   = *Delta_;
       mu_next      = mu_;
-      r.kept_delta = true;
+      r.kept_Delta = true;
     }
 
-    // 9: rank 0's Δ_mix, μ_next and decision on every rank, then commit
+    // 9: rank 0's Δ_mix, μ_next and status on every rank, then commit
     if (comm.size() > 1) {
       for (long b = 0; b < long(Delta_mix.size()); ++b) mpi::broadcast(Delta_mix[b].data(), comm, 0);
       mpi::broadcast(mu_next, comm, 0);
-      mpi::broadcast(r.convergence.decision, comm, 0);
+      mpi::broadcast(r.convergence.status, comm, 0);
     }
     r.mu_next = mu_next;
     if (not params_.run_dir.empty())
@@ -387,8 +387,8 @@ namespace nrgljubljana_interface::dmft {
     for (long taken = 0;;) {
       auto const r = step();
       ++taken;
-      if (r.convergence.decision != "continue") return r.convergence.decision;
-      if (max_steps > 0 and taken >= max_steps) return r.convergence.decision;
+      if (r.convergence.status != "continue") return r.convergence.status;
+      if (max_steps > 0 and taken >= max_steps) return r.convergence.status;
     }
   }
 
@@ -399,11 +399,11 @@ namespace nrgljubljana_interface::dmft {
     std::ofstream out(path, fresh ? std::ios::trunc : std::ios::app);
     if (not out) throw std::runtime_error("dmft_loop: cannot write " + path.string());
     if (fresh)
-      out << "# iteration mu mu_next filling distance window_max distance_imp_loc mix_residual sigma_projected delta_projected mu_status decision\n";
+      out << "# iteration mu mu_next filling distance window_max distance_imp_loc mix_residual Sigma_projected Delta_projected mu_status status\n";
     out << std::setprecision(12) << r.iteration << ' ' << r.mu << ' ' << r.mu_next << ' ' << r.filling << ' '
         << (r.convergence.distance ? *r.convergence.distance : std::numeric_limits<double>::quiet_NaN()) << ' ' << r.convergence.window_max << ' '
-        << r.convergence.distance_imp_loc << ' ' << r.mix_report.residual_norm << ' ' << r.sigma_projection.projected_points << ' '
-        << r.delta_projection.projected_points << ' ' << r.mu_report.status << ' ' << r.convergence.decision << '\n';
+        << r.convergence.distance_imp_loc << ' ' << r.mix_report.residual_norm << ' ' << r.Sigma_projection.projected_points << ' '
+        << r.Delta_projection.projected_points << ' ' << r.mu_report.status << ' ' << r.convergence.status << '\n';
   }
 
   void dmft_loop::write_checkpoint(step_result_t const &r, result_t const &result, g_w_t const &Delta_mix, g_w_t const &Sigma, g_w_t const &G_loc,
@@ -419,14 +419,14 @@ namespace nrgljubljana_interface::dmft {
       h5::write(loop, "mu_next", r.mu_next);
       h5::write(loop, "last_mu_step", r.mu_next - r.mu);
       h5::write(loop, "filling", r.filling);
-      h5::write(loop, "decision", r.convergence.decision);
-      h5::write(loop, "kept_delta", long(r.kept_delta));
+      h5::write(loop, "status", r.convergence.status);
+      h5::write(loop, "kept_Delta", long(r.kept_Delta));
 
       auto params = root.create_group("params");
       h5::write(params, "solve_params", params_.solve_params);
       h5::write(params, "options", params_.options);
       h5::write(params, "Gamma_floor", params_.Gamma_floor);
-      h5::write(params, "sigma_floor", params_.sigma_floor);
+      h5::write(params, "Sigma_floor", params_.Sigma_floor);
       h5_write(params, "mu_control", mu_control_.params());
       h5_write(params, "convergence", convergence_.params());
       h5::write(params, "mixer", mixer_.description());
@@ -446,7 +446,7 @@ namespace nrgljubljana_interface::dmft {
       convergence_.h5_write(controls, "convergence");
 
       write_reports(root.create_group("reports"), r);
-      nrgljubljana_interface::h5_write(root, "result", result, r.convergence.decision != "continue");
+      nrgljubljana_interface::h5_write(root, "result", result, r.convergence.status != "continue");
     }
     sync(tmp);
     std::filesystem::rename(tmp, final_path);
@@ -458,7 +458,7 @@ namespace nrgljubljana_interface::dmft {
     h5::write(g, "mu", r.mu);
     h5::write(g, "mu_next", r.mu_next);
     h5::write(g, "filling", r.filling);
-    h5::write(g, "decision", r.convergence.decision);
+    h5::write(g, "status", r.convergence.status);
     h5::write(g, "Delta", *Delta_);
     h5::write(g, "Delta_out", Delta_out);
     h5::write(g, "Sigma", Sigma);
@@ -472,7 +472,7 @@ namespace nrgljubljana_interface::dmft {
     h5_write(grp, "solve_params", p.solve_params);
     h5_write(grp, "options", p.options);
     h5::write(grp, "Gamma_floor", p.Gamma_floor);
-    h5::write(grp, "sigma_floor", p.sigma_floor);
+    h5::write(grp, "Sigma_floor", p.Sigma_floor);
     h5::write(grp, "run_dir", p.run_dir);
     h5::write(grp, "keep_history", long(p.keep_history));
   }
@@ -483,7 +483,7 @@ namespace nrgljubljana_interface::dmft {
     h5_read(grp, "solve_params", p.solve_params);
     h5_read(grp, "options", p.options);
     h5::read(grp, "Gamma_floor", p.Gamma_floor);
-    h5::read(grp, "sigma_floor", p.sigma_floor);
+    h5::read(grp, "Sigma_floor", p.Sigma_floor);
     h5::read(grp, "run_dir", p.run_dir);
     h5::read(grp, "keep_history", keep_history);
     p.keep_history = keep_history != 0;
@@ -496,19 +496,19 @@ namespace nrgljubljana_interface::dmft {
     h5::write(grp, "mu", r.mu);
     h5::write(grp, "mu_next", r.mu_next);
     h5::write(grp, "filling", r.filling);
-    h5::write(grp, "kept_delta", long(r.kept_delta));
+    h5::write(grp, "kept_Delta", long(r.kept_Delta));
     write_reports(grp.create_group("reports"), r);
   }
 
   void h5_read(h5::group g, std::string const &name, step_result_t &r) {
     auto grp        = g.open_group(name);
-    long kept_delta = 0;
+    long kept_Delta = 0;
     h5::read(grp, "iteration", r.iteration);
     h5::read(grp, "mu", r.mu);
     h5::read(grp, "mu_next", r.mu_next);
     h5::read(grp, "filling", r.filling);
-    h5::read(grp, "kept_delta", kept_delta);
-    r.kept_delta = kept_delta != 0;
+    h5::read(grp, "kept_Delta", kept_Delta);
+    r.kept_Delta = kept_Delta != 0;
     read_reports(grp.open_group("reports"), r);
   }
 

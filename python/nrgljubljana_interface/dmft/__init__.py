@@ -6,7 +6,7 @@ keyword-argument constructors for :class:`MuControl`, :class:`Convergence` and :
 
 - Causality: ``spectral_part``, ``causal_projection``, ``rebuild_hermitian_part``, ``high_frequency_limit``,
   ``hybridization_from_Gamma``
-- Self-energy: ``sigma_IFG``, ``sigma_FG``, ``impurity_gf``
+- Self-energy: ``Sigma_IFG``, ``Sigma_FG``, ``impurity_gf``
 - Measurements: ``occupancy``, ``spectral_weight``, ``spectral_distance``
 - Lattices: :class:`BetheLattice`, :class:`TabulatedLattice`, :class:`CallableLattice`, and ``hilbert_transform`` of a
   tabulated DOS
@@ -21,7 +21,7 @@ from ..solver import OPTIONS_FIELDS
 from ..solver_core import SolveParamsT, OptionsT
 
 from ._dmft import spectral_part, causal_projection, rebuild_hermitian_part, high_frequency_limit, hybridization_from_Gamma
-from ._dmft import sigma_IFG, sigma_FG, impurity_gf
+from ._dmft import Sigma_IFG, Sigma_FG, impurity_gf
 from ._dmft import occupancy, spectral_weight, spectral_distance, hilbert_transform
 from ._dmft import CausalityReportT, OccupancyT, DistanceT, DosT
 from ._dmft import MixInputT, MixReportT, MixResultT, MuControlParamsT, MuInputT, MuReportT, MuResultT
@@ -31,7 +31,7 @@ from ._dmft import LinearMixer
 from ._dmft import MuControlT as _MuControlT, ConvergenceT as _ConvergenceT, PyDmftLoop as _DmftLoop
 
 # Fields of LoopParamsT other than the solve parameters and the options
-LOOP_FIELDS = ('Gamma_floor', 'sigma_floor', 'run_dir', 'keep_history')
+LOOP_FIELDS = ('Gamma_floor', 'Sigma_floor', 'run_dir', 'keep_history')
 
 
 class MuControl(_MuControlT):
@@ -74,7 +74,7 @@ class DMFTLoop(_DmftLoop):
         Without one, μ stays fixed.
     params_kw : dict {'param':value}
         The keyword arguments of Solver.solve (solve parameters and options; no impurity level, which the loop sets),
-        and Gamma_floor, sigma_floor, run_dir, keep_history.
+        and Gamma_floor, Sigma_floor, run_dir, keep_history.
 
     The loop keeps references to the solver and the convergence test, which it uses in each step.
     """
@@ -91,7 +91,7 @@ class DMFTLoop(_DmftLoop):
 
 
 __all__ = ['spectral_part', 'causal_projection', 'rebuild_hermitian_part', 'high_frequency_limit', 'hybridization_from_Gamma',
-           'sigma_IFG', 'sigma_FG', 'impurity_gf', 'occupancy', 'spectral_weight', 'spectral_distance', 'hilbert_transform',
+           'Sigma_IFG', 'Sigma_FG', 'impurity_gf', 'occupancy', 'spectral_weight', 'spectral_distance', 'hilbert_transform',
            'BetheLattice', 'TabulatedLattice', 'CallableLattice', 'DosT', 'LinearMixer', 'MuControl',
            'Convergence', 'DMFTLoop', 'CausalityReportT', 'OccupancyT', 'DistanceT', 'MixInputT', 'MixReportT', 'MixResultT',
            'MuControlParamsT', 'MuInputT', 'MuReportT', 'MuResultT', 'ConvergenceParamsT', 'ConvergenceInputT',

@@ -65,8 +65,8 @@ namespace nrgljubljana_interface {
     }
 
     // Twist average of the expectation value of the [hartree] operator of each element, constant in frequency
-    g_w_t hartree_term(result_t const &r, templates::manifest_t const &m, triqs::mesh::refreq_log const &mesh) {
-      auto hartree = zero_gf(mesh, m.gf);
+    g_w_t Hartree_term(result_t const &r, templates::manifest_t const &m, triqs::mesh::refreq_log const &mesh) {
+      auto Hartree = zero_gf(mesh, m.gf);
       for (auto const &[e, op] : m.hartree) {
         if (not op) continue;
         double value = 0;
@@ -76,10 +76,10 @@ namespace nrgljubljana_interface {
           value += it->second;
         }
         value /= double(r.twists.size());
-        auto &hb = hartree[block_index(m.gf, e.block)];
+        auto &hb = Hartree[block_index(m.gf, e.block)];
         for (auto w : mesh) hb[w](e.i, e.j) = value;
       }
-      return hartree;
+      return Hartree;
     }
 
   } // namespace
@@ -98,22 +98,21 @@ namespace nrgljubljana_interface {
 
     for (auto const *name : templates::gf_correlators)
       if (not r.processed.contains(name)) return;
-    auto hartree    = hartree_term(r, m, r.mesh);
+    auto Hartree    = Hartree_term(r, m, r.mesh);
     auto const &G   = r.processed.at("G");
     auto const &F_l = r.processed.at("F_l");
     auto const &F_r = r.processed.at("F_r");
     auto const &I   = r.processed.at("I");
-    dmft::block_matrices_t hartree_matrices;
-    for (long bl = 0; bl < long(hartree.size()); ++bl) {
-      auto const &d = hartree[bl].data();
+    dmft::block_matrices_t Sigma_Hartree;
+    for (long bl = 0; bl < long(Hartree.size()); ++bl) {
+      auto const &d = Hartree[bl].data();
       nda::matrix<dcomplex> h(d.extent(1), d.extent(2));
       for (long i = 0; i < d.extent(1); ++i)
         for (long j = 0; j < d.extent(2); ++j) h(i, j) = d(0, i, j);
-      hartree_matrices.push_back(std::move(h));
+      Sigma_Hartree.push_back(std::move(h));
     }
-    g_w_t sigma                 = dmft::sigma_IFG(G, F_l, F_r, I, hartree_matrices);
-    r.processed["Sigma"]        = std::move(sigma);
-    r.processed["SigmaHartree"] = std::move(hartree);
+    r.processed["Sigma"]        = dmft::Sigma_IFG(G, F_l, F_r, I, Sigma_Hartree);
+    r.processed["SigmaHartree"] = std::move(Hartree);
   }
 
   g_w_t broaden(result_t const &r, std::string const &correlator, broadening_params_t const &b,

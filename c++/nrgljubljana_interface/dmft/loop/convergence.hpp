@@ -49,10 +49,10 @@ namespace nrgljubljana_interface::dmft {
     double mu_step = 0;
   };
 
-  /// The decision and the measures behind it
+  /// The status and the measures behind it
   struct convergence_result_t {
     /// "continue", "converged" or "stop"
-    std::string decision = {};
+    std::string status = {};
     /// The largest spectral distance of G_loc to the previous iteration (unset in the first)
     std::optional<double> distance = {};
     /// The largest distance in the window, and the number of distances in it

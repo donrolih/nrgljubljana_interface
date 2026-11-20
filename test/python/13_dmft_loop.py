@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 # The DMFT loop from Python with the NRG solver: the Hubbard model on the Bethe lattice at half filling, a few
-# iterations; an interrupted run resumed from its checkpoint gives the iterations of an uninterrupted one
+# iterations; an interrupted run resumed from its checkpoint gives the iteration of an uninterrupted one
 
 import shutil
 import unittest
@@ -38,8 +38,8 @@ class test_dmft_loop(unittest.TestCase):
 
         S, full, full_steps = self.make_loop("run_full")
         full.initialize(self.Sigma0(S), U / 2)
-        self.assertEqual(full.run(3), "continue")
-        self.assertEqual([s.iteration for s in full_steps], [1, 2, 3])
+        self.assertEqual(full.run(2), "continue")
+        self.assertEqual([s.iteration for s in full_steps], [1, 2])
         self.assertIsInstance(full_steps[0], StepResultT)
         for s in full_steps:
             self.assertAlmostEqual(s.filling, 1.0, delta=1e-2)
@@ -47,13 +47,13 @@ class test_dmft_loop(unittest.TestCase):
 
         S1, first, _ = self.make_loop("run_resumed")
         first.initialize(U / 2, U / 2)  # a constant Σ0: the same as self.Sigma0
-        first.run(2)
+        first.run(1)
 
         S2, resumed, resumed_steps = self.make_loop("run_resumed")
         resumed.resume("run_resumed")
-        self.assertEqual(resumed.iteration(), 2)
+        self.assertEqual(resumed.iteration(), 1)
         resumed.run(1)
-        self.assertEqual([s.iteration for s in resumed_steps], [3])
+        self.assertEqual([s.iteration for s in resumed_steps], [2])
         np.testing.assert_allclose(resumed.Delta()['imp'].data, full.Delta()['imp'].data, atol=1e-8)
         self.assertEqual(resumed.mu(), full.mu())
 

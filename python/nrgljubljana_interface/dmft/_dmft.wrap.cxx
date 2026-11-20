@@ -238,73 +238,73 @@ const std::string c2py::tp_doc<_c2py_cls_2> =
 using _c2py_cls_3                                            = nrgljubljana_interface::dmft::bethe_lattice_t;
 template <> constexpr bool c2py::is_wrapped<_c2py_cls_3>     = true;
 template <> inline constexpr auto c2py::tp_name<_c2py_cls_3> = "nrgljubljana_interface.dmft._dmft.BetheLatticeT";
-static const auto _c2py_init_0 = c2py::dispatcher_c_kw_t{c2py::c_constructor<_c2py_cls_3, double, double>("half_bandwidth", "sigma_floor"_a = 1e-12)};
+static const auto _c2py_init_0 = c2py::dispatcher_c_kw_t{c2py::c_constructor<_c2py_cls_3, double, double>("half_bandwidth", "Sigma_floor"_a = 1e-12)};
 template <> constexpr initproc c2py::tp_init<_c2py_cls_3> = c2py::pyfkw_constructor<_c2py_init_0>;
 template <>
 const std::string c2py::tp_ctor_doc<_c2py_cls_3> = _c2py_init_0.doc(R"DOC(
 Throws std::invalid_argument for a half-bandwidth that is not positive and finite, and for an invalid floor
 )DOC");
-// description
+// Sigma_floor
 static auto const _c2py_fun_0 =
+   c2py::dispatcher_f_kw_t{c2py::cmethod([](_c2py_cls_3 const &self) -> decltype(auto) { return self.Sigma_floor(); }, "self")};
+
+// description
+static auto const _c2py_fun_1 =
    c2py::dispatcher_f_kw_t{c2py::cmethod([](_c2py_cls_3 const &self) -> decltype(auto) { return self.description(); }, "self")};
 
 // half_bandwidth
-static auto const _c2py_fun_1 =
+static auto const _c2py_fun_2 =
    c2py::dispatcher_f_kw_t{c2py::cmethod([](_c2py_cls_3 const &self) -> decltype(auto) { return self.half_bandwidth(); }, "self")};
 
 // local_gf
-static auto const _c2py_fun_2 = c2py::dispatcher_f_kw_t{c2py::cmethod(
+static auto const _c2py_fun_3 = c2py::dispatcher_f_kw_t{c2py::cmethod(
    [](_c2py_cls_3 const &self, const nrgljubljana_interface::g_w_t &Sigma, double mu) -> decltype(auto) { return self.local_gf(Sigma, mu); }, "self",
    "Sigma", "mu")};
 
 // moments
-static auto const _c2py_fun_3 = c2py::dispatcher_f_kw_t{c2py::cmethod(
+static auto const _c2py_fun_4 = c2py::dispatcher_f_kw_t{c2py::cmethod(
    [](_c2py_cls_3 const &self, const nrgljubljana_interface::g_w_t &Sigma, double mu) -> decltype(auto) { return self.moments(Sigma, mu); }, "self",
    "Sigma", "mu")};
 
 // onsite_energy
-static auto const _c2py_fun_4 = c2py::dispatcher_f_kw_t{
+static auto const _c2py_fun_5 = c2py::dispatcher_f_kw_t{
    c2py::cmethod([](_c2py_cls_3 const &self, const triqs::gfs::gf_struct_t &structure) -> decltype(auto) { return self.onsite_energy(structure); },
                  "self", "structure")};
 
 // self_consistency
-static auto const _c2py_fun_5 = c2py::dispatcher_f_kw_t{c2py::cmethod(
+static auto const _c2py_fun_6 = c2py::dispatcher_f_kw_t{c2py::cmethod(
    [](_c2py_cls_3 const &self, const nrgljubljana_interface::g_w_t &Sigma, double mu) -> decltype(auto) { return self.self_consistency(Sigma, mu); },
    "self", "Sigma", "mu")};
 
-// sigma_floor
-static auto const _c2py_fun_6 =
-   c2py::dispatcher_f_kw_t{c2py::cmethod([](_c2py_cls_3 const &self) -> decltype(auto) { return self.sigma_floor(); }, "self")};
-
-static const auto _c2py_doc_0 = _c2py_fun_0.doc(R"DOC(
+static const auto _c2py_doc_0 = _c2py_fun_0.doc(R"DOC()DOC");
+static const auto _c2py_doc_1 = _c2py_fun_1.doc(R"DOC(
 The type and the parameters, e.g. to check on resume that the lattice is the same
 )DOC");
-static const auto _c2py_doc_1 = _c2py_fun_1.doc(R"DOC()DOC");
-static const auto _c2py_doc_2 = _c2py_fun_2.doc(R"DOC(
+static const auto _c2py_doc_2 = _c2py_fun_2.doc(R"DOC()DOC");
+static const auto _c2py_doc_3 = _c2py_fun_3.doc(R"DOC(
 G0 alone; by default the first of moments
 )DOC");
-static const auto _c2py_doc_3 = _c2py_fun_3.doc(R"DOC(
+static const auto _c2py_doc_4 = _c2py_fun_4.doc(R"DOC(
 (G0, G1)
 )DOC");
-static const auto _c2py_doc_4 = _c2py_fun_4.doc(R"DOC(
+static const auto _c2py_doc_5 = _c2py_fun_5.doc(R"DOC(
 ⟨h⟩ per block of the given structure
 )DOC");
-static const auto _c2py_doc_5 = _c2py_fun_5.doc(R"DOC(
+static const auto _c2py_doc_6 = _c2py_fun_6.doc(R"DOC(
 (G_loc, Δ) with G_loc = G0 and Δ = G1 G0⁻¹, which avoids subtracting two large numbers where G0 is small.
 Throws std::invalid_argument for a singular G0, naming the block and the frequency.
 )DOC");
-static const auto _c2py_doc_6 = _c2py_fun_6.doc(R"DOC()DOC");
 
 // ----- Method table ----
 template <>
 PyMethodDef c2py::tp_methods<_c2py_cls_3>[] = {
-   {"description", (PyCFunction)c2py::pyfkw<_c2py_fun_0>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_0.c_str()},
-   {"half_bandwidth", (PyCFunction)c2py::pyfkw<_c2py_fun_1>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_1.c_str()},
-   {"local_gf", (PyCFunction)c2py::pyfkw<_c2py_fun_2>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_2.c_str()},
-   {"moments", (PyCFunction)c2py::pyfkw<_c2py_fun_3>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_3.c_str()},
-   {"onsite_energy", (PyCFunction)c2py::pyfkw<_c2py_fun_4>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_4.c_str()},
-   {"self_consistency", (PyCFunction)c2py::pyfkw<_c2py_fun_5>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_5.c_str()},
-   {"sigma_floor", (PyCFunction)c2py::pyfkw<_c2py_fun_6>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_6.c_str()},
+   {"Sigma_floor", (PyCFunction)c2py::pyfkw<_c2py_fun_0>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_0.c_str()},
+   {"description", (PyCFunction)c2py::pyfkw<_c2py_fun_1>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_1.c_str()},
+   {"half_bandwidth", (PyCFunction)c2py::pyfkw<_c2py_fun_2>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_2.c_str()},
+   {"local_gf", (PyCFunction)c2py::pyfkw<_c2py_fun_3>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_3.c_str()},
+   {"moments", (PyCFunction)c2py::pyfkw<_c2py_fun_4>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_4.c_str()},
+   {"onsite_energy", (PyCFunction)c2py::pyfkw<_c2py_fun_5>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_5.c_str()},
+   {"self_consistency", (PyCFunction)c2py::pyfkw<_c2py_fun_6>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_6.c_str()},
    {nullptr, nullptr, 0, nullptr} // Sentinel
 };
 
@@ -389,73 +389,73 @@ using _c2py_cls_5                                            = nrgljubljana_inte
 template <> constexpr bool c2py::is_wrapped<_c2py_cls_5>     = true;
 template <> inline constexpr auto c2py::tp_name<_c2py_cls_5> = "nrgljubljana_interface.dmft._dmft.TabulatedLatticeT";
 static const auto _c2py_init_1 =
-   c2py::dispatcher_c_kw_t{c2py::c_constructor<_c2py_cls_5, nrgljubljana_interface::dmft::dos_t, double>("dos", "sigma_floor"_a = 1e-12),
+   c2py::dispatcher_c_kw_t{c2py::c_constructor<_c2py_cls_5, nrgljubljana_interface::dmft::dos_t, double>("dos", "Sigma_floor"_a = 1e-12),
                            c2py::c_constructor<_c2py_cls_5, std::map<std::string, std::vector<nrgljubljana_interface::dmft::dos_t>>, double>(
-                              "per_element", "sigma_floor"_a = 1e-12)};
+                              "per_element", "Sigma_floor"_a = 1e-12)};
 template <> constexpr initproc c2py::tp_init<_c2py_cls_5>    = c2py::pyfkw_constructor<_c2py_init_1>;
 template <> const std::string c2py::tp_ctor_doc<_c2py_cls_5> = _c2py_init_1.doc(R"DOC()DOC");
-// description
+// Sigma_floor
 static auto const _c2py_fun_7 =
+   c2py::dispatcher_f_kw_t{c2py::cmethod([](_c2py_cls_5 const &self) -> decltype(auto) { return self.Sigma_floor(); }, "self")};
+
+// description
+static auto const _c2py_fun_8 =
    c2py::dispatcher_f_kw_t{c2py::cmethod([](_c2py_cls_5 const &self) -> decltype(auto) { return self.description(); }, "self")};
 
 // local_gf
-static auto const _c2py_fun_8 = c2py::dispatcher_f_kw_t{c2py::cmethod(
+static auto const _c2py_fun_9 = c2py::dispatcher_f_kw_t{c2py::cmethod(
    [](_c2py_cls_5 const &self, const nrgljubljana_interface::g_w_t &Sigma, double mu) -> decltype(auto) { return self.local_gf(Sigma, mu); }, "self",
    "Sigma", "mu")};
 
 // moments
-static auto const _c2py_fun_9 = c2py::dispatcher_f_kw_t{c2py::cmethod(
+static auto const _c2py_fun_10 = c2py::dispatcher_f_kw_t{c2py::cmethod(
    [](_c2py_cls_5 const &self, const nrgljubljana_interface::g_w_t &Sigma, double mu) -> decltype(auto) { return self.moments(Sigma, mu); }, "self",
    "Sigma", "mu")};
 
 // onsite_energy
-static auto const _c2py_fun_10 = c2py::dispatcher_f_kw_t{
+static auto const _c2py_fun_11 = c2py::dispatcher_f_kw_t{
    c2py::cmethod([](_c2py_cls_5 const &self, const triqs::gfs::gf_struct_t &structure) -> decltype(auto) { return self.onsite_energy(structure); },
                  "self", "structure")};
 
 // read_dos
-static auto const _c2py_fun_11 = c2py::dispatcher_f_kw_t{c2py::cfun([](const std::string &path) { return _c2py_cls_5::read_dos(path); }, "path")};
+static auto const _c2py_fun_12 = c2py::dispatcher_f_kw_t{c2py::cfun([](const std::string &path) { return _c2py_cls_5::read_dos(path); }, "path")};
 
 // self_consistency
-static auto const _c2py_fun_12 = c2py::dispatcher_f_kw_t{c2py::cmethod(
+static auto const _c2py_fun_13 = c2py::dispatcher_f_kw_t{c2py::cmethod(
    [](_c2py_cls_5 const &self, const nrgljubljana_interface::g_w_t &Sigma, double mu) -> decltype(auto) { return self.self_consistency(Sigma, mu); },
    "self", "Sigma", "mu")};
 
-// sigma_floor
-static auto const _c2py_fun_13 =
-   c2py::dispatcher_f_kw_t{c2py::cmethod([](_c2py_cls_5 const &self) -> decltype(auto) { return self.sigma_floor(); }, "self")};
-
-static const auto _c2py_doc_7  = _c2py_fun_7.doc(R"DOC(
+static const auto _c2py_doc_7  = _c2py_fun_7.doc(R"DOC()DOC");
+static const auto _c2py_doc_8  = _c2py_fun_8.doc(R"DOC(
 The kind (shared or per element), the number of points and a checksum of each table, and the floor
 )DOC");
-static const auto _c2py_doc_8  = _c2py_fun_8.doc(R"DOC(
+static const auto _c2py_doc_9  = _c2py_fun_9.doc(R"DOC(
 G0 alone; by default the first of moments
 )DOC");
-static const auto _c2py_doc_9  = _c2py_fun_9.doc(R"DOC(
+static const auto _c2py_doc_10 = _c2py_fun_10.doc(R"DOC(
 (G0, G1)
 )DOC");
-static const auto _c2py_doc_10 = _c2py_fun_10.doc(R"DOC(
+static const auto _c2py_doc_11 = _c2py_fun_11.doc(R"DOC(
 ⟨h⟩ per block of the given structure
 )DOC");
-static const auto _c2py_doc_11 = _c2py_fun_11.doc(R"DOC(
+static const auto _c2py_doc_12 = _c2py_fun_12.doc(R"DOC(
 A DOS from a file of two columns, energy and density; blank lines and lines starting with # are skipped
 )DOC");
-static const auto _c2py_doc_12 = _c2py_fun_12.doc(R"DOC(
+static const auto _c2py_doc_13 = _c2py_fun_13.doc(R"DOC(
 (G_loc, Δ) with G_loc = G0 and Δ = G1 G0⁻¹, which avoids subtracting two large numbers where G0 is small.
 Throws std::invalid_argument for a singular G0, naming the block and the frequency.
 )DOC");
-static const auto _c2py_doc_13 = _c2py_fun_13.doc(R"DOC()DOC");
 
 // ----- Method table ----
 template <>
 PyMethodDef c2py::tp_methods<_c2py_cls_5>[] = {
-   {"description", (PyCFunction)c2py::pyfkw<_c2py_fun_7>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_7.c_str()},
-   {"local_gf", (PyCFunction)c2py::pyfkw<_c2py_fun_8>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_8.c_str()},
-   {"moments", (PyCFunction)c2py::pyfkw<_c2py_fun_9>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_9.c_str()},
-   {"onsite_energy", (PyCFunction)c2py::pyfkw<_c2py_fun_10>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_10.c_str()},
-   {"read_dos", (PyCFunction)c2py::pyfkw<_c2py_fun_11>, METH_VARARGS | METH_KEYWORDS | METH_STATIC, _c2py_doc_11.c_str()},
-   {"self_consistency", (PyCFunction)c2py::pyfkw<_c2py_fun_12>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_12.c_str()},
-   {"sigma_floor", (PyCFunction)c2py::pyfkw<_c2py_fun_13>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_13.c_str()},
+   {"Sigma_floor", (PyCFunction)c2py::pyfkw<_c2py_fun_7>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_7.c_str()},
+   {"description", (PyCFunction)c2py::pyfkw<_c2py_fun_8>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_8.c_str()},
+   {"local_gf", (PyCFunction)c2py::pyfkw<_c2py_fun_9>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_9.c_str()},
+   {"moments", (PyCFunction)c2py::pyfkw<_c2py_fun_10>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_10.c_str()},
+   {"onsite_energy", (PyCFunction)c2py::pyfkw<_c2py_fun_11>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_11.c_str()},
+   {"read_dos", (PyCFunction)c2py::pyfkw<_c2py_fun_12>, METH_VARARGS | METH_KEYWORDS | METH_STATIC, _c2py_doc_12.c_str()},
+   {"self_consistency", (PyCFunction)c2py::pyfkw<_c2py_fun_13>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_13.c_str()},
    {nullptr, nullptr, 0, nullptr} // Sentinel
 };
 
@@ -1504,7 +1504,7 @@ static int synth_constructor_13(PyObject *self, PyObject *args, PyObject *kwargs
     return -1;
   }
   auto &self_c = *(((c2py::wrap<_c2py_cls_18> *)self)->_c);
-  de("decision", self_c.decision, true);
+  de("status", self_c.status, true);
   de("distance", self_c.distance, true);
   de("window_max", self_c.window_max, true);
   de("window_samples", self_c.window_samples, true);
@@ -1525,7 +1525,7 @@ const std::string c2py::tp_ctor_doc<_c2py_cls_18> =
 
 Parameters
 ----------
-decision : {par_0}, default={}
+status : {par_0}, default={}
 
 distance : {par_1}, default={}
 
@@ -1573,7 +1573,7 @@ constexpr auto _c2py_doc_member_67 = R"DOC(Which criteria hold (an inactive crit
 static PyObject *prop_get_dict_13(PyObject *self, void *) {
   auto &self_c = *(((c2py::wrap<_c2py_cls_18> *)self)->_c);
   c2py::pydict dic;
-  dic["decision"]         = self_c.decision;
+  dic["status"]           = self_c.status;
   dic["distance"]         = self_c.distance;
   dic["window_max"]       = self_c.window_max;
   dic["window_samples"]   = self_c.window_samples;
@@ -1590,7 +1590,7 @@ static PyObject *prop_get_dict_13(PyObject *self, void *) {
 
 template <>
 constinit PyGetSetDef c2py::tp_getset<_c2py_cls_18>[] = {
-   c2py::getsetdef_from_member<&_c2py_cls_18::decision, _c2py_cls_18>("decision", _c2py_doc_member_58),
+   c2py::getsetdef_from_member<&_c2py_cls_18::status, _c2py_cls_18>("status", _c2py_doc_member_58),
    c2py::getsetdef_from_member<&_c2py_cls_18::distance, _c2py_cls_18>("distance", _c2py_doc_member_59),
    c2py::getsetdef_from_member<&_c2py_cls_18::window_max, _c2py_cls_18>("window_max", _c2py_doc_member_60),
    c2py::getsetdef_from_member<&_c2py_cls_18::window_samples, _c2py_cls_18>("window_samples", _c2py_doc_member_61),
@@ -1605,7 +1605,7 @@ constinit PyGetSetDef c2py::tp_getset<_c2py_cls_18>[] = {
 
 template <>
 const std::string c2py::tp_doc<_c2py_cls_18> =
-   R"DOC(The decision and the measures behind it)DOC" + std::string{"\n\n----------\n\n"} + c2py::tp_ctor_doc<_c2py_cls_18>;
+   R"DOC(The status and the measures behind it)DOC" + std::string{"\n\n----------\n\n"} + c2py::tp_ctor_doc<_c2py_cls_18>;
 // --------- class _c2py_cls_19 -----------
 using _c2py_cls_19                                            = nrgljubljana_interface::dmft::convergence_t;
 template <> constexpr bool c2py::is_wrapped<_c2py_cls_19>     = true;
@@ -1682,7 +1682,7 @@ static int synth_constructor_14(PyObject *self, PyObject *args, PyObject *kwargs
   de("solve_params", self_c.solve_params, true);
   de("options", self_c.options, true);
   de("Gamma_floor", self_c.Gamma_floor, true);
-  de("sigma_floor", self_c.sigma_floor, true);
+  de("Sigma_floor", self_c.Sigma_floor, true);
   de("run_dir", self_c.run_dir, true);
   de("keep_history", self_c.keep_history, true);
   return de.check();
@@ -1702,7 +1702,7 @@ options : {par_1}, default={}
 
 Gamma_floor : {par_2}, default=1e-6
 
-sigma_floor : {par_3}, default=1e-12
+Sigma_floor : {par_3}, default=1e-12
 
 run_dir : {par_4}, default={}
 
@@ -1734,7 +1734,7 @@ static PyObject *prop_get_dict_14(PyObject *self, void *) {
   dic["solve_params"] = self_c.solve_params;
   dic["options"]      = self_c.options;
   dic["Gamma_floor"]  = self_c.Gamma_floor;
-  dic["sigma_floor"]  = self_c.sigma_floor;
+  dic["Sigma_floor"]  = self_c.Sigma_floor;
   dic["run_dir"]      = self_c.run_dir;
   dic["keep_history"] = self_c.keep_history;
   return dic.new_ref();
@@ -1747,7 +1747,7 @@ constinit PyGetSetDef c2py::tp_getset<_c2py_cls_20>[] = {
    c2py::getsetdef_from_member<&_c2py_cls_20::solve_params, _c2py_cls_20>("solve_params", _c2py_doc_member_68),
    c2py::getsetdef_from_member<&_c2py_cls_20::options, _c2py_cls_20>("options", _c2py_doc_member_69),
    c2py::getsetdef_from_member<&_c2py_cls_20::Gamma_floor, _c2py_cls_20>("Gamma_floor", _c2py_doc_member_70),
-   c2py::getsetdef_from_member<&_c2py_cls_20::sigma_floor, _c2py_cls_20>("sigma_floor", _c2py_doc_member_71),
+   c2py::getsetdef_from_member<&_c2py_cls_20::Sigma_floor, _c2py_cls_20>("Sigma_floor", _c2py_doc_member_71),
    c2py::getsetdef_from_member<&_c2py_cls_20::run_dir, _c2py_cls_20>("run_dir", _c2py_doc_member_72),
    c2py::getsetdef_from_member<&_c2py_cls_20::keep_history, _c2py_cls_20>("keep_history", _c2py_doc_member_73),
    {"__dict__", (getter)prop_get_dict_14, nullptr, "", nullptr},
@@ -1780,13 +1780,13 @@ static int synth_constructor_15(PyObject *self, PyObject *args, PyObject *kwargs
   de("mu", self_c.mu, true);
   de("mu_next", self_c.mu_next, true);
   de("filling", self_c.filling, true);
-  de("sigma_projection", self_c.sigma_projection, true);
-  de("delta_projection", self_c.delta_projection, true);
+  de("Sigma_projection", self_c.Sigma_projection, true);
+  de("Delta_projection", self_c.Delta_projection, true);
   de("mu_report", self_c.mu_report, true);
   de("mix_report", self_c.mix_report, true);
   de("convergence", self_c.convergence, true);
   de("expv", self_c.expv, true);
-  de("kept_delta", self_c.kept_delta, true);
+  de("kept_Delta", self_c.kept_Delta, true);
   return de.check();
 }
 
@@ -1806,9 +1806,9 @@ mu_next : {par_2}, default=0
 
 filling : {par_3}, default=0
 
-sigma_projection : {par_4}, default={}
+Sigma_projection : {par_4}, default={}
 
-delta_projection : {par_5}, default={}
+Delta_projection : {par_5}, default={}
 
 mu_report : {par_6}, default={}
 
@@ -1818,7 +1818,7 @@ convergence : {par_8}, default={}
 
 expv : {par_9}, default={}
 
-kept_delta : {par_10}, default=false
+kept_Delta : {par_10}, default=false
 
 )DOC",
    "par",
@@ -1847,7 +1847,7 @@ constexpr auto _c2py_doc_member_80 = R"DOC()DOC";
 constexpr auto _c2py_doc_member_81 = R"DOC()DOC";
 constexpr auto _c2py_doc_member_82 = R"DOC()DOC";
 constexpr auto _c2py_doc_member_83 = R"DOC(Expectation values of the solve)DOC";
-constexpr auto _c2py_doc_member_84 = R"DOC(The next Δ could not be prepared after a terminal decision; Δ is kept)DOC";
+constexpr auto _c2py_doc_member_84 = R"DOC(The next Δ could not be prepared after a terminal status; Δ is kept)DOC";
 static PyObject *prop_get_dict_15(PyObject *self, void *) {
   auto &self_c = *(((c2py::wrap<_c2py_cls_21> *)self)->_c);
   c2py::pydict dic;
@@ -1855,13 +1855,13 @@ static PyObject *prop_get_dict_15(PyObject *self, void *) {
   dic["mu"]               = self_c.mu;
   dic["mu_next"]          = self_c.mu_next;
   dic["filling"]          = self_c.filling;
-  dic["sigma_projection"] = self_c.sigma_projection;
-  dic["delta_projection"] = self_c.delta_projection;
+  dic["Sigma_projection"] = self_c.Sigma_projection;
+  dic["Delta_projection"] = self_c.Delta_projection;
   dic["mu_report"]        = self_c.mu_report;
   dic["mix_report"]       = self_c.mix_report;
   dic["convergence"]      = self_c.convergence;
   dic["expv"]             = self_c.expv;
-  dic["kept_delta"]       = self_c.kept_delta;
+  dic["kept_Delta"]       = self_c.kept_Delta;
   return dic.new_ref();
 }
 
@@ -1873,13 +1873,13 @@ constinit PyGetSetDef c2py::tp_getset<_c2py_cls_21>[] = {
    c2py::getsetdef_from_member<&_c2py_cls_21::mu, _c2py_cls_21>("mu", _c2py_doc_member_75),
    c2py::getsetdef_from_member<&_c2py_cls_21::mu_next, _c2py_cls_21>("mu_next", _c2py_doc_member_76),
    c2py::getsetdef_from_member<&_c2py_cls_21::filling, _c2py_cls_21>("filling", _c2py_doc_member_77),
-   c2py::getsetdef_from_member<&_c2py_cls_21::sigma_projection, _c2py_cls_21>("sigma_projection", _c2py_doc_member_78),
-   c2py::getsetdef_from_member<&_c2py_cls_21::delta_projection, _c2py_cls_21>("delta_projection", _c2py_doc_member_79),
+   c2py::getsetdef_from_member<&_c2py_cls_21::Sigma_projection, _c2py_cls_21>("Sigma_projection", _c2py_doc_member_78),
+   c2py::getsetdef_from_member<&_c2py_cls_21::Delta_projection, _c2py_cls_21>("Delta_projection", _c2py_doc_member_79),
    c2py::getsetdef_from_member<&_c2py_cls_21::mu_report, _c2py_cls_21>("mu_report", _c2py_doc_member_80),
    c2py::getsetdef_from_member<&_c2py_cls_21::mix_report, _c2py_cls_21>("mix_report", _c2py_doc_member_81),
    c2py::getsetdef_from_member<&_c2py_cls_21::convergence, _c2py_cls_21>("convergence", _c2py_doc_member_82),
    c2py::getsetdef_from_member<&_c2py_cls_21::expv, _c2py_cls_21>("expv", _c2py_doc_member_83),
-   c2py::getsetdef_from_member<&_c2py_cls_21::kept_delta, _c2py_cls_21>("kept_delta", _c2py_doc_member_84),
+   c2py::getsetdef_from_member<&_c2py_cls_21::kept_Delta, _c2py_cls_21>("kept_Delta", _c2py_doc_member_84),
    {"__dict__", (getter)prop_get_dict_15, nullptr, "", nullptr},
    {nullptr, nullptr, nullptr, nullptr, nullptr}};
 
@@ -1995,7 +1995,7 @@ mixer and the lattice, the manifest, the mesh); otherwise std::invalid_argument 
 allow_changes, which continues with the current parameters.
 )DOC");
 static const auto _c2py_doc_41 = _c2py_fun_41.doc(R"DOC(
-Steps until the decision is converged or stop, or max_steps (0: no limit) steps were taken; the last decision
+Steps until the status is converged or stop, or max_steps (0: no limit) steps were taken; the last status
 )DOC");
 static const auto _c2py_doc_42 = _c2py_fun_42.doc(R"DOC(
 Call the function with the StepResult of each step, after it is committed; what it returns is ignored
@@ -2031,16 +2031,29 @@ const std::string c2py::tp_doc<_c2py_cls_22> =
 
 // ==================== module functions ====================
 
-// causal_projection
+// Sigma_FG
 static auto const _c2py_fun_44 = c2py::dispatcher_f_kw_t{c2py::cfun(
+   [](const nrgljubljana_interface::g_w_t &G, const nrgljubljana_interface::g_w_t &F_l) { return nrgljubljana_interface::dmft::Sigma_FG(G, F_l); },
+   "G", "F_l")};
+
+// Sigma_IFG
+static auto const _c2py_fun_45 = c2py::dispatcher_f_kw_t{c2py::cfun(
+   [](const nrgljubljana_interface::g_w_t &G, const nrgljubljana_interface::g_w_t &F_l, const nrgljubljana_interface::g_w_t &F_r,
+      const nrgljubljana_interface::g_w_t &I, const nrgljubljana_interface::dmft::block_matrices_t &Sigma_Hartree) {
+     return nrgljubljana_interface::dmft::Sigma_IFG(G, F_l, F_r, I, Sigma_Hartree);
+   },
+   "G", "F_l", "F_r", "I", "Sigma_Hartree")};
+
+// causal_projection
+static auto const _c2py_fun_46 = c2py::dispatcher_f_kw_t{c2py::cfun(
    [](const nrgljubljana_interface::g_w_t &F, double floor) { return nrgljubljana_interface::dmft::causal_projection(F, floor); }, "F", "floor")};
 
 // high_frequency_limit
-static auto const _c2py_fun_45 = c2py::dispatcher_f_kw_t{
+static auto const _c2py_fun_47 = c2py::dispatcher_f_kw_t{
    c2py::cfun([](const nrgljubljana_interface::g_w_t &F) { return nrgljubljana_interface::dmft::high_frequency_limit(F); }, "F")};
 
 // hilbert_transform
-static auto const _c2py_fun_46 = c2py::dispatcher_f_kw_t{
+static auto const _c2py_fun_48 = c2py::dispatcher_f_kw_t{
    c2py::cfun([](const nrgljubljana_interface::dmft::dos_t &dos, std::complex<double> z,
                  long moment) { return nrgljubljana_interface::dmft::hilbert_transform(dos, z, moment); },
               "dos", "z", "moment"_a = 0),
@@ -2056,42 +2069,29 @@ static auto const _c2py_fun_46 = c2py::dispatcher_f_kw_t{
       "dos", "z", "moment"_a = 0)};
 
 // hybridization_from_Gamma
-static auto const _c2py_fun_47 = c2py::dispatcher_f_kw_t{
+static auto const _c2py_fun_49 = c2py::dispatcher_f_kw_t{
    c2py::cfun([](const nrgljubljana_interface::g_w_t &Gamma, const nrgljubljana_interface::dmft::block_matrices_t &onsite_energy,
                  double floor) { return nrgljubljana_interface::dmft::hybridization_from_Gamma(Gamma, onsite_energy, floor); },
               "Gamma", "onsite_energy", "floor")};
 
 // impurity_gf
-static auto const _c2py_fun_48 = c2py::dispatcher_f_kw_t{c2py::cfun(
+static auto const _c2py_fun_50 = c2py::dispatcher_f_kw_t{c2py::cfun(
    [](const nrgljubljana_interface::g_w_t &Delta, const nrgljubljana_interface::g_w_t &Sigma,
       const nrgljubljana_interface::dmft::block_matrices_t &h_imp) { return nrgljubljana_interface::dmft::impurity_gf(Delta, Sigma, h_imp); },
    "Delta", "Sigma", "h_imp")};
 
 // occupancy
-static auto const _c2py_fun_49 = c2py::dispatcher_f_kw_t{
+static auto const _c2py_fun_51 = c2py::dispatcher_f_kw_t{
    c2py::cfun([](const nrgljubljana_interface::g_w_t &G, double T, const std::map<std::string, long> &degeneracy, double epsabs,
                  double epsrel) { return nrgljubljana_interface::dmft::occupancy(G, T, degeneracy, epsabs, epsrel); },
               "G", "T", "degeneracy", "epsabs"_a = 1e-10, "epsrel"_a = 1e-9)};
 
 // rebuild_hermitian_part
-static auto const _c2py_fun_50 = c2py::dispatcher_f_kw_t{c2py::cfun(
+static auto const _c2py_fun_52 = c2py::dispatcher_f_kw_t{c2py::cfun(
    [](const nrgljubljana_interface::g_w_t &F, const nrgljubljana_interface::dmft::block_matrices_t &high_frequency_limit) {
      return nrgljubljana_interface::dmft::rebuild_hermitian_part(F, high_frequency_limit);
    },
    "F", "high_frequency_limit")};
-
-// sigma_FG
-static auto const _c2py_fun_51 = c2py::dispatcher_f_kw_t{c2py::cfun(
-   [](const nrgljubljana_interface::g_w_t &G, const nrgljubljana_interface::g_w_t &F_l) { return nrgljubljana_interface::dmft::sigma_FG(G, F_l); },
-   "G", "F_l")};
-
-// sigma_IFG
-static auto const _c2py_fun_52 = c2py::dispatcher_f_kw_t{c2py::cfun(
-   [](const nrgljubljana_interface::g_w_t &G, const nrgljubljana_interface::g_w_t &F_l, const nrgljubljana_interface::g_w_t &F_r,
-      const nrgljubljana_interface::g_w_t &I, const nrgljubljana_interface::dmft::block_matrices_t &sigma_hartree) {
-     return nrgljubljana_interface::dmft::sigma_IFG(G, F_l, F_r, I, sigma_hartree);
-   },
-   "G", "F_l", "F_r", "I", "sigma_hartree")};
 
 // spectral_distance
 static auto const _c2py_fun_53 =
@@ -2108,6 +2108,16 @@ static auto const _c2py_fun_55 =
    c2py::dispatcher_f_kw_t{c2py::cfun([](const nrgljubljana_interface::g_w_t &G) { return nrgljubljana_interface::dmft::spectral_weight(G); }, "G")};
 
 static const auto _c2py_doc_44 = _c2py_fun_44.doc(R"DOC(
+The self-energy Σ = F_l G⁻¹, the estimator without I and F_r. Errors as for Sigma_IFG.
+)DOC");
+static const auto _c2py_doc_45 = _c2py_fun_45.doc(R"DOC(
+The self-energy from G, F_l, F_r and I: Σ = Σ_H + I − F_l G⁻¹ F_r, per block and mesh point, with the constant
+Hartree term Σ_H (one matrix per block).
+
+F_l, F_r and I must have the structure and mesh of G. Throws std::invalid_argument for a mismatch, a non-finite
+input, a wrong number or size of Hartree matrices, and a singular G (naming the block and the frequency).
+)DOC");
+static const auto _c2py_doc_46 = _c2py_fun_46.doc(R"DOC(
 Raise the eigenvalues of the spectral part below floor to it, keeping the eigenvectors (S' = S + δS), and
 correct the Hermitian part by the Kramers-Kronig transform of the change: F' = H + KK(−δS) − iS'.
 
@@ -2118,13 +2128,13 @@ projection changes nothing. A block in which nothing is raised is returned uncha
 Throws std::invalid_argument for a floor that is negative or not finite, and for a non-finite F (naming the
 block, the element and the frequency).
 )DOC");
-static const auto _c2py_doc_45 = _c2py_fun_45.doc(R"DOC(
+static const auto _c2py_doc_47 = _c2py_fun_47.doc(R"DOC(
 Estimate of the high-frequency limit F_∞: H − KK(−S) averaged over the two ends of the mesh, symmetrized.
 
 Exact up to the accuracy of KK when ρ vanishes at and beyond the ends of the mesh. Throws std::invalid_argument
 for a non-finite F.
 )DOC");
-static const auto _c2py_doc_46 = _c2py_fun_46.doc(R"DOC(
+static const auto _c2py_doc_48 = _c2py_fun_48.doc(R"DOC(
 [1] The Hilbert transform G_n(z) = ∫ εⁿ ρ(ε) / (z − ε) dε of the Steffen interpolant of a tabulated DOS (NRG
 Ljubljana numerics, as tabulated_lattice_t), for z off the real axis; a real z gives the limit z + i0. The DOS
 needs finite values, strictly increasing energies and ρ ≥ 0, but no normalization.
@@ -2143,7 +2153,7 @@ condition number at most 1e8. Errors are std::invalid_argument.
 
 ------
 )DOC");
-static const auto _c2py_doc_47 = _c2py_fun_47.doc(R"DOC(
+static const auto _c2py_doc_49 = _c2py_fun_49.doc(R"DOC(
 The hybridization from a spectral part Γ, e.g. after mixing: the eigenvalues of Γ below floor raised to it (Γ'),
 then Δ = ⟨h⟩ + KK(−Γ') − iΓ' with the on-site energy ⟨h⟩ (one matrix per block, symmetrized). The same as
 rebuild_hermitian_part(causal_projection(−iΓ, floor).first, ⟨h⟩), without the correction that the rebuild
@@ -2152,36 +2162,26 @@ discards.
 Throws std::invalid_argument for a negative or non-finite floor, a non-finite or non-Hermitian Γ (to 1e-12 of its
 largest element), and on-site energies of the wrong number or size.
 )DOC");
-static const auto _c2py_doc_48 = _c2py_fun_48.doc(R"DOC(
+static const auto _c2py_doc_50 = _c2py_fun_50.doc(R"DOC(
 The impurity Green's function from the impurity Dyson equation, G = (G0⁻¹ − Σ)⁻¹ with G0⁻¹ = ω − h_imp − Δ,
 per block and mesh point, with the constant impurity levels h_imp (one matrix per block).
 
 Σ must have the structure and mesh of Δ. Throws std::invalid_argument for a mismatch, a non-finite input, a
 wrong number or size of h_imp, and a singular ω − h_imp − Δ − Σ (naming the block and the frequency).
 )DOC");
-static const auto _c2py_doc_49 = _c2py_fun_49.doc(R"DOC(
+static const auto _c2py_doc_51 = _c2py_fun_51.doc(R"DOC(
 The occupancy of G at temperature T (T = 0: the step at ω = 0). degeneracy gives the number of equivalent copies
 each block stands for (the manifest's [structure] degeneracy), for every block of G and no other.
 
 Throws std::invalid_argument for a non-finite G, a negative or non-finite T, and a degeneracy that does not cover
 exactly the blocks of G with positive counts.
 )DOC");
-static const auto _c2py_doc_50 = _c2py_fun_50.doc(R"DOC(
+static const auto _c2py_doc_52 = _c2py_fun_52.doc(R"DOC(
 The Hermitian part rebuilt from the spectral part and the high-frequency limit: F' = F_∞ + KK(−S) − iS.
 
 For a function whose Hermitian part is missing or not trusted, e.g. Δ after mixing Γ. F_∞ has one matrix per
 block of the size of the block, Hermitian to 1e-12 relative; it is symmetrized. Throws std::invalid_argument
 otherwise, and for a non-finite F.
-)DOC");
-static const auto _c2py_doc_51 = _c2py_fun_51.doc(R"DOC(
-The self-energy Σ = F_l G⁻¹, the estimator without I and F_r. Errors as for sigma_IFG.
-)DOC");
-static const auto _c2py_doc_52 = _c2py_fun_52.doc(R"DOC(
-The self-energy from G, F_l, F_r and I: Σ = Σ_H + I − F_l G⁻¹ F_r, per block and mesh point, with the constant
-Hartree term Σ_H (one matrix per block).
-
-F_l, F_r and I must have the structure and mesh of G. Throws std::invalid_argument for a mismatch, a non-finite
-input, a wrong number or size of Hartree matrices, and a singular G (naming the block and the frequency).
 )DOC");
 static const auto _c2py_doc_53 = _c2py_fun_53.doc(R"DOC(
 The distance between the spectral functions of a and b, which must have the same structure and mesh
@@ -2195,15 +2195,15 @@ static const auto _c2py_doc_55 = _c2py_fun_55.doc(R"DOC(
 //--------------------- module function table  -----------------------------
 
 static PyMethodDef module_methods[] = {
-   {"causal_projection", (PyCFunction)c2py::pyfkw<_c2py_fun_44>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_44.c_str()},
-   {"high_frequency_limit", (PyCFunction)c2py::pyfkw<_c2py_fun_45>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_45.c_str()},
-   {"hilbert_transform", (PyCFunction)c2py::pyfkw<_c2py_fun_46>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_46.c_str()},
-   {"hybridization_from_Gamma", (PyCFunction)c2py::pyfkw<_c2py_fun_47>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_47.c_str()},
-   {"impurity_gf", (PyCFunction)c2py::pyfkw<_c2py_fun_48>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_48.c_str()},
-   {"occupancy", (PyCFunction)c2py::pyfkw<_c2py_fun_49>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_49.c_str()},
-   {"rebuild_hermitian_part", (PyCFunction)c2py::pyfkw<_c2py_fun_50>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_50.c_str()},
-   {"sigma_FG", (PyCFunction)c2py::pyfkw<_c2py_fun_51>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_51.c_str()},
-   {"sigma_IFG", (PyCFunction)c2py::pyfkw<_c2py_fun_52>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_52.c_str()},
+   {"Sigma_FG", (PyCFunction)c2py::pyfkw<_c2py_fun_44>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_44.c_str()},
+   {"Sigma_IFG", (PyCFunction)c2py::pyfkw<_c2py_fun_45>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_45.c_str()},
+   {"causal_projection", (PyCFunction)c2py::pyfkw<_c2py_fun_46>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_46.c_str()},
+   {"high_frequency_limit", (PyCFunction)c2py::pyfkw<_c2py_fun_47>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_47.c_str()},
+   {"hilbert_transform", (PyCFunction)c2py::pyfkw<_c2py_fun_48>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_48.c_str()},
+   {"hybridization_from_Gamma", (PyCFunction)c2py::pyfkw<_c2py_fun_49>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_49.c_str()},
+   {"impurity_gf", (PyCFunction)c2py::pyfkw<_c2py_fun_50>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_50.c_str()},
+   {"occupancy", (PyCFunction)c2py::pyfkw<_c2py_fun_51>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_51.c_str()},
+   {"rebuild_hermitian_part", (PyCFunction)c2py::pyfkw<_c2py_fun_52>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_52.c_str()},
    {"spectral_distance", (PyCFunction)c2py::pyfkw<_c2py_fun_53>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_53.c_str()},
    {"spectral_part", (PyCFunction)c2py::pyfkw<_c2py_fun_54>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_54.c_str()},
    {"spectral_weight", (PyCFunction)c2py::pyfkw<_c2py_fun_55>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_55.c_str()},

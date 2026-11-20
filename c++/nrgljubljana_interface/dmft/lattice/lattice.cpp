@@ -57,7 +57,7 @@ namespace nrgljubljana_interface::dmft {
 
   namespace detail {
 
-    void check_sigma_floor(double floor, std::string const &function) {
+    void check_Sigma_floor(double floor, std::string const &function) {
       double const smallest = std::sqrt(std::numeric_limits<double>::min());
       if (not std::isfinite(floor) or floor < smallest)
         throw std::invalid_argument(function + ": the floor of Im Σ must be finite and at least " + number(smallest) + ", got " + number(floor));

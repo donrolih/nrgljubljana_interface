@@ -77,10 +77,10 @@ namespace {
     return make_matrix({{0.6, {0.0, 0.2}}, {{0.0, -0.2}, 0.4}}) * lorentz(w, 0.1, 0.8);
   }
 
-  block_matrices_t hartree() { return {make_matrix({{1.7}}), make_matrix({{1.1, 0.2}, {0.2, 0.9}})}; }
+  block_matrices_t Hartree() { return {make_matrix({{1.7}}), make_matrix({{1.1, 0.2}, {0.2, 0.9}})}; }
   block_matrices_t levels() { return {make_matrix({{-0.5}}), make_matrix({{-0.3, {0.05, 0.1}}, {{0.05, -0.1}, -0.6}})}; }
 
-  cmatrix g_exact(long b, double w) { return nda::linalg::inv(cmatrix(w * id(b) - levels()[b] - delta(b, w) - hartree()[b] - sigma_prime(b, w))); }
+  cmatrix g_exact(long b, double w) { return nda::linalg::inv(cmatrix(w * id(b) - levels()[b] - delta(b, w) - Hartree()[b] - sigma_prime(b, w))); }
 
   struct constructed_t {
     g_w_t G, F_l, F_r, I, Delta, Sigma, Sigma_prime;
@@ -92,7 +92,7 @@ namespace {
     auto F_r = make_gf(mesh, [](long b, double w) { return cmatrix(g_exact(b, w) * sigma_prime(b, w)); });
     auto I   = make_gf(mesh, [](long b, double w) { return cmatrix(sigma_prime(b, w) + sigma_prime(b, w) * g_exact(b, w) * sigma_prime(b, w)); });
     auto D   = make_gf(mesh, delta);
-    auto S   = make_gf(mesh, [](long b, double w) { return cmatrix(hartree()[b] + sigma_prime(b, w)); });
+    auto S   = make_gf(mesh, [](long b, double w) { return cmatrix(Hartree()[b] + sigma_prime(b, w)); });
     auto Sp  = make_gf(mesh, sigma_prime);
     return {G, F_l, F_r, I, D, S, Sp};
   }
@@ -121,12 +121,12 @@ namespace {
 
 TEST(SelfEnergy, SigmaIFG) {
   auto const c = constructed(test_mesh());
-  EXPECT_LT(relative_difference(sigma_IFG(c.G, c.F_l, c.F_r, c.I, hartree()), c.Sigma), 1e-13);
+  EXPECT_LT(relative_difference(Sigma_IFG(c.G, c.F_l, c.F_r, c.I, Hartree()), c.Sigma), 1e-13);
 }
 
 TEST(SelfEnergy, SigmaFG) {
   auto const c = constructed(test_mesh());
-  EXPECT_LT(relative_difference(sigma_FG(c.G, c.F_l), c.Sigma_prime), 1e-13);
+  EXPECT_LT(relative_difference(Sigma_FG(c.G, c.F_l), c.Sigma_prime), 1e-13);
 }
 
 TEST(SelfEnergy, ImpurityGf) {
@@ -149,26 +149,26 @@ TEST(SelfEnergy, Errors) {
   auto const c    = constructed(mesh);
 
   g_w_t other_blocks{mesh, triqs::gfs::gf_struct_t{{"imp", 1}, {"dn", 2}}};
-  expect_invalid_argument([&] { sigma_IFG(c.G, other_blocks, c.F_r, c.I, hartree()); }, "sigma_IFG: F_l does not have the blocks of G");
+  expect_invalid_argument([&] { Sigma_IFG(c.G, other_blocks, c.F_r, c.I, Hartree()); }, "Sigma_IFG: F_l does not have the blocks of G");
   g_w_t other_size{mesh, triqs::gfs::gf_struct_t{{"imp", 1}, {"up", 3}}};
-  expect_invalid_argument([&] { sigma_IFG(c.G, c.F_l, other_size, c.I, hartree()); }, "F_r block up is 3x3, in G 2x2");
+  expect_invalid_argument([&] { Sigma_IFG(c.G, c.F_l, other_size, c.I, Hartree()); }, "F_r block up is 3x3, in G 2x2");
   g_w_t other_mesh{refreq_log{1e-2, 5.0, 1.3}, triqs::gfs::gf_struct_t{{"imp", 1}, {"up", 2}}};
-  expect_invalid_argument([&] { sigma_FG(c.G, other_mesh); }, "F_l block imp is not on the mesh of G");
+  expect_invalid_argument([&] { Sigma_FG(c.G, other_mesh); }, "F_l block imp is not on the mesh of G");
   expect_invalid_argument([&] { impurity_gf(c.Delta, other_mesh, levels()); }, "Sigma block imp is not on the mesh of Delta");
 
-  expect_invalid_argument([&] { sigma_IFG(c.G, c.F_l, c.F_r, c.I, {hartree()[0]}); }, "the Hartree term has 1 matrices, the function 2 blocks");
+  expect_invalid_argument([&] { Sigma_IFG(c.G, c.F_l, c.F_r, c.I, {Hartree()[0]}); }, "the Hartree term has 1 matrices, the function 2 blocks");
   expect_invalid_argument([&] { impurity_gf(c.Delta, c.Sigma, {levels()[0], levels()[0]}); }, "h_imp of block up is 1x1, the block 2x2");
   expect_invalid_argument([&] { impurity_gf(c.Delta, c.Sigma, {make_matrix({{std::numeric_limits<double>::quiet_NaN()}}), levels()[1]}); },
                           "h_imp of block imp is not finite");
 
   auto bad                  = c.I;
   bad[1].data()(2, 1, 0) = {std::numeric_limits<double>::infinity(), 0.0};
-  expect_invalid_argument([&] { sigma_IFG(c.G, c.F_l, c.F_r, bad, hartree()); }, "I is not finite in block up, element (1, 0)");
+  expect_invalid_argument([&] { Sigma_IFG(c.G, c.F_l, c.F_r, bad, Hartree()); }, "I is not finite in block up, element (1, 0)");
 
   auto singular               = c.G;
   singular[0].data()(4, 0, 0) = 0;
-  expect_invalid_argument([&] { sigma_IFG(singular, c.F_l, c.F_r, c.I, hartree()); }, "sigma_IFG: G is singular in block imp at ω = ");
-  expect_invalid_argument([&] { sigma_FG(singular, c.F_l); }, "sigma_FG: G is singular in block imp");
+  expect_invalid_argument([&] { Sigma_IFG(singular, c.F_l, c.F_r, c.I, Hartree()); }, "Sigma_IFG: G is singular in block imp at ω = ");
+  expect_invalid_argument([&] { Sigma_FG(singular, c.F_l); }, "Sigma_FG: G is singular in block imp");
 
   // ω − h − Δ − Σ singular at one point: Σ chosen so that it vanishes there
   auto sigma_singular = c.Sigma;

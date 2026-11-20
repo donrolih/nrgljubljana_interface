@@ -14,6 +14,14 @@ Examples
    guide/hubbard
    guide/2orb-UJ
 
+DMFT
+----
+
+.. toctree::
+   :maxdepth: 1
+
+   dmft
+
 Model templates
 ---------------
 

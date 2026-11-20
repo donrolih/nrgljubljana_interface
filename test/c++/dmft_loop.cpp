@@ -308,7 +308,7 @@ namespace {
 
   struct run_record_t {
     std::vector<double> mus;
-    std::vector<std::string> decisions;
+    std::vector<std::string> statuses;
   };
 
   // A loop with a filling goal in run_dir; the controls are owned here so a new object stands for a new process
@@ -324,7 +324,7 @@ namespace {
        : solver(siam_manifest + levels_section), mixer(alpha), loop(make(run_dir, T, keep_history)) {
       loop.set_callback([this](step_result_t const &r) {
         record.mus.push_back(r.mu_next);
-        record.decisions.push_back(r.convergence.decision);
+        record.statuses.push_back(r.convergence.status);
       });
     }
 

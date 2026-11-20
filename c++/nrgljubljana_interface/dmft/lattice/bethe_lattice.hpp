@@ -16,7 +16,7 @@ namespace nrgljubljana_interface::dmft {
   class bethe_lattice_t : public lattice_t {
    public:
     /// Throws std::invalid_argument for a half-bandwidth that is not positive and finite, and for an invalid floor
-    explicit bethe_lattice_t(double half_bandwidth, double sigma_floor = 1e-12);
+    explicit bethe_lattice_t(double half_bandwidth, double Sigma_floor = 1e-12);
 
     std::pair<g_w_t, g_w_t> moments(g_w_t const &Sigma, double mu) const override;
     g_w_t local_gf(g_w_t const &Sigma, double mu) const override;
@@ -24,7 +24,7 @@ namespace nrgljubljana_interface::dmft {
     [[nodiscard]] std::string description() const override;
 
     [[nodiscard]] double half_bandwidth() const { return D_; }
-    [[nodiscard]] double sigma_floor() const { return floor_; }
+    [[nodiscard]] double Sigma_floor() const { return floor_; }
 
    private:
     double D_, floor_;

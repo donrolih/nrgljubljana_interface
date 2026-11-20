@@ -86,11 +86,11 @@ namespace nrgljubljana_interface::dmft {
     r.imp_loc_ok     = not p.eps_imp_loc or r.distance_imp_loc <= *p.eps_imp_loc;
 
     if (r.window_ok and r.iterations_ok and r.filling_ok and r.mu_ok and r.imp_loc_ok)
-      r.decision = "converged";
+      r.status = "converged";
     else if (in.iteration >= p.max_iter)
-      r.decision = "stop";
+      r.status = "stop";
     else
-      r.decision = "continue";
+      r.status = "continue";
     return r;
   }
 
@@ -123,7 +123,7 @@ namespace nrgljubljana_interface::dmft {
   void h5_write(h5::group g, std::string const &name, convergence_result_t const &r) {
     auto grp = g.create_group(name);
     h5::write_hdf5_format(grp, r);
-    h5::write(grp, "decision", r.decision);
+    h5::write(grp, "status", r.status);
     if (r.distance) h5::write(grp, "distance", *r.distance);
     h5::write(grp, "window_max", r.window_max);
     h5::write(grp, "window_samples", r.window_samples);
@@ -142,7 +142,7 @@ namespace nrgljubljana_interface::dmft {
       h5::read(grp, key, v);
       b = v != 0;
     };
-    h5::read(grp, "decision", r.decision);
+    h5::read(grp, "status", r.status);
     r.distance = {};
     if (grp.has_key("distance")) {
       double d = 0;
