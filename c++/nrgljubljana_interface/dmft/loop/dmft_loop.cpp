@@ -5,8 +5,12 @@
 #include <mpi/mpi.hpp>
 #include <nda/mpi.hpp>
 
+#include <fcntl.h>
+#include <unistd.h>
+
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
@@ -55,6 +59,90 @@ namespace nrgljubljana_interface::dmft {
           throw std::invalid_argument(pre + "the model parameter " + name + " is an impurity level, set by the loop from the on-site energy and μ");
     }
 
+    void write_report(h5::group g, std::string const &name, causality_report_t const &r) {
+      auto grp = g.create_group(name);
+      h5::write(grp, "projected_points", r.projected_points);
+      h5::write(grp, "largest_violation", r.largest_violation);
+    }
+
+    void write_report(h5::group g, std::string const &name, mu_report_t const &r) {
+      auto grp = g.create_group(name);
+      h5::write(grp, "status", r.status);
+      h5::write(grp, "filling", r.filling);
+      h5::write(grp, "filling_next", r.filling_next);
+      h5::write(grp, "weight_error", r.weight_error);
+      h5::write(grp, "weight_error_next", r.weight_error_next);
+      if (r.mu_root) h5::write(grp, "mu_root", *r.mu_root);
+      h5::write(grp, "evaluations", r.evaluations);
+    }
+
+    void write_report(h5::group g, std::string const &name, mix_report_t const &r) {
+      auto grp = g.create_group(name);
+      h5::write(grp, "method", r.method);
+      h5::write(grp, "residual_norm", r.residual_norm);
+      h5::write(grp, "history_size", r.history_size);
+      h5::write(grp, "condition", r.condition);
+      h5::write(grp, "fallback", long(r.fallback));
+    }
+
+    void write_report(h5::group g, std::string const &name, convergence_result_t const &r) {
+      auto grp = g.create_group(name);
+      h5::write(grp, "decision", r.decision);
+      if (r.distance) h5::write(grp, "distance", *r.distance);
+      h5::write(grp, "window_max", r.window_max);
+      h5::write(grp, "window_samples", r.window_samples);
+      h5::write(grp, "distance_imp_loc", r.distance_imp_loc);
+      h5::write(grp, "window_ok", long(r.window_ok));
+      h5::write(grp, "iterations_ok", long(r.iterations_ok));
+      h5::write(grp, "filling_ok", long(r.filling_ok));
+      h5::write(grp, "mu_ok", long(r.mu_ok));
+      h5::write(grp, "imp_loc_ok", long(r.imp_loc_ok));
+    }
+
+    void write_reports(h5::group g, step_result_t const &r) {
+      write_report(g, "sigma_projection", r.sigma_projection);
+      write_report(g, "delta_projection", r.delta_projection);
+      write_report(g, "mu", r.mu_report);
+      write_report(g, "mix", r.mix_report);
+      write_report(g, "convergence", r.convergence);
+      h5::write(g, "expv", r.expv);
+    }
+
+    // Run f on rank 0 only; an exception there is raised on every rank, so no rank is left waiting in a collective
+    template <typename F> void on_rank_0(mpi::communicator const &comm, F &&f) {
+      std::string error;
+      if (comm.rank() == 0) {
+        try {
+          f();
+        } catch (std::exception const &e) { error = e.what(); }
+      }
+      if (comm.size() > 1) mpi::broadcast(error, comm, 0);
+      if (not error.empty()) throw std::runtime_error(error);
+    }
+
+    // Data on disk before the rename that publishes the file
+    void sync(std::filesystem::path const &path) {
+      int const fd = ::open(path.c_str(), O_RDONLY);
+      if (fd < 0) throw std::runtime_error("dmft_loop: cannot open " + path.string() + " to flush it");
+      ::fsync(fd);
+      ::close(fd);
+    }
+
+    std::filesystem::path checkpoint_path(std::string const &run_dir) { return std::filesystem::path(run_dir) / "checkpoint.h5"; }
+
+    std::string history_name(long iteration) {
+      char name[32];
+      std::snprintf(name, sizeof name, "iteration_%04ld", iteration);
+      return name;
+    }
+
+    // The checkpoint of a run, or std::invalid_argument
+    h5::file open_checkpoint(std::string const &run_dir) {
+      auto const path = checkpoint_path(run_dir);
+      if (not std::filesystem::exists(path)) throw std::invalid_argument("dmft_loop: no checkpoint.h5 in " + run_dir);
+      return h5::file(path.string(), 'r');
+    }
+
   } // namespace
 
   dmft_loop::dmft_loop(impurity_solver_t &solver, lattice_t const &lattice, mixer_t &mixer, convergence_t &convergence, loop_params_t params,
@@ -72,7 +160,7 @@ namespace nrgljubljana_interface::dmft {
       throw std::invalid_argument("dmft_loop: the floors must be finite and >= 0");
     onsite_    = lattice_.onsite_energy(m.gf);
     degeneracy_ = m.degeneracy;
-    if (not params_.run_dir.empty() and solver_.communicator().rank() == 0) std::filesystem::create_directories(params_.run_dir);
+    if (not params_.run_dir.empty()) on_rank_0(solver_.communicator(), [&] { std::filesystem::create_directories(params_.run_dir); });
   }
 
   g_w_t const &dmft_loop::Delta() const {
@@ -113,6 +201,107 @@ namespace nrgljubljana_interface::dmft {
     G_loc_                   = G0;
     G_loc_previous_.reset();
     last_.reset();
+    mixer_.reset();
+    convergence_.reset();
+    start_files();
+  }
+
+  void dmft_loop::start_files() const {
+    if (params_.run_dir.empty()) return;
+    on_rank_0(solver_.communicator(), [&] { std::filesystem::remove(std::filesystem::path(params_.run_dir) / "history.h5"); });
+  }
+
+  void dmft_loop::resume(std::string const &run_dir, bool allow_changes) {
+    auto file = open_checkpoint(run_dir);
+    h5::group const root(file);
+    auto const params = root.open_group("params");
+    std::vector<std::string> differences;
+    auto stored_string = [&](std::string const &key) {
+      std::string v;
+      h5::read(params, key, v);
+      return v;
+    };
+    solve_params_t sp;
+    h5::read(params, "solve_params", sp);
+    if (not(sp == params_.solve_params)) differences.emplace_back("the solve parameters");
+    options_t options;
+    h5::read(params, "options", options);
+    if (not(options == params_.options)) differences.emplace_back("the options");
+    double Gamma_floor = 0, sigma_floor = 0;
+    h5::read(params, "Gamma_floor", Gamma_floor);
+    h5::read(params, "sigma_floor", sigma_floor);
+    if (Gamma_floor != params_.Gamma_floor or sigma_floor != params_.sigma_floor) differences.emplace_back("the floors");
+    mu_control_params_t mp;
+    h5_read(params, "mu_control", mp);
+    if (not(mp == mu_control_.params())) differences.emplace_back("the μ-control parameters");
+    convergence_params_t cp;
+    h5_read(params, "convergence", cp);
+    if (not(cp == convergence_.params())) differences.emplace_back("the convergence parameters");
+    if (auto const m = stored_string("mixer"); m != mixer_.description())
+      differences.emplace_back("the mixer (stored \"" + m + "\", now \"" + mixer_.description() + "\")");
+    if (auto const l = stored_string("lattice"); l != lattice_.description())
+      differences.emplace_back("the lattice (stored \"" + l + "\", now \"" + lattice_.description() + "\")");
+    if (stored_string("manifest") != solver_.manifest().text) differences.emplace_back("the template's manifest");
+    triqs::mesh::refreq_log mesh;
+    h5::read(params, "mesh", mesh);
+    if (not(mesh == solver_.mesh())) differences.emplace_back("the mesh");
+    if (not differences.empty() and not allow_changes) {
+      std::string list;
+      for (auto const &d : differences) list += (list.empty() ? "" : "; ") + d;
+      throw std::invalid_argument("dmft_loop: the run in " + run_dir + " differs from this loop in " + list + " (allow_changes to continue anyway)");
+    }
+
+    auto const loop  = root.open_group("loop");
+    auto const state = root.open_group("state");
+    long iteration   = 0;
+    double mu_next = 0, last_step = 0;
+    h5::read(loop, "iteration", iteration);
+    h5::read(loop, "mu_next", mu_next);
+    h5::read(loop, "last_mu_step", last_step);
+    g_w_t Delta_mix, Sigma, G_loc;
+    h5::read(state, "Delta_mix", Delta_mix);
+    h5::read(state, "Sigma", Sigma);
+    h5::read(state, "G_loc", G_loc);
+    auto const controls = root.open_group("controls");
+    mixer_.h5_read(controls, "mixer");
+    convergence_.h5_read(controls, "convergence");
+
+    iteration_      = iteration;
+    mu_             = mu_next;
+    last_mu_step_   = last_step;
+    Delta_          = std::move(Delta_mix);
+    Sigma_          = std::move(Sigma);
+    G_loc_          = G_loc;
+    G_loc_previous_ = std::move(G_loc);
+    last_.reset();
+  }
+
+  void dmft_loop::initialize_from(std::string const &run_dir) {
+    auto file = open_checkpoint(run_dir);
+    h5::group const root(file);
+    auto const params = root.open_group("params");
+    std::string manifest;
+    h5::read(params, "manifest", manifest);
+    triqs::mesh::refreq_log mesh;
+    h5::read(params, "mesh", mesh);
+    if (manifest != solver_.manifest().text or not(mesh == solver_.mesh()))
+      throw std::invalid_argument("dmft_loop: the run in " + run_dir + " has another template or mesh");
+    double mu_next = 0;
+    h5::read(root.open_group("loop"), "mu_next", mu_next);
+    g_w_t Delta_mix;
+    h5::read(root.open_group("state"), "Delta_mix", Delta_mix);
+
+    Delta_        = std::move(Delta_mix);
+    mu_           = mu_next;
+    iteration_    = 0;
+    last_mu_step_ = 0;
+    Sigma_.reset();
+    G_loc_.reset();
+    G_loc_previous_.reset();
+    last_.reset();
+    mixer_.reset();
+    convergence_.reset();
+    start_files();
   }
 
   step_result_t dmft_loop::step() {
@@ -176,7 +365,12 @@ namespace nrgljubljana_interface::dmft {
       mpi::broadcast(mu_next, comm, 0);
       mpi::broadcast(r.convergence.decision, comm, 0);
     }
-    r.mu_next       = mu_next;
+    r.mu_next = mu_next;
+    if (not params_.run_dir.empty())
+      on_rank_0(comm, [&] {
+        write_checkpoint(r, result, Delta_mix, Sigma, G_loc, G_imp);
+        if (params_.keep_history) append_history(r, Delta_out, Sigma, G_loc);
+      });
     last_mu_step_   = mu_next - mu_;
     mu_             = mu_next;
     Delta_     = std::move(Delta_mix);
@@ -186,7 +380,7 @@ namespace nrgljubljana_interface::dmft {
     iteration_      = n;
     last_           = r;
 
-    if (comm.rank() == 0) write_statistics(r);
+    on_rank_0(comm, [&] { write_statistics(r); });
     if (callback_) callback_(*this, r);
     return r;
   }
@@ -213,6 +407,66 @@ namespace nrgljubljana_interface::dmft {
         << (r.convergence.distance ? *r.convergence.distance : std::numeric_limits<double>::quiet_NaN()) << ' ' << r.convergence.window_max << ' '
         << r.convergence.distance_imp_loc << ' ' << r.mix_report.residual_norm << ' ' << r.sigma_projection.projected_points << ' '
         << r.delta_projection.projected_points << ' ' << r.mu_report.status << ' ' << r.convergence.decision << '\n';
+  }
+
+  void dmft_loop::write_checkpoint(step_result_t const &r, result_t const &result, g_w_t const &Delta_mix, g_w_t const &Sigma, g_w_t const &G_loc,
+                                   g_w_t const &G_imp) const {
+    auto const final_path = checkpoint_path(params_.run_dir);
+    auto const tmp        = std::filesystem::path(final_path.string() + ".tmp");
+    {
+      h5::file f(tmp.string(), 'w');
+      h5::group const root(f);
+      auto loop = root.create_group("loop");
+      h5::write(loop, "iteration", r.iteration);
+      h5::write(loop, "mu", r.mu);
+      h5::write(loop, "mu_next", r.mu_next);
+      h5::write(loop, "last_mu_step", r.mu_next - r.mu);
+      h5::write(loop, "filling", r.filling);
+      h5::write(loop, "decision", r.convergence.decision);
+      h5::write(loop, "kept_delta", long(r.kept_delta));
+
+      auto params = root.create_group("params");
+      h5::write(params, "solve_params", params_.solve_params);
+      h5::write(params, "options", params_.options);
+      h5::write(params, "Gamma_floor", params_.Gamma_floor);
+      h5::write(params, "sigma_floor", params_.sigma_floor);
+      h5_write(params, "mu_control", mu_control_.params());
+      h5_write(params, "convergence", convergence_.params());
+      h5::write(params, "mixer", mixer_.description());
+      h5::write(params, "lattice", lattice_.description());
+      h5::write(params, "manifest", solver_.manifest().text);
+      h5::write(params, "mesh", solver_.mesh());
+
+      auto state = root.create_group("state");
+      h5::write(state, "Delta", *Delta_);
+      h5::write(state, "Delta_mix", Delta_mix);
+      h5::write(state, "Sigma", Sigma);
+      h5::write(state, "G_loc", G_loc);
+      h5::write(state, "G_imp", G_imp);
+
+      auto controls = root.create_group("controls");
+      mixer_.h5_write(controls, "mixer");
+      convergence_.h5_write(controls, "convergence");
+
+      write_reports(root.create_group("reports"), r);
+      nrgljubljana_interface::h5_write(root, "result", result, r.convergence.decision != "continue");
+    }
+    sync(tmp);
+    std::filesystem::rename(tmp, final_path);
+  }
+
+  void dmft_loop::append_history(step_result_t const &r, g_w_t const &Delta_out, g_w_t const &Sigma, g_w_t const &G_loc) const {
+    h5::file f((std::filesystem::path(params_.run_dir) / "history.h5").string(), 'a');
+    auto g = h5::group(f).create_group(history_name(r.iteration));
+    h5::write(g, "mu", r.mu);
+    h5::write(g, "mu_next", r.mu_next);
+    h5::write(g, "filling", r.filling);
+    h5::write(g, "decision", r.convergence.decision);
+    h5::write(g, "Delta", *Delta_);
+    h5::write(g, "Delta_out", Delta_out);
+    h5::write(g, "Sigma", Sigma);
+    h5::write(g, "G_loc", G_loc);
+    write_reports(g.create_group("reports"), r);
   }
 
 } // namespace nrgljubljana_interface::dmft

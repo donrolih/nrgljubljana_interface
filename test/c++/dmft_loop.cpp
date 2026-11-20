@@ -11,12 +11,14 @@
 #include <nrgljubljana_interface/dmft/lattice/bethe_lattice.hpp>
 #include <nrgljubljana_interface/dmft/loop/dmft_loop.hpp>
 #include <nrgljubljana_interface/dmft/measurements.hpp>
+#include <nrgljubljana_interface/solver/result.hpp>
 #include <nrgljubljana_interface/templates/manifest.hpp>
 
 #include <mpi/mpi.hpp>
 #include <nda/mpi.hpp>
 
 #include <cmath>
+#include <cstdio>
 #include <complex>
 #include <filesystem>
 #include <fstream>
@@ -87,6 +89,9 @@ imp[0,0]=SigmaHartree
       g_w_t Sigma     = c * Delta;
       result_.processed.emplace("Sigma", std::move(Sigma));
       result_.expv["n_d"] = 0.5;
+      twist_result_t twist;
+      twist.spectra["A_d-A_d"] = nrg::spectrum_bins_t{{-0.5, 0.5}, {0.5, 0.5}, {}, false};
+      result_.twists.push_back(std::move(twist));
       levels.push_back(sp.model_parameters.at("eps1"));
       return result_;
     }
@@ -292,3 +297,153 @@ TEST(Loop, AllRanksAgree) {
     EXPECT_EQ(mu_together[i], mu_alone[i]);
   }
 }
+
+namespace {
+
+  // On several ranks rank 0 prepares the directory, the others wait
+  void fresh_directory(std::string const &dir, mpi::communicator const &world) {
+    if (world.rank() == 0) std::filesystem::remove_all(dir);
+    world.barrier();
+  }
+
+  struct run_record_t {
+    std::vector<double> mus;
+    std::vector<std::string> decisions;
+  };
+
+  // A loop with a filling goal in run_dir; the controls are owned here so a new object stands for a new process
+  struct loop_set_t {
+    mock_solver solver;
+    bethe_lattice_t lattice{D};
+    linear_mixer mixer;
+    convergence_t convergence{convergence_params()};
+    dmft_loop loop;
+    run_record_t record;
+
+    loop_set_t(std::string const &run_dir, double alpha = 0.5, double T = 0.01, bool keep_history = true)
+       : solver(siam_manifest + levels_section), mixer(alpha), loop(make(run_dir, T, keep_history)) {
+      loop.set_callback([this](dmft_loop const &l, step_result_t const &r) {
+        record.mus.push_back(l.mu());
+        record.decisions.push_back(r.convergence.decision);
+      });
+    }
+
+    dmft_loop make(std::string const &run_dir, double T, bool keep_history) {
+      auto p            = loop_params(run_dir);
+      p.solve_params.T  = T;
+      p.keep_history    = keep_history;
+      return dmft_loop(solver, lattice, mixer, convergence, p, mu_control_t{goal_params(0.8)});
+    }
+  };
+
+  result_t read_result(std::string const &run_dir) {
+    h5::file f((std::filesystem::path(run_dir) / "checkpoint.h5").string(), 'r');
+    result_t r;
+    h5_read(h5::group(f), "result", r);
+    return r;
+  }
+
+} // namespace
+
+// Interrupted after 3 iterations and resumed with new objects: the same iterations as an uninterrupted run
+TEST(Loop, Resume) {
+  mpi::communicator world;
+  std::string const full_dir = "dmft_loop_full", cut_dir = "dmft_loop_cut";
+  fresh_directory(full_dir, world);
+  fresh_directory(cut_dir, world);
+
+  loop_set_t full(full_dir);
+  full.loop.initialize(constant(dcomplex(0.2, -1e-3)), 0.0);
+  EXPECT_EQ(full.loop.run(), "converged");
+  long const n = full.loop.iteration();
+  ASSERT_GT(n, 4);
+
+  run_record_t cut_record;
+  {
+    loop_set_t first(cut_dir);
+    first.loop.initialize(constant(dcomplex(0.2, -1e-3)), 0.0);
+    EXPECT_EQ(first.loop.run(3), "continue");
+    cut_record = first.record;
+    EXPECT_TRUE(read_result(cut_dir).twists.at(0).spectra.empty()); // no bins before the end
+  }
+  if (world.rank() == 0) std::ofstream(std::filesystem::path(cut_dir) / "checkpoint.h5.tmp") << "left over from an interrupted write";
+  world.barrier();
+
+  loop_set_t second(cut_dir);
+  second.loop.resume(cut_dir);
+  EXPECT_EQ(second.loop.iteration(), 3);
+  EXPECT_EQ(second.loop.run(), "converged");
+  EXPECT_EQ(second.loop.iteration(), n);
+  auto mus = cut_record.mus;
+  mus.insert(mus.end(), second.record.mus.begin(), second.record.mus.end());
+  EXPECT_EQ(mus, full.record.mus);
+  EXPECT_EQ(max_abs_diff(second.loop.Delta(), full.loop.Delta()), 0.0);
+
+  // Bins only in the terminal checkpoint
+  EXPECT_FALSE(read_result(full_dir).twists.at(0).spectra.empty());
+
+  // One history entry per iteration; the last G_loc is the loop's
+  {
+    h5::file f((std::filesystem::path(full_dir) / "history.h5").string(), 'r');
+    h5::group const root(f);
+    EXPECT_TRUE(root.has_subgroup("iteration_0001"));
+    char last[32];
+    std::snprintf(last, sizeof last, "iteration_%04ld", n);
+    ASSERT_TRUE(root.has_subgroup(last));
+    g_w_t G;
+    h5::read(root.open_group(last), "G_loc", G);
+    EXPECT_EQ(max_abs_diff(G, *full.loop.G_loc()), 0.0);
+  }
+
+  // A new run from the converged one starts at its Δ_mix and μ_next, with fresh controls
+  std::string const next_dir = "dmft_loop_next";
+  fresh_directory(next_dir, world);
+  loop_set_t next(next_dir);
+  next.loop.initialize_from(full_dir);
+  EXPECT_EQ(next.loop.iteration(), 0);
+  EXPECT_EQ(next.loop.mu(), full.loop.mu());
+  EXPECT_EQ(max_abs_diff(next.loop.Delta(), full.loop.Delta()), 0.0);
+  EXPECT_TRUE(next.convergence.history().empty());
+
+  world.barrier();
+  if (world.rank() == 0)
+    for (auto const &dir : {full_dir, cut_dir, next_dir}) std::filesystem::remove_all(dir);
+}
+
+TEST(Loop, ResumeChecksParameters) {
+  mpi::communicator world;
+  std::string const dir = "dmft_loop_check";
+  fresh_directory(dir, world);
+  {
+    loop_set_t first(dir);
+    first.loop.initialize(constant(dcomplex(0.2, -1e-3)), 0.0);
+    (void)first.loop.run(2);
+  }
+  {
+    loop_set_t other(dir, 0.4, 0.02);
+    expect_error<std::invalid_argument>([&] { other.loop.resume(dir); }, "the solve parameters; the mixer (stored \"linear alpha=0.5\"");
+    other.loop.resume(dir, true);
+    EXPECT_EQ(other.loop.iteration(), 2);
+  }
+  {
+    loop_set_t empty("dmft_loop_none");
+    expect_error<std::invalid_argument>([&] { empty.loop.resume("dmft_loop_none"); }, "no checkpoint.h5 in dmft_loop_none");
+  }
+  {
+    std::string const quiet = "dmft_loop_quiet";
+    fresh_directory(quiet, world);
+    loop_set_t no_history(quiet, 0.5, 0.01, false);
+    no_history.loop.initialize(constant(dcomplex(0.2, -1e-3)), 0.0);
+    (void)no_history.loop.run(2);
+    EXPECT_TRUE(std::filesystem::exists(std::filesystem::path(quiet) / "checkpoint.h5"));
+    EXPECT_FALSE(std::filesystem::exists(std::filesystem::path(quiet) / "history.h5"));
+    world.barrier();
+    if (world.rank() == 0) std::filesystem::remove_all(quiet);
+  }
+  world.barrier();
+  if (world.rank() == 0) {
+    std::filesystem::remove_all(dir);
+    std::filesystem::remove_all("dmft_loop_none");
+  }
+}
+

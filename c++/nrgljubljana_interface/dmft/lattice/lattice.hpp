@@ -31,6 +31,9 @@ namespace nrgljubljana_interface::dmft {
     /// ⟨h⟩ per block of the given structure
     virtual block_matrices_t onsite_energy(triqs::gfs::gf_struct_t const &structure) const = 0;
 
+    /// The type and the parameters, e.g. to check on resume that the lattice is the same
+    [[nodiscard]] virtual std::string description() const = 0;
+
     /**
      * (G_loc, Δ) with G_loc = G0 and Δ = G1 G0⁻¹, which avoids subtracting two large numbers where G0 is small.
      * Throws std::invalid_argument for a singular G0, naming the block and the frequency.

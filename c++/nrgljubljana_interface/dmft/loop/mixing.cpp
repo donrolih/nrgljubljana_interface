@@ -1,6 +1,7 @@
 #include "./mixing.hpp"
 
 #include <cmath>
+#include <sstream>
 #include <stdexcept>
 
 namespace nrgljubljana_interface::dmft {
@@ -62,6 +63,13 @@ namespace nrgljubljana_interface::dmft {
     report.method        = "linear";
     report.residual_norm = detail::weighted_distance(input.Gamma_out, input.Gamma);
     return {std::move(next), std::nullopt, std::move(report)};
+  }
+
+  std::string linear_mixer::description() const {
+    std::ostringstream os;
+    os.precision(17);
+    os << "linear alpha=" << alpha_;
+    return os.str();
   }
 
   void linear_mixer::h5_write(h5::group g, std::string const &name) const {

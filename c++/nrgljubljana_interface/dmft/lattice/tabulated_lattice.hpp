@@ -34,6 +34,8 @@ namespace nrgljubljana_interface::dmft {
     std::pair<g_w_t, g_w_t> moments(g_w_t const &Sigma, double mu) const override;
     g_w_t local_gf(g_w_t const &Sigma, double mu) const override;
     block_matrices_t onsite_energy(triqs::gfs::gf_struct_t const &structure) const override;
+    /// The kind (shared or per element), the number of points and a checksum of each table, and the floor
+    [[nodiscard]] std::string description() const override;
 
     [[nodiscard]] double sigma_floor() const { return floor_; }
 

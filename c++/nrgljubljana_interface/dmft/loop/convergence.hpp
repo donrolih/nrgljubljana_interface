@@ -25,6 +25,8 @@ namespace nrgljubljana_interface::dmft {
     double filling_tol = 1e-6, mu_tol = 1e-7;
     /// When set, the distance between G_imp and G_loc must also be at most this
     std::optional<double> eps_imp_loc = {};
+
+    bool operator==(convergence_params_t const &) const = default;
   };
 
   void h5_write(h5::group g, std::string const &name, convergence_params_t const &p);
@@ -73,6 +75,12 @@ namespace nrgljubljana_interface::dmft {
     explicit convergence_t(convergence_params_t const &params = {});
 
     convergence_result_t decide(convergence_input_t const &input);
+
+    /// Forget the history, for a new run
+    void reset() {
+      history_.clear();
+      last_iteration_ = 0;
+    }
 
     /// The parameters and the history of distances, for the checkpoint
     void h5_write(h5::group g, std::string const &name) const;

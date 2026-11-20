@@ -25,8 +25,10 @@ namespace nrgljubljana_interface::dmft {
     options_t options;
     /// Floors of the spectral parts of Δ and Σ
     double Gamma_floor = 1e-6, sigma_floor = 1e-12;
-    /// Directory of the statistics table (rank 0); empty: no files
+    /// Directory of the files of the run (rank 0): checkpoint.h5, history.h5, stats.dat; empty: no files
     std::string run_dir;
+    /// Append each iteration to history.h5
+    bool keep_history = true;
   };
 
   /// One iteration of the loop
@@ -63,8 +65,21 @@ namespace nrgljubljana_interface::dmft {
     dmft_loop(impurity_solver_t &solver, lattice_t const &lattice, mixer_t &mixer, convergence_t &convergence, loop_params_t params,
               std::optional<mu_control_t> const &mu_control = {});
 
-    /// Δ from the lattice at Σ0 and μ0, through hybridization_from_Gamma; Σ0 in the structure and mesh of G
+    /// Δ from the lattice at Σ0 and μ0, through hybridization_from_Gamma; Σ0 in the structure and mesh of G. The loop
+    /// controls are reset, and a history.h5 in the run directory is removed.
     void initialize(g_w_t const &Sigma0, double mu0);
+
+    /**
+     * Continue the run whose checkpoint.h5 is in run_dir: the next step is the iteration after it, with its Δ_mix and
+     * μ_next, and the states of the mixer and the convergence test restored. The stored parameters must equal the
+     * current ones (solve parameters, options, floors, μ-control and convergence parameters, the descriptions of the
+     * mixer and the lattice, the manifest, the mesh); otherwise std::invalid_argument names each difference, unless
+     * allow_changes, which continues with the current parameters.
+     */
+    void resume(std::string const &run_dir, bool allow_changes = false);
+
+    /// Start a new run from the Δ_mix and μ_next of the checkpoint in run_dir: iteration 0, the loop controls reset
+    void initialize_from(std::string const &run_dir);
 
     /// One iteration; throws std::logic_error before initialize
     step_result_t step();
@@ -101,6 +116,10 @@ namespace nrgljubljana_interface::dmft {
 
     [[nodiscard]] solve_params_t with_levels(double mu) const;
     void write_statistics(step_result_t const &r) const;
+    void write_checkpoint(step_result_t const &r, result_t const &result, g_w_t const &Delta_mix, g_w_t const &Sigma, g_w_t const &G_loc,
+                          g_w_t const &G_imp) const;
+    void append_history(step_result_t const &r, g_w_t const &Delta_out, g_w_t const &Sigma, g_w_t const &G_loc) const;
+    void start_files() const;
   };
 
 } // namespace nrgljubljana_interface::dmft

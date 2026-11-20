@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <sstream>
 #include <stdexcept>
 
 namespace nrgljubljana_interface::dmft {
@@ -32,6 +33,13 @@ namespace nrgljubljana_interface::dmft {
 
   g_w_t bethe_lattice_t::local_gf(g_w_t const &Sigma, double mu) const {
     return std::move(detail::lattice_moments(Sigma, mu, 0, scalar(), true, "bethe_lattice_t")[0]);
+  }
+
+  std::string bethe_lattice_t::description() const {
+    std::ostringstream os;
+    os.precision(17);
+    os << "bethe half_bandwidth=" << D_ << " sigma_floor=" << floor_;
+    return os.str();
   }
 
   block_matrices_t bethe_lattice_t::onsite_energy(triqs::gfs::gf_struct_t const &structure) const {

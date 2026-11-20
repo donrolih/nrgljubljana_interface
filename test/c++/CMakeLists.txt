@@ -83,9 +83,11 @@ set_property(TEST independent_solves_np2 APPEND PROPERTY ENVIRONMENT
 )
 set_property(TEST independent_solves_np2 APPEND PROPERTY LABELS solver)
 
-# The DMFT loop on 2 ranks: every rank holds rank 0's state (mock solver, no NRG run)
-add_test(NAME dmft_loop_np2 COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2 ${MPIEXEC_PREFLAGS} $<TARGET_FILE:dmft_loop> --gtest_filter=Loop.AllRanksAgree ${MPIEXEC_POSTFLAGS}
-         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+# The DMFT loop on 2 ranks: every rank holds rank 0's state (mock solver, no NRG run); own directory, since the serial
+# run writes run directories of the same names
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/dmft_loop_np2)
+add_test(NAME dmft_loop_np2 COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2 ${MPIEXEC_PREFLAGS} $<TARGET_FILE:dmft_loop> --gtest_filter=Loop.AllRanksAgree:Loop.Resume:Loop.ResumeChecksParameters ${MPIEXEC_POSTFLAGS}
+         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/dmft_loop_np2)
 set_property(TEST dmft_loop_np2 APPEND PROPERTY LABELS unit)
 
 # Deferred broadening in a fresh process, from the file the first run writes

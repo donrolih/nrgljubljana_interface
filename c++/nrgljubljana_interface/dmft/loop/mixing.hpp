@@ -56,6 +56,12 @@ namespace nrgljubljana_interface::dmft {
       return false;
     }
 
+    /// Forget the history, for a new run
+    virtual void reset() {}
+
+    /// The type and the parameters, e.g. to check on resume that the mixer is the same
+    [[nodiscard]] virtual std::string description() const = 0;
+
     /// Write the type, the parameters and the state, for the checkpoint
     virtual void h5_write(h5::group g, std::string const &name) const = 0;
 
@@ -72,6 +78,7 @@ namespace nrgljubljana_interface::dmft {
     /// Throws std::invalid_argument if Γ and Γ_out differ in structure or mesh, or are not finite
     mix_result_t mix(mix_input_t const &input) override;
 
+    [[nodiscard]] std::string description() const override;
     void h5_write(h5::group g, std::string const &name) const override;
     void h5_read(h5::group g, std::string const &name) override;
 

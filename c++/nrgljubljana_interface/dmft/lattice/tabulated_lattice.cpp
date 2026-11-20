@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <sstream>
 #include <stdexcept>
 
@@ -37,6 +38,24 @@ namespace nrgljubljana_interface::dmft {
 
     double centroid(dos_t const &d) { return nrg::integrate_moment(table(d), 1); }
 
+    // FNV-1a over the bytes of the energies and densities: a table changed in any value changes it
+    std::uint64_t checksum(dos_t const &d) {
+      std::uint64_t h = 1469598103934665603ULL;
+      auto add        = [&](std::vector<double> const &v) {
+        auto const *p = reinterpret_cast<unsigned char const *>(v.data());
+        for (std::size_t i = 0; i < v.size() * sizeof(double); ++i) h = (h ^ p[i]) * 1099511628211ULL;
+      };
+      add(d.energy);
+      add(d.density);
+      return h;
+    }
+
+    std::string describe(dos_t const &d) {
+      std::ostringstream os;
+      os << d.energy.size() << " points, checksum " << std::hex << checksum(d);
+      return os.str();
+    }
+
   } // namespace
 
   tabulated_lattice_t::tabulated_lattice_t(dos_t dos, double sigma_floor) : shared_(std::move(dos)), floor_(sigma_floor) {
@@ -56,6 +75,20 @@ namespace nrgljubljana_interface::dmft {
         centroid_[name].push_back(centroid(list[i]));
       }
     }
+  }
+
+  std::string tabulated_lattice_t::description() const {
+    std::ostringstream os;
+    os.precision(17);
+    if (shared_)
+      os << "tabulated shared: " << describe(*shared_);
+    else {
+      os << "tabulated per element:";
+      for (auto const &[name, list] : per_element_)
+        for (std::size_t i = 0; i < list.size(); ++i) os << " " << name << "[" << i << "]: " << describe(list[i]) << ";";
+    }
+    os << " sigma_floor=" << floor_;
+    return os.str();
   }
 
   dos_t const &tabulated_lattice_t::dos(std::string const &block, long orbital) const { return shared_ ? *shared_ : per_element_.at(block).at(orbital); }

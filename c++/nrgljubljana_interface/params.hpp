@@ -143,6 +143,8 @@ namespace nrgljubljana_interface {
     /// Model parameters (name to value map, e.g. U1, eps1).
     std::map<std::string, double> model_parameters;
 
+    bool operator==(solve_params_t const &) const = default;
+
     /// Write solve_params_t to HDF5.
     friend void h5_write(h5::group h5group, std::string subgroup_name, solve_params_t const &sp);
 

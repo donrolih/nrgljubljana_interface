@@ -30,6 +30,8 @@ namespace nrgljubljana_interface::dmft {
     double weight_tol = 1e-4;
     /// Tolerances of the Fermi integral of the filling
     double epsabs = 1e-10, epsrel = 1e-9;
+
+    bool operator==(mu_control_params_t const &) const = default;
   };
 
   void h5_write(h5::group g, std::string const &name, mu_control_params_t const &p);

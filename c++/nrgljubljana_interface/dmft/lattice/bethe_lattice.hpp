@@ -21,6 +21,7 @@ namespace nrgljubljana_interface::dmft {
     std::pair<g_w_t, g_w_t> moments(g_w_t const &Sigma, double mu) const override;
     g_w_t local_gf(g_w_t const &Sigma, double mu) const override;
     block_matrices_t onsite_energy(triqs::gfs::gf_struct_t const &structure) const override;
+    [[nodiscard]] std::string description() const override;
 
     [[nodiscard]] double half_bandwidth() const { return D_; }
     [[nodiscard]] double sigma_floor() const { return floor_; }
