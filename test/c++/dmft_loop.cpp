@@ -221,7 +221,7 @@ TEST(Loop, StepRunCallbackStatistics) {
   auto by_step = make(s2, m2, c2, lattice, {});
   for (int i = 0; i < 5; ++i) (void)by_step.step();
   EXPECT_EQ(by_step.mu(), by_run.mu());
-  EXPECT_EQ(max_abs_diff(by_step.Delta_used(), by_run.Delta_used()), 0.0);
+  EXPECT_EQ(max_abs_diff(by_step.Delta(), by_run.Delta()), 0.0);
 
   std::vector<std::string> lines;
   {
@@ -229,7 +229,7 @@ TEST(Loop, StepRunCallbackStatistics) {
     for (std::string line; std::getline(stats, line);) lines.push_back(line);
   }
   ASSERT_EQ(lines.size(), 6u);
-  EXPECT_EQ(lines[0].rfind("# iteration mu_used", 0), 0u);
+  EXPECT_EQ(lines[0].rfind("# iteration mu mu_next", 0), 0u);
   EXPECT_EQ(lines[5].rfind("5 ", 0), 0u);
   std::filesystem::remove_all(dir);
 }
@@ -277,7 +277,7 @@ TEST(Loop, AllRanksAgree) {
     std::vector<double> mus;
     for (long i = 0; i < steps; ++i) {
       (void)loop.step();
-      deltas.push_back(loop.Delta_used());
+      deltas.push_back(loop.Delta());
       mus.push_back(loop.mu());
     }
     return std::pair{deltas, mus};

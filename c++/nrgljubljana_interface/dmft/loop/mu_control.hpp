@@ -40,7 +40,7 @@ namespace nrgljubljana_interface::dmft {
     /// The self-energy, held fixed
     g_w_t Sigma;
     /// μ of the solve
-    double mu_used = 0;
+    double mu = 0;
     /// The temperature, and the degeneracy of each block (the manifest's)
     double T = 0;
     std::map<std::string, long> degeneracy;
@@ -50,10 +50,10 @@ namespace nrgljubljana_interface::dmft {
   struct mu_report_t {
     /// "fixed", "within_tolerance", "bracketed" or "limited"
     std::string status;
-    /// The filling at μ_used and at μ_next
-    double filling_used = 0, filling_next = 0;
-    /// The largest |∫ A_ii dω − 1| at μ_used and at μ_next
-    double weight_error_used = 0, weight_error_next = 0;
+    /// The filling at μ and at μ_next
+    double filling = 0, filling_next = 0;
+    /// The largest |∫ A_ii dω − 1| at μ and at μ_next
+    double weight_error = 0, weight_error_next = 0;
     /// The root of n(μ) = goal, when bracketed
     std::optional<double> mu_root;
     /// The number of lattice evaluations
@@ -63,7 +63,7 @@ namespace nrgljubljana_interface::dmft {
   /// The result of adjusting μ
   struct mu_result_t {
     double mu_next = 0;
-    /// The filling at μ_used
+    /// The filling at μ
     double filling = 0;
     mu_report_t report;
   };
@@ -71,10 +71,10 @@ namespace nrgljubljana_interface::dmft {
   /**
    * The chemical potential: fixed without a goal, otherwise adjusted towards the goal with Σ held fixed.
    *
-   * With a goal: the filling at μ_used; within root_tol of the goal μ is kept. Otherwise the filling at
-   * μ_used ± maxdx / under in the direction of the error, which must not move the filling the wrong way. If the two
+   * With a goal: the filling at μ; within root_tol of the goal μ is kept. Otherwise the filling at
+   * μ ± maxdx / under in the direction of the error, which must not move the filling the wrong way. If the two
    * bracket the goal, Brent's method (GSL) to mu_tol, the residual checked against root_tol, and
-   * μ_next = μ_used + clamp(under (μ* − μ_used), ±maxdx); otherwise μ_next = μ_used ± maxdx. At μ_next the filling
+   * μ_next = μ + clamp(under (μ* − μ), ±maxdx); otherwise μ_next = μ ± maxdx. At μ_next the filling
    * error must not have grown by more than root_tol. Evaluations are cached and limited to max_evaluations.
    *
    * With a goal every evaluation checks that each ∫ A_ii dω is 1 within weight_tol and that the filling lies between

@@ -45,22 +45,22 @@ namespace nrgljubljana_interface::dmft {
   }
 
   mix_result_t linear_mixer::mix(mix_input_t const &input) {
-    detail::check_same_structure(input.gamma_raw, input.gamma_used, "linear_mixer", "gamma_raw", "gamma_used");
-    detail::check_finite(input.gamma_used, "linear_mixer", "gamma_used");
-    detail::check_finite(input.gamma_raw, "linear_mixer", "gamma_raw");
+    detail::check_same_structure(input.Gamma_out, input.Gamma, "linear_mixer", "Gamma_out", "Gamma");
+    detail::check_finite(input.Gamma, "linear_mixer", "Gamma");
+    detail::check_finite(input.Gamma_out, "linear_mixer", "Gamma_out");
 
-    g_w_t next = input.gamma_used;
+    g_w_t next = input.Gamma;
     for (long b = 0; b < long(next.size()); ++b) {
       auto &out       = next[b].data();
-      auto const &raw = input.gamma_raw[b].data();
-      auto const &old = input.gamma_used[b].data();
+      auto const &raw = input.Gamma_out[b].data();
+      auto const &old = input.Gamma[b].data();
       for (long k = 0; k < out.extent(0); ++k)
         for (long i = 0; i < out.extent(1); ++i)
           for (long j = 0; j < out.extent(2); ++j) out(k, i, j) = alpha_ * raw(k, i, j) + (1 - alpha_) * old(k, i, j);
     }
     mix_report_t report;
     report.method        = "linear";
-    report.residual_norm = detail::weighted_distance(input.gamma_raw, input.gamma_used);
+    report.residual_norm = detail::weighted_distance(input.Gamma_out, input.Gamma);
     return {std::move(next), std::nullopt, std::move(report)};
   }
 

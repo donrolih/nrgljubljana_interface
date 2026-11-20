@@ -207,8 +207,8 @@ namespace nrgljubljana_interface::dmft {
     return result;
   }
 
-  std::pair<g_w_t, causality_report_t> hybridization_from_gamma(g_w_t const &Gamma, block_matrices_t const &onsite_energy, double floor) {
-    std::string const function = "hybridization_from_gamma";
+  std::pair<g_w_t, causality_report_t> hybridization_from_Gamma(g_w_t const &Gamma, block_matrices_t const &onsite_energy, double floor) {
+    std::string const function = "hybridization_from_Gamma";
     check_floor(floor, function);
     check_finite(Gamma, function, "Gamma");
     auto const limit = checked_limit(Gamma, onsite_energy, function, "the on-site energy");

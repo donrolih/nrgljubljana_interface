@@ -1,4 +1,4 @@
-// Chemical potential (dmft/loop/mu_control) and hybridization_from_gamma (dmft/causality). No NRG run.
+// Chemical potential (dmft/loop/mu_control) and hybridization_from_Gamma (dmft/causality). No NRG run.
 //
 // The lattice is a tabulated smooth band, ρ ∝ (1 − ε²)² on [−1, 1], with Σ = −10⁻⁴ i: its spectral function is C¹ at
 // the band edges, so the spectral weight on the mesh is 1 well within weight_tol. The filling n(μ) of the same
@@ -96,7 +96,7 @@ TEST(MuControl, Fixed) {
   EXPECT_EQ(adjusted.report.status, "fixed");
   EXPECT_EQ(adjusted.filling, s.filling(mu0));
   EXPECT_EQ(adjusted.report.evaluations, 1);
-  EXPECT_LT(adjusted.report.weight_error_used, 1e-4);
+  EXPECT_LT(adjusted.report.weight_error, 1e-4);
 }
 
 TEST(MuControl, WithinTolerance) {
@@ -159,7 +159,7 @@ TEST(MuControl, WeightCheck) {
   mu_input_t in{narrow, mu0, T, degeneracy};
   expect_error<std::runtime_error>([&] { (void)mu_control_t{with_goal(0.8)}.adjust(in, s.lattice); }, "the lattice spectral weight at μ = 0.1 is off by");
   auto const fixed = mu_control_t{}.adjust(in, s.lattice); // without a goal the weight error is only reported
-  EXPECT_GT(fixed.report.weight_error_used, 0.1);
+  EXPECT_GT(fixed.report.weight_error, 0.1);
 }
 
 TEST(MuControl, Parameters) {
@@ -212,15 +212,15 @@ TEST(MuControl, HybridizationFromGamma) {
   }
   block_matrices_t h{nda::matrix<dcomplex>{{0.1}}, nda::matrix<dcomplex>{{-0.2, dcomplex(0.05, 0.01)}, {dcomplex(0.05, -0.01), 0.3}}};
   double const floor   = 1e-6;
-  auto const [D, rep]  = hybridization_from_gamma(Gamma, h, floor);
-  g_w_t minus_i_gamma  = Gamma;
-  for (long b = 0; b < 2; ++b) minus_i_gamma[b].data() = dcomplex(0, -1) * Gamma[b].data();
-  auto const [P, rep2] = causal_projection(minus_i_gamma, floor);
+  auto const [D, rep]  = hybridization_from_Gamma(Gamma, h, floor);
+  g_w_t minus_i_Gamma  = Gamma;
+  for (long b = 0; b < 2; ++b) minus_i_Gamma[b].data() = dcomplex(0, -1) * Gamma[b].data();
+  auto const [P, rep2] = causal_projection(minus_i_Gamma, floor);
   auto const R         = rebuild_hermitian_part(P, h);
   EXPECT_EQ(rep, rep2);
   EXPECT_GT(rep.projected_points, 0);
   for (long b = 0; b < 2; ++b) EXPECT_LT(double(max_element(abs(D[b].data() - R[b].data()))), 1e-13) << "block " << b;
 
   Gamma[1].data()(5, 0, 1) += 1e-3;
-  expect_error<std::invalid_argument>([&] { (void)hybridization_from_gamma(Gamma, h, floor); }, "Gamma is not Hermitian in block up");
+  expect_error<std::invalid_argument>([&] { (void)hybridization_from_Gamma(Gamma, h, floor); }, "Gamma is not Hermitian in block up");
 }

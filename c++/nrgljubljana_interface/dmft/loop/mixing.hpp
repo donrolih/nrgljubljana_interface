@@ -16,17 +16,17 @@ namespace nrgljubljana_interface::dmft {
   struct mix_input_t {
     /// The iteration, from 1
     long iteration = 0;
-    /// The spectral parts of Δ_used and of Δ_raw from the lattice; same structure and mesh
-    g_w_t gamma_used, gamma_raw;
-    /// μ of the solve, and the filling n(μ_used), for a mixer that also moves μ
-    double mu_used = 0, filling = 0;
+    /// The spectral parts of Δ and of Δ_out from the lattice; same structure and mesh
+    g_w_t Gamma, Gamma_out;
+    /// μ of the solve, and the filling n(μ), for a mixer that also moves μ
+    double mu = 0, filling = 0;
   };
 
   /// What a mixer did; the same for all mixers
   struct mix_report_t {
     /// "linear", "broyden" or "linear (fallback)"
     std::string method;
-    /// ‖Γ_raw − Γ_used‖ = √(Σ_k w_k Σ_ij |ΔΓ_ij(ω_k)|²) over all blocks, w_k the integration weights of the mesh
+    /// ‖Γ_out − Γ‖ = √(Σ_k w_k Σ_ij |ΔΓ_ij(ω_k)|²) over all blocks, w_k the integration weights of the mesh
     double residual_norm = 0;
     /// Broyden: the number of stored iterations, the condition number of its step, whether it fell back to linear
     long history_size = 0;
@@ -37,7 +37,7 @@ namespace nrgljubljana_interface::dmft {
   /// The result of mixing
   struct mix_result_t {
     /// The mixed Γ, before the causal projection and the rebuild of Δ
-    g_w_t gamma_next;
+    g_w_t Gamma_mix;
     /// μ for the next iteration, if the mixer moves μ
     std::optional<double> mu_next;
     mix_report_t report;
@@ -63,13 +63,13 @@ namespace nrgljubljana_interface::dmft {
     virtual void h5_read(h5::group g, std::string const &name) = 0;
   };
 
-  /// Linear mixing: Γ_next = α Γ_raw + (1 − α) Γ_used, element by element over all blocks
+  /// Linear mixing: Γ_mix = α Γ_out + (1 − α) Γ, element by element over all blocks
   class linear_mixer : public mixer_t {
    public:
     /// Throws std::invalid_argument unless 0 < α ≤ 1
     explicit linear_mixer(double alpha);
 
-    /// Throws std::invalid_argument if Γ_used and Γ_raw differ in structure or mesh, or are not finite
+    /// Throws std::invalid_argument if Γ and Γ_out differ in structure or mesh, or are not finite
     mix_result_t mix(mix_input_t const &input) override;
 
     void h5_write(h5::group g, std::string const &name) const override;

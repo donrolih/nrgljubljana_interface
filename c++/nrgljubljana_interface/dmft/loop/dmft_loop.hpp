@@ -24,7 +24,7 @@ namespace nrgljubljana_interface::dmft {
     /// What each solve computes; must give G, F_l, F_r and I broadened, for the full set of z
     options_t options;
     /// Floors of the spectral parts of Δ and Σ
-    double gamma_floor = 1e-6, sigma_floor = 1e-12;
+    double Gamma_floor = 1e-6, sigma_floor = 1e-12;
     /// Directory of the statistics table (rank 0); empty: no files
     std::string run_dir;
   };
@@ -32,24 +32,24 @@ namespace nrgljubljana_interface::dmft {
   /// One iteration of the loop
   struct step_result_t {
     long iteration = 0;
-    /// μ of the solve, μ for the next iteration, and the filling at μ_used
-    double mu_used = 0, mu_next = 0, filling = 0;
+    /// μ of the solve, μ for the next iteration, and the filling at μ
+    double mu = 0, mu_next = 0, filling = 0;
     /// The causal projections of Σ and of the next Δ
     causality_report_t sigma_projection, delta_projection;
-    mu_report_t mu;
-    mix_report_t mix;
+    mu_report_t mu_report;
+    mix_report_t mix_report;
     convergence_result_t convergence;
     /// Expectation values of the solve
     std::map<std::string, double> expv;
-    /// The next Δ could not be prepared after a terminal decision; Δ_used is kept
+    /// The next Δ could not be prepared after a terminal decision; Δ is kept
     bool kept_delta = false;
   };
 
   /**
-   * The DMFT loop. One step: the impurity levels ⟨h⟩_ii − μ from the manifest's [levels]; the solve with Δ_used; Σ
-   * made causal; G_loc at μ_used; μ_next from the μ control (or from the mixer, when it moves μ); (G_loc, Δ_raw) at
-   * μ_next; the convergence decision with G_imp = impurity_gf(Δ_used, Σ, −μ); Γ_used and Γ_raw mixed and the next Δ
-   * from hybridization_from_gamma. Rank 0 broadcasts Δ_next, μ_next and the decision.
+   * The DMFT loop. One step: the impurity levels ⟨h⟩_ii − μ from the manifest's [levels]; the solve with Δ; Σ
+   * made causal; G_loc at μ; μ_next from the μ control (or from the mixer, when it moves μ); (G_loc, Δ_out) at
+   * μ_next; the convergence decision with G_imp = impurity_gf(Δ, Σ, −μ); Γ and Γ_out mixed and the next Δ
+   * from hybridization_from_Gamma. Rank 0 broadcasts Δ_mix, μ_next and the decision.
    *
    * Without a μ control μ stays fixed and the filling is still measured. Construction throws std::invalid_argument
    * for options that do not give G, F_l, F_r and I broadened for the full set of z, a manifest without a level for
@@ -63,7 +63,7 @@ namespace nrgljubljana_interface::dmft {
     dmft_loop(impurity_solver_t &solver, lattice_t const &lattice, mixer_t &mixer, convergence_t &convergence, loop_params_t params,
               std::optional<mu_control_t> const &mu_control = {});
 
-    /// Δ_used from the lattice at Σ0 and μ0, through hybridization_from_gamma; Σ0 in the structure and mesh of G
+    /// Δ from the lattice at Σ0 and μ0, through hybridization_from_Gamma; Σ0 in the structure and mesh of G
     void initialize(g_w_t const &Sigma0, double mu0);
 
     /// One iteration; throws std::logic_error before initialize
@@ -76,7 +76,7 @@ namespace nrgljubljana_interface::dmft {
 
     [[nodiscard]] long iteration() const { return iteration_; }
     [[nodiscard]] double mu() const { return mu_; }
-    [[nodiscard]] g_w_t const &Delta_used() const;
+    [[nodiscard]] g_w_t const &Delta() const;
     [[nodiscard]] std::optional<g_w_t> const &Sigma() const { return Sigma_; }
     [[nodiscard]] std::optional<g_w_t> const &G_loc() const { return G_loc_; }
     [[nodiscard]] std::optional<step_result_t> const &last_step() const { return last_; }
@@ -96,7 +96,7 @@ namespace nrgljubljana_interface::dmft {
 
     long iteration_ = 0;
     double mu_ = 0, last_mu_step_ = 0;
-    std::optional<g_w_t> Delta_used_, Sigma_, G_loc_, G_loc_previous_;
+    std::optional<g_w_t> Delta_, Sigma_, G_loc_, G_loc_previous_;
     std::optional<step_result_t> last_;
 
     [[nodiscard]] solve_params_t with_levels(double mu) const;

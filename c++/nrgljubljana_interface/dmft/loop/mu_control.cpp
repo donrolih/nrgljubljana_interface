@@ -81,7 +81,7 @@ namespace nrgljubljana_interface::dmft {
 
   mu_result_t mu_control_t::adjust(mu_input_t const &input, lattice_t const &lattice) const {
     auto const &p = params_;
-    if (not std::isfinite(input.mu_used)) throw std::invalid_argument("mu_control_t: μ_used must be finite, got " + number(input.mu_used));
+    if (not std::isfinite(input.mu)) throw std::invalid_argument("mu_control_t: μ must be finite, got " + number(input.mu));
 
     // The number of states, for the plausibility of the filling
     double states = 0;
@@ -110,12 +110,12 @@ namespace nrgljubljana_interface::dmft {
       return cache.emplace(mu, evaluation_t{n, weight_err}).first->second;
     };
 
-    double const mu       = input.mu_used;
+    double const mu       = input.mu;
     auto const initial    = evaluate(mu, 0);
     mu_result_t result;
     result.filling                  = initial.filling;
-    result.report.filling_used      = initial.filling;
-    result.report.weight_error_used = initial.weight_error;
+    result.report.filling      = initial.filling;
+    result.report.weight_error = initial.weight_error;
 
     auto finish = [&](double mu_next, std::string status) {
       auto const last                 = evaluate(mu_next, 0);

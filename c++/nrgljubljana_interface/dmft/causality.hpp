@@ -64,6 +64,6 @@ namespace nrgljubljana_interface::dmft {
    * Throws std::invalid_argument for a negative or non-finite floor, a non-finite or non-Hermitian Γ (to 1e-12 of its
    * largest element), and on-site energies of the wrong number or size.
    */
-  std::pair<g_w_t, causality_report_t> hybridization_from_gamma(g_w_t const &Gamma, block_matrices_t const &onsite_energy, double floor);
+  std::pair<g_w_t, causality_report_t> hybridization_from_Gamma(g_w_t const &Gamma, block_matrices_t const &onsite_energy, double floor);
 
 } // namespace nrgljubljana_interface::dmft

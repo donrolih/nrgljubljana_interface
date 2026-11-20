@@ -47,7 +47,7 @@ namespace {
     convergence_t convergence;
     double c = 0;
     long iteration = 0;
-    std::optional<g_w_t> previous;
+    std::optional<g_w_t> previous = {};
 
     convergence_result_t step(double distance, double filling = 0.8, std::optional<double> goal = {}, double mu_step = 0,
                               double imp_offset = 0) {

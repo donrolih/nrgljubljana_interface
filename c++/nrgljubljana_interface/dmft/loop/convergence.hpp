@@ -21,7 +21,7 @@ namespace nrgljubljana_interface::dmft {
     long window = 3;
     /// The first and the last iteration at which the loop may converge; at max_iter it stops
     long min_iter = 1, max_iter = 50;
-    /// With a goal: the allowed |n(μ_used) − goal| and |μ_next − μ_used|
+    /// With a goal: the allowed |n(μ) − goal| and |μ_next − μ|
     double filling_tol = 1e-6, mu_tol = 1e-7;
     /// When set, the distance between G_imp and G_loc must also be at most this
     std::optional<double> eps_imp_loc = {};
@@ -34,12 +34,12 @@ namespace nrgljubljana_interface::dmft {
   struct convergence_input_t {
     /// The iteration, from 1; consecutive
     long iteration = 0;
-    /// G_loc at μ_used, and that of the previous iteration (unset in the first)
+    /// G_loc at μ, and that of the previous iteration (unset in the first)
     g_w_t G_loc;
     std::optional<g_w_t> G_loc_previous = {};
     /// The impurity Green's function
     g_w_t G_imp;
-    /// The filling at μ_used; the goal when μ is controlled; μ_next − μ_used
+    /// The filling at μ; the goal when μ is controlled; μ_next − μ
     double filling = 0;
     std::optional<double> goal = {};
     double mu_step = 0;
@@ -62,7 +62,7 @@ namespace nrgljubljana_interface::dmft {
 
   /**
    * The convergence test. converged: a full window of distances all strictly below eps, min_iter ≤ n ≤ max_iter,
-   * with a goal |n − goal| ≤ filling_tol and |μ_next − μ_used| ≤ mu_tol, and with eps_imp_loc the G_imp–G_loc
+   * with a goal |n − goal| ≤ filling_tol and |μ_next − μ| ≤ mu_tol, and with eps_imp_loc the G_imp–G_loc
    * distance at most that; stop: not converged at max_iter; continue otherwise. The state is the history of distances.
    *
    * Throws std::invalid_argument for invalid parameters, a non-consecutive iteration, a missing previous G_loc after

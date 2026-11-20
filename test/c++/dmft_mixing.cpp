@@ -22,7 +22,7 @@ namespace {
   refreq_log test_mesh() { return {1e-2, 5.0, 1.2}; }
 
   // Hermitian Γ in blocks imp (1x1) and up (2x2), varying with ω and with a parameter
-  g_w_t gamma(refreq_log const &mesh, double a) {
+  g_w_t make_Gamma(refreq_log const &mesh, double a) {
     g_w_t g{mesh, triqs::gfs::gf_struct_t{{"imp", 1}, {"up", 2}}};
     auto const &pts = mesh.points();
     for (long k = 0; k < long(pts.size()); ++k) {
@@ -36,7 +36,7 @@ namespace {
     return g;
   }
 
-  mix_input_t input(refreq_log const &mesh) { return {3, gamma(mesh, 1.0), gamma(mesh, 2.5), 0.4, 0.8}; }
+  mix_input_t input(refreq_log const &mesh) { return {3, make_Gamma(mesh, 1.0), make_Gamma(mesh, 2.5), 0.4, 0.8}; }
 
   template <typename Exception, typename Function> void expect_error(Function f, std::string const &detail) {
     try {
@@ -59,9 +59,9 @@ TEST(Mixing, LinearUpdate) {
   EXPECT_FALSE(mixed.mu_next.has_value());
   EXPECT_EQ(mixed.report.method, "linear");
   for (long b = 0; b < 2; ++b) {
-    auto const &out = mixed.gamma_next[b].data();
-    auto const &raw = in.gamma_raw[b].data();
-    auto const &old = in.gamma_used[b].data();
+    auto const &out = mixed.Gamma_mix[b].data();
+    auto const &raw = in.Gamma_out[b].data();
+    auto const &old = in.Gamma[b].data();
     for (long k = 0; k < out.extent(0); ++k)
       for (long i = 0; i < out.extent(1); ++i)
         for (long j = 0; j < out.extent(2); ++j) {
@@ -69,9 +69,9 @@ TEST(Mixing, LinearUpdate) {
           EXPECT_EQ(out(k, i, j), std::conj(out(k, j, i)));
         }
   }
-  // α = 1 gives Γ_raw
+  // α = 1 gives Γ_out
   auto const full = linear_mixer(1.0).mix(in);
-  for (long b = 0; b < 2; ++b) EXPECT_EQ(double(max_element(abs(full.gamma_next[b].data() - in.gamma_raw[b].data()))), 0.0);
+  for (long b = 0; b < 2; ++b) EXPECT_EQ(double(max_element(abs(full.Gamma_mix[b].data() - in.Gamma_out[b].data()))), 0.0);
 }
 
 TEST(Mixing, ResidualNorm) {
@@ -123,9 +123,9 @@ TEST(Mixing, Errors) {
   linear_mixer mixer(0.5);
   auto in = input(mesh);
   g_w_t other{mesh, triqs::gfs::gf_struct_t{{"imp", 1}}};
-  expect_error<std::invalid_argument>([&] { mixer.mix({1, in.gamma_used, other, 0.0, 0.0}); }, "gamma_raw does not have the blocks of gamma_used");
-  g_w_t other_mesh = gamma(refreq_log{1e-2, 5.0, 1.3}, 1.0);
-  expect_error<std::invalid_argument>([&] { mixer.mix({1, in.gamma_used, other_mesh, 0.0, 0.0}); }, "is not on the mesh of gamma_used");
-  in.gamma_raw[1].data()(2, 1, 1) = std::numeric_limits<double>::infinity();
-  expect_error<std::invalid_argument>([&] { mixer.mix(in); }, "gamma_raw is not finite in block up, element (1, 1)");
+  expect_error<std::invalid_argument>([&] { mixer.mix({1, in.Gamma, other, 0.0, 0.0}); }, "Gamma_out does not have the blocks of Gamma");
+  g_w_t other_mesh = make_Gamma(refreq_log{1e-2, 5.0, 1.3}, 1.0);
+  expect_error<std::invalid_argument>([&] { mixer.mix({1, in.Gamma, other_mesh, 0.0, 0.0}); }, "is not on the mesh of Gamma");
+  in.Gamma_out[1].data()(2, 1, 1) = std::numeric_limits<double>::infinity();
+  expect_error<std::invalid_argument>([&] { mixer.mix(in); }, "Gamma_out is not finite in block up, element (1, 1)");
 }

@@ -68,16 +68,16 @@ namespace nrgljubljana_interface::dmft {
     auto const &m = solver_.manifest();
     check_options(params_, m);
     check_manifest(m, params_.solve_params);
-    if (not(std::isfinite(params_.gamma_floor) and params_.gamma_floor >= 0) or not(std::isfinite(params_.sigma_floor) and params_.sigma_floor >= 0))
+    if (not(std::isfinite(params_.Gamma_floor) and params_.Gamma_floor >= 0) or not(std::isfinite(params_.sigma_floor) and params_.sigma_floor >= 0))
       throw std::invalid_argument("dmft_loop: the floors must be finite and >= 0");
     onsite_    = lattice_.onsite_energy(m.gf);
     degeneracy_ = m.degeneracy;
     if (not params_.run_dir.empty() and solver_.communicator().rank() == 0) std::filesystem::create_directories(params_.run_dir);
   }
 
-  g_w_t const &dmft_loop::Delta_used() const {
-    if (not Delta_used_) throw std::logic_error("dmft_loop: not initialized");
-    return *Delta_used_;
+  g_w_t const &dmft_loop::Delta() const {
+    if (not Delta_) throw std::logic_error("dmft_loop: not initialized");
+    return *Delta_;
   }
 
   solve_params_t dmft_loop::with_levels(double mu) const {
@@ -105,7 +105,7 @@ namespace nrgljubljana_interface::dmft {
     detail::check_same_structure(Sigma0, reference, "dmft_loop", "Sigma0", "G");
     auto const Sigma         = causal_projection(Sigma0, params_.sigma_floor).first;
     auto const [G0, Delta0]  = lattice_.self_consistency(Sigma, mu0);
-    Delta_used_             = hybridization_from_gamma(spectral_part(Delta0), onsite_, params_.gamma_floor).first;
+    Delta_             = hybridization_from_Gamma(spectral_part(Delta0), onsite_, params_.Gamma_floor).first;
     mu_                      = mu0;
     iteration_               = 0;
     last_mu_step_            = 0;
@@ -116,29 +116,29 @@ namespace nrgljubljana_interface::dmft {
   }
 
   step_result_t dmft_loop::step() {
-    if (not Delta_used_) throw std::logic_error("dmft_loop: step before initialize");
+    if (not Delta_) throw std::logic_error("dmft_loop: step before initialize");
     auto const comm = solver_.communicator();
     long const n    = iteration_ + 1;
     step_result_t r;
     r.iteration = n;
-    r.mu_used   = mu_;
+    r.mu        = mu_;
 
     // 1–3: the levels, the solve, a causal Σ
-    auto const &result = solver_.solve(*Delta_used_, with_levels(mu_), params_.options);
+    auto const &result = solver_.solve(*Delta_, with_levels(mu_), params_.options);
     auto const found   = result.processed.find("Sigma");
     if (found == result.processed.end()) throw std::runtime_error("dmft_loop: the solve gave no Σ");
     r.expv                 = result.expv;
     auto [Sigma, sigma_rep] = causal_projection(found->second, params_.sigma_floor);
     r.sigma_projection     = sigma_rep;
 
-    // 4–6: G_loc at μ_used, μ_next, Δ_raw
+    // 4–6: G_loc at μ, μ_next, Δ_out
     auto const G_loc      = lattice_.local_gf(Sigma, mu_);
     auto const adjusted   = mu_control_.adjust({Sigma, mu_, params_.solve_params.T, degeneracy_}, lattice_);
-    r.mu                  = adjusted.report;
+    r.mu_report           = adjusted.report;
     r.filling             = adjusted.filling;
     bool const mixer_mu   = mixer_.moves_mu(n);
-    double const mu_raw   = mixer_mu ? mu_ : adjusted.mu_next;
-    auto const Delta_raw  = lattice_.self_consistency(Sigma, mu_raw).second;
+    double const mu_out   = mixer_mu ? mu_ : adjusted.mu_next;
+    auto const Delta_out  = lattice_.self_consistency(Sigma, mu_out).second;
 
     // 7: convergence
     block_matrices_t h_imp;
@@ -148,38 +148,38 @@ namespace nrgljubljana_interface::dmft {
       for (long i = 0; i < size; ++i) h(i, i) = -mu_;
       h_imp.push_back(std::move(h));
     }
-    auto const G_imp     = impurity_gf(*Delta_used_, Sigma, h_imp);
+    auto const G_imp     = impurity_gf(*Delta_, Sigma, h_imp);
     double const mu_step = mixer_mu ? last_mu_step_ : adjusted.mu_next - mu_;
     r.convergence        = convergence_.decide({n, G_loc, G_loc_previous_, G_imp, adjusted.filling, mu_control_.params().goal, mu_step});
 
     // 8: the next Δ, also after a terminal decision
-    g_w_t Delta_next = *Delta_used_;
+    g_w_t Delta_mix = *Delta_;
     double mu_next   = mu_;
     try {
-      auto const mixed = mixer_.mix({n, spectral_part(*Delta_used_), spectral_part(Delta_raw), mu_, adjusted.filling});
-      r.mix            = mixed.report;
+      auto const mixed = mixer_.mix({n, spectral_part(*Delta_), spectral_part(Delta_out), mu_, adjusted.filling});
+      r.mix_report     = mixed.report;
       if (mixer_mu and not mixed.mu_next) throw std::runtime_error("dmft_loop: the mixer moves μ but gave none");
       mu_next             = mixer_mu ? *mixed.mu_next : adjusted.mu_next;
-      auto [next, report] = hybridization_from_gamma(mixed.gamma_next, onsite_, params_.gamma_floor);
-      Delta_next          = std::move(next);
+      auto [next, report] = hybridization_from_Gamma(mixed.Gamma_mix, onsite_, params_.Gamma_floor);
+      Delta_mix          = std::move(next);
       r.delta_projection  = report;
     } catch (std::exception const &) {
       if (r.convergence.decision == "continue") throw;
-      Delta_next   = *Delta_used_;
+      Delta_mix   = *Delta_;
       mu_next      = mu_;
       r.kept_delta = true;
     }
 
-    // 9: rank 0's Δ_next, μ_next and decision on every rank, then commit
+    // 9: rank 0's Δ_mix, μ_next and decision on every rank, then commit
     if (comm.size() > 1) {
-      for (long b = 0; b < long(Delta_next.size()); ++b) mpi::broadcast(Delta_next[b].data(), comm, 0);
+      for (long b = 0; b < long(Delta_mix.size()); ++b) mpi::broadcast(Delta_mix[b].data(), comm, 0);
       mpi::broadcast(mu_next, comm, 0);
       mpi::broadcast(r.convergence.decision, comm, 0);
     }
     r.mu_next       = mu_next;
     last_mu_step_   = mu_next - mu_;
     mu_             = mu_next;
-    Delta_used_     = std::move(Delta_next);
+    Delta_     = std::move(Delta_mix);
     G_loc_previous_ = G_loc;
     G_loc_          = G_loc;
     Sigma_          = std::move(Sigma);
@@ -208,11 +208,11 @@ namespace nrgljubljana_interface::dmft {
     std::ofstream out(path, fresh ? std::ios::trunc : std::ios::app);
     if (not out) throw std::runtime_error("dmft_loop: cannot write " + path.string());
     if (fresh)
-      out << "# iteration mu_used mu_next filling distance window_max distance_imp_loc mix_residual sigma_projected delta_projected mu_status decision\n";
-    out << std::setprecision(12) << r.iteration << ' ' << r.mu_used << ' ' << r.mu_next << ' ' << r.filling << ' '
+      out << "# iteration mu mu_next filling distance window_max distance_imp_loc mix_residual sigma_projected delta_projected mu_status decision\n";
+    out << std::setprecision(12) << r.iteration << ' ' << r.mu << ' ' << r.mu_next << ' ' << r.filling << ' '
         << (r.convergence.distance ? *r.convergence.distance : std::numeric_limits<double>::quiet_NaN()) << ' ' << r.convergence.window_max << ' '
-        << r.convergence.distance_imp_loc << ' ' << r.mix.residual_norm << ' ' << r.sigma_projection.projected_points << ' '
-        << r.delta_projection.projected_points << ' ' << r.mu.status << ' ' << r.convergence.decision << '\n';
+        << r.convergence.distance_imp_loc << ' ' << r.mix_report.residual_norm << ' ' << r.sigma_projection.projected_points << ' '
+        << r.delta_projection.projected_points << ' ' << r.mu_report.status << ' ' << r.convergence.decision << '\n';
   }
 
 } // namespace nrgljubljana_interface::dmft
