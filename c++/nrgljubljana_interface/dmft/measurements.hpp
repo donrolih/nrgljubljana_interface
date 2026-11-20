@@ -15,7 +15,7 @@ namespace nrgljubljana_interface::dmft {
   /// The occupancy of a Green's function
   struct occupancy_t {
     /// N_ij = ∫ f(ω) A_ij(ω) dω per block, Hermitian
-    block_matrices_t matrix;
+    block_matrices_t matrix = {};
     /// The sum over the blocks of degeneracy × Re tr N, e.g. the spin-summed filling
     double total = 0;
   };
@@ -36,7 +36,7 @@ namespace nrgljubljana_interface::dmft {
   /// The distance between two spectral functions
   struct distance_t {
     /// Per block and element: ∫ |Re ΔA_ij| dω + ∫ |Im ΔA_ij| dω, which is ∫ |ΔA_ii| dω on the diagonal
-    std::vector<nda::matrix<double>> elements;
+    std::vector<nda::matrix<double>> elements = {};
     /// The largest element over all blocks
     double max = 0;
   };

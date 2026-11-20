@@ -25,3 +25,6 @@ FetchContent_MakeAvailable(c2py)
 # Add Python modules
 c2py_add_module(solver_core LINK_LIBRARIES ${PROJECT_NAME}_c ${PROJECT_NAME}_warnings)
 install(TARGETS solver_core DESTINATION ${PYTHON_LIB_DEST})
+
+c2py_add_module(_dmft DIR dmft LINK_LIBRARIES ${PROJECT_NAME}_c ${PROJECT_NAME}_warnings DEPENDS_ON_BINDINGS solver_core)
+install(TARGETS _dmft DESTINATION ${PYTHON_LIB_DEST}/dmft)

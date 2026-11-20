@@ -4,6 +4,9 @@
 
 #include "./lattice.hpp"
 
+#include <nda/nda.hpp>
+
+#include <complex>
 #include <map>
 #include <optional>
 #include <string>
@@ -52,5 +55,22 @@ namespace nrgljubljana_interface::dmft {
     void check_structure(std::vector<std::string> const &names, std::vector<long> const &sizes, std::string const &function) const;
     [[nodiscard]] std::vector<g_w_t> transform(g_w_t const &Sigma, double mu, unsigned max_moment, std::string const &function) const;
   };
+
+  /**
+   * The Hilbert transform G_n(z) = ∫ εⁿ ρ(ε) / (z − ε) dε of the Steffen interpolant of a tabulated DOS (NRG
+   * Ljubljana numerics, as tabulated_lattice_t), for z off the real axis; a real z gives the limit z + i0. The DOS
+   * needs finite values, strictly increasing energies and ρ ≥ 0, but no normalization.
+   *
+   * For an array of z the transform is taken at each element; for a square matrix z through its eigenvectors,
+   * z = U diag(λ) U⁻¹ and G_n(z) = U diag(G_n(λ)) U⁻¹, so z must be diagonalizable with an eigenvector matrix of
+   * condition number at most 1e8. Errors are std::invalid_argument.
+   */
+  std::complex<double> hilbert_transform(dos_t const &dos, std::complex<double> z, long moment = 0);
+
+  /// The Hilbert transform at each element of z
+  nda::array<std::complex<double>, 1> hilbert_transform(dos_t const &dos, nda::array<std::complex<double>, 1> const &z, long moment = 0);
+
+  /// The Hilbert transform of a square matrix z
+  nda::matrix<std::complex<double>> hilbert_transform(dos_t const &dos, nda::matrix<std::complex<double>> const &z, long moment = 0);
 
 } // namespace nrgljubljana_interface::dmft

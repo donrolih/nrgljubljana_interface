@@ -18,6 +18,7 @@ namespace nrgljubljana_interface::dmft {
 
   void h5_write(h5::group g, std::string const &name, convergence_params_t const &p) {
     auto grp = g.create_group(name);
+    h5::write_hdf5_format(grp, p);
     h5::write(grp, "eps", p.eps);
     h5::write(grp, "window", p.window);
     h5::write(grp, "min_iter", p.min_iter);
@@ -117,6 +118,45 @@ namespace nrgljubljana_interface::dmft {
     h5::read(grp, "last_iteration", last_iteration_);
     history_.clear();
     for (std::size_t i = 0; i < iterations.size(); ++i) history_.emplace_back(iterations[i], distances[i]);
+  }
+
+  void h5_write(h5::group g, std::string const &name, convergence_result_t const &r) {
+    auto grp = g.create_group(name);
+    h5::write_hdf5_format(grp, r);
+    h5::write(grp, "decision", r.decision);
+    if (r.distance) h5::write(grp, "distance", *r.distance);
+    h5::write(grp, "window_max", r.window_max);
+    h5::write(grp, "window_samples", r.window_samples);
+    h5::write(grp, "distance_imp_loc", r.distance_imp_loc);
+    h5::write(grp, "window_ok", long(r.window_ok));
+    h5::write(grp, "iterations_ok", long(r.iterations_ok));
+    h5::write(grp, "filling_ok", long(r.filling_ok));
+    h5::write(grp, "mu_ok", long(r.mu_ok));
+    h5::write(grp, "imp_loc_ok", long(r.imp_loc_ok));
+  }
+
+  void h5_read(h5::group g, std::string const &name, convergence_result_t &r) {
+    auto grp      = g.open_group(name);
+    auto read_bool = [&](char const *key, bool &b) {
+      long v = 0;
+      h5::read(grp, key, v);
+      b = v != 0;
+    };
+    h5::read(grp, "decision", r.decision);
+    r.distance = {};
+    if (grp.has_key("distance")) {
+      double d = 0;
+      h5::read(grp, "distance", d);
+      r.distance = d;
+    }
+    h5::read(grp, "window_max", r.window_max);
+    h5::read(grp, "window_samples", r.window_samples);
+    h5::read(grp, "distance_imp_loc", r.distance_imp_loc);
+    read_bool("window_ok", r.window_ok);
+    read_bool("iterations_ok", r.iterations_ok);
+    read_bool("filling_ok", r.filling_ok);
+    read_bool("mu_ok", r.mu_ok);
+    read_bool("imp_loc_ok", r.imp_loc_ok);
   }
 
 } // namespace nrgljubljana_interface::dmft

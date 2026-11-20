@@ -7,6 +7,7 @@
 #include "../lattice/lattice.hpp"
 
 #include <h5/h5.hpp>
+#include <triqs/utility/macros.hpp>
 
 #include <map>
 #include <optional>
@@ -32,6 +33,7 @@ namespace nrgljubljana_interface::dmft {
     double epsabs = 1e-10, epsrel = 1e-9;
 
     bool operator==(mu_control_params_t const &) const = default;
+    static std::string hdf5_format() { return "NRGLJUBLJANA_INTERFACE_MuControlParams"; }
   };
 
   void h5_write(h5::group g, std::string const &name, mu_control_params_t const &p);
@@ -45,29 +47,34 @@ namespace nrgljubljana_interface::dmft {
     double mu = 0;
     /// The temperature, and the degeneracy of each block (the manifest's)
     double T = 0;
-    std::map<std::string, long> degeneracy;
+    std::map<std::string, long> degeneracy = {};
   };
 
   /// What the μ control did
   struct mu_report_t {
     /// "fixed", "within_tolerance", "bracketed" or "limited"
-    std::string status;
+    std::string status = {};
     /// The filling at μ and at μ_next
     double filling = 0, filling_next = 0;
     /// The largest |∫ A_ii dω − 1| at μ and at μ_next
     double weight_error = 0, weight_error_next = 0;
     /// The root of n(μ) = goal, when bracketed
-    std::optional<double> mu_root;
+    std::optional<double> mu_root = {};
     /// The number of lattice evaluations
     long evaluations = 0;
+
+    static std::string hdf5_format() { return "NRGLJUBLJANA_INTERFACE_MuReport"; }
   };
+
+  void h5_write(h5::group g, std::string const &name, mu_report_t const &r);
+  void h5_read(h5::group g, std::string const &name, mu_report_t &r);
 
   /// The result of adjusting μ
   struct mu_result_t {
     double mu_next = 0;
     /// The filling at μ
     double filling = 0;
-    mu_report_t report;
+    mu_report_t report = {};
   };
 
   /**
@@ -87,7 +94,7 @@ namespace nrgljubljana_interface::dmft {
    public:
     explicit mu_control_t(mu_control_params_t const &params = {});
 
-    [[nodiscard]] mu_result_t adjust(mu_input_t const &input, lattice_t const &lattice) const;
+    [[nodiscard]] C2PY_IGNORE mu_result_t adjust(mu_input_t const &input, lattice_t const &lattice) const;
 
     [[nodiscard]] mu_control_params_t const &params() const { return params_; }
 

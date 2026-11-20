@@ -218,7 +218,7 @@ TEST(Loop, StepRunCallbackStatistics) {
 
   auto by_run = make(s1, m1, c1, lattice, dir);
   long calls  = 0;
-  by_run.set_callback([&](dmft_loop const &, step_result_t const &) { ++calls; });
+  by_run.set_callback([&](step_result_t const &) { ++calls; });
   EXPECT_EQ(by_run.run(5), "continue");
   EXPECT_EQ(by_run.iteration(), 5);
   EXPECT_EQ(calls, 5);
@@ -322,8 +322,8 @@ namespace {
 
     loop_set_t(std::string const &run_dir, double alpha = 0.5, double T = 0.01, bool keep_history = true)
        : solver(siam_manifest + levels_section), mixer(alpha), loop(make(run_dir, T, keep_history)) {
-      loop.set_callback([this](dmft_loop const &l, step_result_t const &r) {
-        record.mus.push_back(l.mu());
+      loop.set_callback([this](step_result_t const &r) {
+        record.mus.push_back(r.mu_next);
         record.decisions.push_back(r.convergence.decision);
       });
     }

@@ -59,53 +59,23 @@ namespace nrgljubljana_interface::dmft {
           throw std::invalid_argument(pre + "the model parameter " + name + " is an impurity level, set by the loop from the on-site energy and μ");
     }
 
-    void write_report(h5::group g, std::string const &name, causality_report_t const &r) {
-      auto grp = g.create_group(name);
-      h5::write(grp, "projected_points", r.projected_points);
-      h5::write(grp, "largest_violation", r.largest_violation);
-    }
-
-    void write_report(h5::group g, std::string const &name, mu_report_t const &r) {
-      auto grp = g.create_group(name);
-      h5::write(grp, "status", r.status);
-      h5::write(grp, "filling", r.filling);
-      h5::write(grp, "filling_next", r.filling_next);
-      h5::write(grp, "weight_error", r.weight_error);
-      h5::write(grp, "weight_error_next", r.weight_error_next);
-      if (r.mu_root) h5::write(grp, "mu_root", *r.mu_root);
-      h5::write(grp, "evaluations", r.evaluations);
-    }
-
-    void write_report(h5::group g, std::string const &name, mix_report_t const &r) {
-      auto grp = g.create_group(name);
-      h5::write(grp, "method", r.method);
-      h5::write(grp, "residual_norm", r.residual_norm);
-      h5::write(grp, "history_size", r.history_size);
-      h5::write(grp, "condition", r.condition);
-      h5::write(grp, "fallback", long(r.fallback));
-    }
-
-    void write_report(h5::group g, std::string const &name, convergence_result_t const &r) {
-      auto grp = g.create_group(name);
-      h5::write(grp, "decision", r.decision);
-      if (r.distance) h5::write(grp, "distance", *r.distance);
-      h5::write(grp, "window_max", r.window_max);
-      h5::write(grp, "window_samples", r.window_samples);
-      h5::write(grp, "distance_imp_loc", r.distance_imp_loc);
-      h5::write(grp, "window_ok", long(r.window_ok));
-      h5::write(grp, "iterations_ok", long(r.iterations_ok));
-      h5::write(grp, "filling_ok", long(r.filling_ok));
-      h5::write(grp, "mu_ok", long(r.mu_ok));
-      h5::write(grp, "imp_loc_ok", long(r.imp_loc_ok));
-    }
-
     void write_reports(h5::group g, step_result_t const &r) {
-      write_report(g, "sigma_projection", r.sigma_projection);
-      write_report(g, "delta_projection", r.delta_projection);
-      write_report(g, "mu", r.mu_report);
-      write_report(g, "mix", r.mix_report);
-      write_report(g, "convergence", r.convergence);
+      h5_write(g, "sigma_projection", r.sigma_projection);
+      h5_write(g, "delta_projection", r.delta_projection);
+      h5_write(g, "mu", r.mu_report);
+      h5_write(g, "mix", r.mix_report);
+      h5_write(g, "convergence", r.convergence);
       h5::write(g, "expv", r.expv);
+    }
+
+    void read_reports(h5::group g, step_result_t &r) {
+      h5_read(g, "sigma_projection", r.sigma_projection);
+      h5_read(g, "delta_projection", r.delta_projection);
+      h5_read(g, "mu", r.mu_report);
+      h5_read(g, "mix", r.mix_report);
+      h5_read(g, "convergence", r.convergence);
+      r.expv.clear();
+      h5::read(g, "expv", r.expv);
     }
 
     // Run f on rank 0 only; an exception there is raised on every rank, so no rank is left waiting in a collective
@@ -153,6 +123,22 @@ namespace nrgljubljana_interface::dmft {
        convergence_(convergence),
        params_(std::move(params)),
        mu_control_(mu_control.value_or(mu_control_t{})) {
+    setup();
+  }
+
+  dmft_loop::dmft_loop(solver_core &solver, lattice_t const &lattice, mixer_t &mixer, convergence_t &convergence, loop_params_t params,
+                       std::optional<mu_control_t> const &mu_control)
+     : owned_solver_(std::make_unique<solver_core_adapter>(solver)),
+       solver_(*owned_solver_),
+       lattice_(lattice),
+       mixer_(mixer),
+       convergence_(convergence),
+       params_(std::move(params)),
+       mu_control_(mu_control.value_or(mu_control_t{})) {
+    setup();
+  }
+
+  void dmft_loop::setup() {
     auto const &m = solver_.manifest();
     check_options(params_, m);
     check_manifest(m, params_.solve_params);
@@ -184,6 +170,17 @@ namespace nrgljubljana_interface::dmft {
       sp.model_parameters[name] = value;
     }
     return sp;
+  }
+
+  void dmft_loop::initialize(std::complex<double> Sigma0, double mu0) {
+    g_w_t S{solver_.mesh(), solver_.manifest().gf};
+    for (long b = 0; b < long(S.size()); ++b) {
+      auto &d = S[b].data();
+      d       = 0;
+      for (long k = 0; k < d.extent(0); ++k)
+        for (long i = 0; i < d.extent(1); ++i) d(k, i, i) = Sigma0;
+    }
+    initialize(S, mu0);
   }
 
   void dmft_loop::initialize(g_w_t const &Sigma0, double mu0) {
@@ -381,7 +378,7 @@ namespace nrgljubljana_interface::dmft {
     last_           = r;
 
     on_rank_0(comm, [&] { write_statistics(r); });
-    if (callback_) callback_(*this, r);
+    if (callback_) callback_(r);
     return r;
   }
 
@@ -467,6 +464,52 @@ namespace nrgljubljana_interface::dmft {
     h5::write(g, "Sigma", Sigma);
     h5::write(g, "G_loc", G_loc);
     write_reports(g.create_group("reports"), r);
+  }
+
+  void h5_write(h5::group g, std::string const &name, loop_params_t const &p) {
+    auto grp = g.create_group(name);
+    h5::write_hdf5_format(grp, p);
+    h5_write(grp, "solve_params", p.solve_params);
+    h5_write(grp, "options", p.options);
+    h5::write(grp, "Gamma_floor", p.Gamma_floor);
+    h5::write(grp, "sigma_floor", p.sigma_floor);
+    h5::write(grp, "run_dir", p.run_dir);
+    h5::write(grp, "keep_history", long(p.keep_history));
+  }
+
+  void h5_read(h5::group g, std::string const &name, loop_params_t &p) {
+    auto grp          = g.open_group(name);
+    long keep_history = 0;
+    h5_read(grp, "solve_params", p.solve_params);
+    h5_read(grp, "options", p.options);
+    h5::read(grp, "Gamma_floor", p.Gamma_floor);
+    h5::read(grp, "sigma_floor", p.sigma_floor);
+    h5::read(grp, "run_dir", p.run_dir);
+    h5::read(grp, "keep_history", keep_history);
+    p.keep_history = keep_history != 0;
+  }
+
+  void h5_write(h5::group g, std::string const &name, step_result_t const &r) {
+    auto grp = g.create_group(name);
+    h5::write_hdf5_format(grp, r);
+    h5::write(grp, "iteration", r.iteration);
+    h5::write(grp, "mu", r.mu);
+    h5::write(grp, "mu_next", r.mu_next);
+    h5::write(grp, "filling", r.filling);
+    h5::write(grp, "kept_delta", long(r.kept_delta));
+    write_reports(grp.create_group("reports"), r);
+  }
+
+  void h5_read(h5::group g, std::string const &name, step_result_t &r) {
+    auto grp        = g.open_group(name);
+    long kept_delta = 0;
+    h5::read(grp, "iteration", r.iteration);
+    h5::read(grp, "mu", r.mu);
+    h5::read(grp, "mu_next", r.mu_next);
+    h5::read(grp, "filling", r.filling);
+    h5::read(grp, "kept_delta", kept_delta);
+    r.kept_delta = kept_delta != 0;
+    read_reports(grp.open_group("reports"), r);
   }
 
 } // namespace nrgljubljana_interface::dmft

@@ -257,4 +257,17 @@ namespace nrgljubljana_interface::dmft {
     return result;
   }
 
+  void h5_write(h5::group g, std::string const &name, causality_report_t const &r) {
+    auto grp = g.create_group(name);
+    h5::write_hdf5_format(grp, r);
+    h5::write(grp, "projected_points", r.projected_points);
+    h5::write(grp, "largest_violation", r.largest_violation);
+  }
+
+  void h5_read(h5::group g, std::string const &name, causality_report_t &r) {
+    auto grp = g.open_group(name);
+    h5::read(grp, "projected_points", r.projected_points);
+    h5::read(grp, "largest_violation", r.largest_violation);
+  }
+
 } // namespace nrgljubljana_interface::dmft

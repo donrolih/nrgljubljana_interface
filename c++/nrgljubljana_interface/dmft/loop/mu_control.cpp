@@ -35,6 +35,7 @@ namespace nrgljubljana_interface::dmft {
 
   void h5_write(h5::group g, std::string const &name, mu_control_params_t const &p) {
     auto grp = g.create_group(name);
+    h5::write_hdf5_format(grp, p);
     if (p.goal) h5::write(grp, "goal", *p.goal);
     h5::write(grp, "maxdx", p.maxdx);
     h5::write(grp, "under", p.under);
@@ -199,6 +200,34 @@ namespace nrgljubljana_interface::dmft {
     if (std::abs(result.report.filling_next - goal) > std::abs(error_old) + p.root_tol)
       throw std::runtime_error("mu_control_t: the step to μ = " + number(mu_next) + " made the filling error worse");
     return result;
+  }
+
+  void h5_write(h5::group g, std::string const &name, mu_report_t const &r) {
+    auto grp = g.create_group(name);
+    h5::write_hdf5_format(grp, r);
+    h5::write(grp, "status", r.status);
+    h5::write(grp, "filling", r.filling);
+    h5::write(grp, "filling_next", r.filling_next);
+    h5::write(grp, "weight_error", r.weight_error);
+    h5::write(grp, "weight_error_next", r.weight_error_next);
+    if (r.mu_root) h5::write(grp, "mu_root", *r.mu_root);
+    h5::write(grp, "evaluations", r.evaluations);
+  }
+
+  void h5_read(h5::group g, std::string const &name, mu_report_t &r) {
+    auto grp = g.open_group(name);
+    h5::read(grp, "status", r.status);
+    h5::read(grp, "filling", r.filling);
+    h5::read(grp, "filling_next", r.filling_next);
+    h5::read(grp, "weight_error", r.weight_error);
+    h5::read(grp, "weight_error_next", r.weight_error_next);
+    r.mu_root = {};
+    if (grp.has_key("mu_root")) {
+      double root = 0;
+      h5::read(grp, "mu_root", root);
+      r.mu_root = root;
+    }
+    h5::read(grp, "evaluations", r.evaluations);
   }
 
 } // namespace nrgljubljana_interface::dmft

@@ -5,6 +5,7 @@
 #include "../common.hpp"
 
 #include <h5/h5.hpp>
+#include <triqs/utility/macros.hpp>
 
 #include <optional>
 #include <string>
@@ -27,6 +28,7 @@ namespace nrgljubljana_interface::dmft {
     std::optional<double> eps_imp_loc = {};
 
     bool operator==(convergence_params_t const &) const = default;
+    static std::string hdf5_format() { return "NRGLJUBLJANA_INTERFACE_ConvergenceParams"; }
   };
 
   void h5_write(h5::group g, std::string const &name, convergence_params_t const &p);
@@ -50,9 +52,9 @@ namespace nrgljubljana_interface::dmft {
   /// The decision and the measures behind it
   struct convergence_result_t {
     /// "continue", "converged" or "stop"
-    std::string decision;
+    std::string decision = {};
     /// The largest spectral distance of G_loc to the previous iteration (unset in the first)
-    std::optional<double> distance;
+    std::optional<double> distance = {};
     /// The largest distance in the window, and the number of distances in it
     double window_max   = 0;
     long window_samples = 0;
@@ -60,7 +62,12 @@ namespace nrgljubljana_interface::dmft {
     double distance_imp_loc = 0;
     /// Which criteria hold (an inactive criterion holds)
     bool window_ok = false, iterations_ok = false, filling_ok = false, mu_ok = false, imp_loc_ok = false;
+
+    static std::string hdf5_format() { return "NRGLJUBLJANA_INTERFACE_ConvergenceResult"; }
   };
+
+  void h5_write(h5::group g, std::string const &name, convergence_result_t const &r);
+  void h5_read(h5::group g, std::string const &name, convergence_result_t &r);
 
   /**
    * The convergence test. converged: a full window of distances all strictly below eps, min_iter ≤ n ≤ max_iter,
@@ -83,8 +90,8 @@ namespace nrgljubljana_interface::dmft {
     }
 
     /// The parameters and the history of distances, for the checkpoint
-    void h5_write(h5::group g, std::string const &name) const;
-    void h5_read(h5::group g, std::string const &name);
+    C2PY_IGNORE void h5_write(h5::group g, std::string const &name) const;
+    C2PY_IGNORE void h5_read(h5::group g, std::string const &name);
 
     [[nodiscard]] convergence_params_t const &params() const { return params_; }
     /// (iteration, distance) of every iteration after the first

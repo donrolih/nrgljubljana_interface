@@ -8,6 +8,8 @@
 
 #include "./common.hpp"
 
+#include <h5/h5.hpp>
+
 #include <utility>
 
 namespace nrgljubljana_interface::dmft {
@@ -23,7 +25,11 @@ namespace nrgljubljana_interface::dmft {
     double largest_violation = 0;
 
     bool operator==(causality_report_t const &) const = default;
+    static std::string hdf5_format() { return "NRGLJUBLJANA_INTERFACE_CausalityReport"; }
   };
+
+  void h5_write(h5::group g, std::string const &name, causality_report_t const &r);
+  void h5_read(h5::group g, std::string const &name, causality_report_t &r);
 
   /**
    * Raise the eigenvalues of the spectral part below floor to it, keeping the eigenvectors (S' = S + δS), and

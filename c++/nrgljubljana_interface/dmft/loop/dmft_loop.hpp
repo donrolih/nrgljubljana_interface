@@ -10,8 +10,12 @@
 #include "./mixing.hpp"
 #include "./mu_control.hpp"
 
+#include <triqs/utility/macros.hpp>
+
+#include <complex>
 #include <functional>
 #include <map>
+#include <memory>
 #include <optional>
 #include <string>
 
@@ -20,16 +24,21 @@ namespace nrgljubljana_interface::dmft {
   /// Parameters of the loop
   struct loop_params_t {
     /// Solve parameters (T, Λ, Nz, the model parameters except the impurity levels)
-    solve_params_t solve_params;
+    solve_params_t solve_params = {};
     /// What each solve computes; must give G, F_l, F_r and I broadened, for the full set of z
-    options_t options;
+    options_t options = {};
     /// Floors of the spectral parts of Δ and Σ
     double Gamma_floor = 1e-6, sigma_floor = 1e-12;
     /// Directory of the files of the run (rank 0): checkpoint.h5, history.h5, stats.dat; empty: no files
-    std::string run_dir;
+    std::string run_dir = {};
     /// Append each iteration to history.h5
     bool keep_history = true;
+
+    static std::string hdf5_format() { return "NRGLJUBLJANA_INTERFACE_LoopParams"; }
   };
+
+  void h5_write(h5::group g, std::string const &name, loop_params_t const &p);
+  void h5_read(h5::group g, std::string const &name, loop_params_t &p);
 
   /// One iteration of the loop
   struct step_result_t {
@@ -37,15 +46,20 @@ namespace nrgljubljana_interface::dmft {
     /// μ of the solve, μ for the next iteration, and the filling at μ
     double mu = 0, mu_next = 0, filling = 0;
     /// The causal projections of Σ and of the next Δ
-    causality_report_t sigma_projection, delta_projection;
-    mu_report_t mu_report;
-    mix_report_t mix_report;
-    convergence_result_t convergence;
+    causality_report_t sigma_projection = {}, delta_projection = {};
+    mu_report_t mu_report = {};
+    mix_report_t mix_report = {};
+    convergence_result_t convergence = {};
     /// Expectation values of the solve
-    std::map<std::string, double> expv;
+    std::map<std::string, double> expv = {};
     /// The next Δ could not be prepared after a terminal decision; Δ is kept
     bool kept_delta = false;
+
+    static std::string hdf5_format() { return "NRGLJUBLJANA_INTERFACE_StepResult"; }
   };
+
+  void h5_write(h5::group g, std::string const &name, step_result_t const &r);
+  void h5_read(h5::group g, std::string const &name, step_result_t &r);
 
   /**
    * The DMFT loop. One step: the impurity levels ⟨h⟩_ii − μ from the manifest's [levels]; the solve with Δ; Σ
@@ -60,14 +74,21 @@ namespace nrgljubljana_interface::dmft {
    */
   class dmft_loop {
    public:
-    using callback_t = std::function<void(dmft_loop const &, step_result_t const &)>;
+    using callback_t = std::function<void(step_result_t const &)>;
 
-    dmft_loop(impurity_solver_t &solver, lattice_t const &lattice, mixer_t &mixer, convergence_t &convergence, loop_params_t params,
+    C2PY_IGNORE dmft_loop(impurity_solver_t &solver, lattice_t const &lattice, mixer_t &mixer, convergence_t &convergence, loop_params_t params,
+                          std::optional<mu_control_t> const &mu_control = {});
+
+    /// With the solver of the package, through a solver_core_adapter held by the loop
+    dmft_loop(solver_core &solver, lattice_t const &lattice, mixer_t &mixer, convergence_t &convergence, loop_params_t params,
               std::optional<mu_control_t> const &mu_control = {});
 
     /// Δ from the lattice at Σ0 and μ0, through hybridization_from_Gamma; Σ0 in the structure and mesh of G. The loop
     /// controls are reset, and a history.h5 in the run directory is removed.
     void initialize(g_w_t const &Sigma0, double mu0);
+
+    /// As initialize, with Σ0 times the unit matrix in every block and at every frequency
+    void initialize(std::complex<double> Sigma0, double mu0);
 
     /**
      * Continue the run whose checkpoint.h5 is in run_dir: the next step is the iteration after it, with its Δ_mix and
@@ -87,18 +108,20 @@ namespace nrgljubljana_interface::dmft {
     /// Steps until the decision is converged or stop, or max_steps (0: no limit) steps were taken; the last decision
     std::string run(long max_steps = 0);
 
-    void set_callback(callback_t callback) { callback_ = std::move(callback); }
+    /// Called with the result of each step, after it is committed
+    C2PY_IGNORE void set_callback(callback_t callback) { callback_ = std::move(callback); }
 
     [[nodiscard]] long iteration() const { return iteration_; }
     [[nodiscard]] double mu() const { return mu_; }
-    [[nodiscard]] g_w_t const &Delta() const;
-    [[nodiscard]] std::optional<g_w_t> const &Sigma() const { return Sigma_; }
-    [[nodiscard]] std::optional<g_w_t> const &G_loc() const { return G_loc_; }
-    [[nodiscard]] std::optional<step_result_t> const &last_step() const { return last_; }
+    [[nodiscard]] C2PY_IGNORE g_w_t const &Delta() const;
+    [[nodiscard]] C2PY_IGNORE std::optional<g_w_t> const &Sigma() const { return Sigma_; }
+    [[nodiscard]] C2PY_IGNORE std::optional<g_w_t> const &G_loc() const { return G_loc_; }
+    [[nodiscard]] C2PY_IGNORE std::optional<step_result_t> const &last_step() const { return last_; }
     [[nodiscard]] block_matrices_t const &onsite_energy() const { return onsite_; }
     [[nodiscard]] loop_params_t const &params() const { return params_; }
 
    private:
+    std::unique_ptr<impurity_solver_t> owned_solver_;
     impurity_solver_t &solver_;
     lattice_t const &lattice_;
     mixer_t &mixer_;
@@ -114,6 +137,7 @@ namespace nrgljubljana_interface::dmft {
     std::optional<g_w_t> Delta_, Sigma_, G_loc_, G_loc_previous_;
     std::optional<step_result_t> last_;
 
+    void setup();
     [[nodiscard]] solve_params_t with_levels(double mu) const;
     void write_statistics(step_result_t const &r) const;
     void write_checkpoint(step_result_t const &r, result_t const &result, g_w_t const &Delta_mix, g_w_t const &Sigma, g_w_t const &G_loc,

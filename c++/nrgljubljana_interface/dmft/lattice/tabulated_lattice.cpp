@@ -4,9 +4,12 @@
 #include "../../nrg/lattice.hpp"
 #include "../../nrg/output.hpp"
 
+#include <nda/linalg.hpp>
+
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <limits>
 #include <sstream>
 #include <stdexcept>
 
@@ -19,8 +22,8 @@ namespace nrgljubljana_interface::dmft {
 
     nrg::dos_table_t table(dos_t const &d) { return {d.energy, d.density}; }
 
-    void check_dos(dos_t const &d, std::string const &where) {
-      auto const prefix = "tabulated_lattice_t: the DOS" + where;
+    void check_dos(dos_t const &d, std::string const &where, std::string const &function = "tabulated_lattice_t", bool normalized = true) {
+      auto const prefix = function + ": the DOS" + where;
       if (d.energy.size() != d.density.size())
         throw std::invalid_argument(prefix + " has " + std::to_string(d.energy.size()) + " energies and " + std::to_string(d.density.size()) + " densities");
       if (d.energy.size() < 3) throw std::invalid_argument(prefix + " has fewer than 3 points");
@@ -31,6 +34,7 @@ namespace nrgljubljana_interface::dmft {
         if (k > 0 and not(d.energy[k] > d.energy[k - 1]))
           throw std::invalid_argument(prefix + ": the energies are not strictly increasing at point " + std::to_string(k));
       }
+      if (not normalized) return;
       double const norm = nrg::integrate(d.energy, d.density);
       if (not(std::abs(norm - 1) <= normalization_tolerance))
         throw std::invalid_argument(prefix + " is not normalized: its integral is " + detail::number(norm) + ", expected 1 within 1e-8");
@@ -160,6 +164,91 @@ namespace nrgljubljana_interface::dmft {
       d.density.push_back(rho);
     }
     return d;
+  }
+
+  namespace {
+
+    using dcomplex = std::complex<double>;
+
+    // Largest condition number of the eigenvector matrix of z accepted by the matrix transform
+    constexpr double max_condition = 1e8;
+
+    // G_n(z) for each z, through NRG Ljubljana with ω = Re z, μ = 0 and Σ = −i |Im z|, and G_n(z̄) = conj G_n(z). The
+    // frequencies of one call must increase strictly: the points are sorted by Re z, and the k-th of the points
+    // with the same Re z goes to the k-th call.
+    std::vector<dcomplex> transform_points(dos_t const &dos, std::vector<dcomplex> const &z, long moment) {
+      if (moment < 0) throw std::invalid_argument("hilbert_transform: the moment must be non-negative, got " + std::to_string(moment));
+      check_dos(dos, "", "hilbert_transform", false);
+      for (std::size_t k = 0; k < z.size(); ++k)
+        if (not std::isfinite(z[k].real()) or not std::isfinite(z[k].imag()))
+          throw std::invalid_argument("hilbert_transform: z is not finite at index " + std::to_string(k));
+
+      std::vector<std::size_t> order(z.size());
+      for (std::size_t k = 0; k < z.size(); ++k) order[k] = k;
+      std::stable_sort(order.begin(), order.end(), [&](std::size_t a, std::size_t b) { return z[a].real() < z[b].real(); });
+      std::vector<std::vector<std::size_t>> passes;
+      for (std::size_t i = 0, repeat = 0; i < order.size(); ++i) {
+        repeat = (i > 0 and z[order[i]].real() == z[order[i - 1]].real()) ? repeat + 1 : 0;
+        if (passes.size() <= repeat) passes.emplace_back();
+        passes[repeat].push_back(order[i]);
+      }
+
+      double const floor = std::sqrt(std::numeric_limits<double>::min());
+      std::vector<dcomplex> g(z.size());
+      for (auto const &pass : passes) {
+        std::vector<double> mesh;
+        std::vector<dcomplex> sigma;
+        for (auto k : pass) {
+          mesh.push_back(z[k].real());
+          sigma.emplace_back(0, -std::abs(z[k].imag()));
+        }
+        auto const values = nrg::hilbert_moment(table(dos), mesh, sigma, 0, floor, unsigned(moment), detail::workers());
+        for (std::size_t i = 0; i < pass.size(); ++i) g[pass[i]] = z[pass[i]].imag() < 0 ? std::conj(values[i]) : values[i];
+      }
+      return g;
+    }
+
+    double frobenius(nda::matrix<dcomplex> const &m) {
+      double s = 0;
+      for (long i = 0; i < m.extent(0); ++i)
+        for (long j = 0; j < m.extent(1); ++j) s += std::norm(m(i, j));
+      return std::sqrt(s);
+    }
+
+  } // namespace
+
+  dcomplex hilbert_transform(dos_t const &dos, dcomplex z, long moment) { return transform_points(dos, {z}, moment)[0]; }
+
+  nda::array<dcomplex, 1> hilbert_transform(dos_t const &dos, nda::array<dcomplex, 1> const &z, long moment) {
+    std::vector<dcomplex> const points(z.begin(), z.end());
+    auto const g = transform_points(dos, points, moment);
+    nda::array<dcomplex, 1> result(z.extent(0));
+    for (long k = 0; k < z.extent(0); ++k) result(k) = g[k];
+    return result;
+  }
+
+  nda::matrix<dcomplex> hilbert_transform(dos_t const &dos, nda::matrix<dcomplex> const &z, long moment) {
+    long const n = z.extent(0);
+    if (z.extent(1) != n)
+      throw std::invalid_argument("hilbert_transform: z must be a square matrix, got " + std::to_string(n) + "x" + std::to_string(z.extent(1)));
+    if (n == 0) return nda::matrix<dcomplex>(0, 0);
+    for (long i = 0; i < n; ++i)
+      for (long j = 0; j < n; ++j)
+        if (not std::isfinite(z(i, j).real()) or not std::isfinite(z(i, j).imag()))
+          throw std::invalid_argument("hilbert_transform: z is not finite at (" + std::to_string(i) + ", " + std::to_string(j) + ")");
+    auto [lambda, V] = nda::linalg::eig(z);
+    nda::matrix<dcomplex> U = V;
+    if (nda::linalg::det(U) == dcomplex{0}) throw std::invalid_argument("hilbert_transform: z is not diagonalizable");
+    nda::matrix<dcomplex> const U_inv = nda::linalg::inv(U);
+    double const condition            = frobenius(U) * frobenius(U_inv);
+    if (not(condition <= max_condition))
+      throw std::invalid_argument("hilbert_transform: the eigenvectors of z are ill-conditioned (condition number " + detail::number(condition) + ")");
+    std::vector<dcomplex> const eigenvalues(lambda.begin(), lambda.end());
+    auto const g = transform_points(dos, eigenvalues, moment);
+    nda::matrix<dcomplex> diag(n, n);
+    diag = 0;
+    for (long m = 0; m < n; ++m) diag(m, m) = g[m];
+    return U * diag * U_inv;
   }
 
 } // namespace nrgljubljana_interface::dmft

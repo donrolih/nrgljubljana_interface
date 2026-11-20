@@ -80,4 +80,25 @@ namespace nrgljubljana_interface::dmft {
 
   void linear_mixer::h5_read(h5::group g, std::string const &name) { detail::check_mixer_type(g, name, "linear"); }
 
+  void h5_write(h5::group g, std::string const &name, mix_report_t const &r) {
+    auto grp = g.create_group(name);
+    h5::write_hdf5_format(grp, r);
+    h5::write(grp, "method", r.method);
+    h5::write(grp, "residual_norm", r.residual_norm);
+    h5::write(grp, "history_size", r.history_size);
+    h5::write(grp, "condition", r.condition);
+    h5::write(grp, "fallback", long(r.fallback));
+  }
+
+  void h5_read(h5::group g, std::string const &name, mix_report_t &r) {
+    auto grp = g.open_group(name);
+    long fallback = 0;
+    h5::read(grp, "method", r.method);
+    h5::read(grp, "residual_norm", r.residual_norm);
+    h5::read(grp, "history_size", r.history_size);
+    h5::read(grp, "condition", r.condition);
+    h5::read(grp, "fallback", fallback);
+    r.fallback = fallback != 0;
+  }
+
 } // namespace nrgljubljana_interface::dmft

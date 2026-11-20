@@ -6,6 +6,7 @@
 #include "../common.hpp"
 
 #include <h5/h5.hpp>
+#include <triqs/utility/macros.hpp>
 
 #include <optional>
 #include <string>
@@ -25,22 +26,27 @@ namespace nrgljubljana_interface::dmft {
   /// What a mixer did; the same for all mixers
   struct mix_report_t {
     /// "linear", "broyden" or "linear (fallback)"
-    std::string method;
+    std::string method = {};
     /// ‖Γ_out − Γ‖ = √(Σ_k w_k Σ_ij |ΔΓ_ij(ω_k)|²) over all blocks, w_k the integration weights of the mesh
     double residual_norm = 0;
     /// Broyden: the number of stored iterations, the condition number of its step, whether it fell back to linear
     long history_size = 0;
     double condition  = 0;
     bool fallback     = false;
+
+    static std::string hdf5_format() { return "NRGLJUBLJANA_INTERFACE_MixReport"; }
   };
+
+  void h5_write(h5::group g, std::string const &name, mix_report_t const &r);
+  void h5_read(h5::group g, std::string const &name, mix_report_t &r);
 
   /// The result of mixing
   struct mix_result_t {
     /// The mixed Γ, before the causal projection and the rebuild of Δ
     g_w_t Gamma_mix;
     /// μ for the next iteration, if the mixer moves μ
-    std::optional<double> mu_next;
-    mix_report_t report;
+    std::optional<double> mu_next = {};
+    mix_report_t report = {};
   };
 
   /// A mixer: the next Γ from the used and the raw one, with a state kept between iterations
@@ -63,10 +69,10 @@ namespace nrgljubljana_interface::dmft {
     [[nodiscard]] virtual std::string description() const = 0;
 
     /// Write the type, the parameters and the state, for the checkpoint
-    virtual void h5_write(h5::group g, std::string const &name) const = 0;
+    C2PY_IGNORE virtual void h5_write(h5::group g, std::string const &name) const = 0;
 
     /// Restore the state; throws std::runtime_error if the group holds another type of mixer
-    virtual void h5_read(h5::group g, std::string const &name) = 0;
+    C2PY_IGNORE virtual void h5_read(h5::group g, std::string const &name) = 0;
   };
 
   /// Linear mixing: Γ_mix = α Γ_out + (1 − α) Γ, element by element over all blocks
@@ -79,8 +85,8 @@ namespace nrgljubljana_interface::dmft {
     mix_result_t mix(mix_input_t const &input) override;
 
     [[nodiscard]] std::string description() const override;
-    void h5_write(h5::group g, std::string const &name) const override;
-    void h5_read(h5::group g, std::string const &name) override;
+    C2PY_IGNORE void h5_write(h5::group g, std::string const &name) const override;
+    C2PY_IGNORE void h5_read(h5::group g, std::string const &name) override;
 
     [[nodiscard]] double alpha() const { return alpha_; }
 
