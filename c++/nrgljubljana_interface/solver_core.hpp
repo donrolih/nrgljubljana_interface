@@ -149,6 +149,12 @@ namespace nrgljubljana_interface {
     /// The result of the last solve (a copy); None before the first solve
     C2PY_RENAME(last_result) std::optional<result_t> last_result_copy() const { return result; }
 
+    /// The manifest of the template
+    C2PY_IGNORE templates::manifest_t const &template_manifest() const { return manifest; }
+
+    /// The ranks that solve together
+    C2PY_IGNORE mpi::communicator communicator() const { return comm; }
+
     /**
      * @brief Create a temporary working directory for a series of NRG runs.
      *

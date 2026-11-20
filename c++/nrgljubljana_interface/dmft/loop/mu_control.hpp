@@ -77,9 +77,9 @@ namespace nrgljubljana_interface::dmft {
    * μ_next = μ_used + clamp(under (μ* − μ_used), ±maxdx); otherwise μ_next = μ_used ± maxdx. At μ_next the filling
    * error must not have grown by more than root_tol. Evaluations are cached and limited to max_evaluations.
    *
-   * Every evaluation checks that each ∫ A_ii dω is 1 within weight_tol and that the filling lies between 0 and the
-   * number of states. Errors: std::invalid_argument for invalid parameters or input, std::runtime_error for a failed
-   * search.
+   * With a goal every evaluation checks that each ∫ A_ii dω is 1 within weight_tol and that the filling lies between
+   * 0 and the number of states; without one the weight error is only reported. Errors: std::invalid_argument for
+   * invalid parameters or input, std::runtime_error for a failed search.
    */
   class mu_control_t {
    public:

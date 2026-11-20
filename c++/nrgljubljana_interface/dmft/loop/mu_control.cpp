@@ -101,12 +101,12 @@ namespace nrgljubljana_interface::dmft {
       auto const w      = spectral_weight(G);
       for (auto const &m : w)
         for (long i = 0; i < m.extent(0); ++i) weight_err = std::max(weight_err, std::abs(m(i, i).real() - 1));
-      if (not(weight_err <= p.weight_tol))
+      if (p.goal and not(weight_err <= p.weight_tol))
         throw std::runtime_error("mu_control_t: the lattice spectral weight at μ = " + number(mu) + " is off by " + number(weight_err)
                                  + ", more than weight_tol; the mesh may not cover the spectrum");
       double const n   = occupancy(G, input.T, input.degeneracy, p.epsabs, p.epsrel).total;
       double const tol = p.weight_tol * states;
-      if (not(n >= -tol and n <= states + tol)) throw std::runtime_error("mu_control_t: unphysical filling " + number(n) + " at μ = " + number(mu));
+      if (p.goal and not(n >= -tol and n <= states + tol)) throw std::runtime_error("mu_control_t: unphysical filling " + number(n) + " at μ = " + number(mu));
       return cache.emplace(mu, evaluation_t{n, weight_err}).first->second;
     };
 

@@ -6,7 +6,7 @@ endforeach()
 
 # List of all tests, by CTest label: unit (no NRG run), solver (short NRG runs), long (manual)
 #file(GLOB_RECURSE all_tests RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.cpp)
-set(unit_tests refreq_log.cpp hilbert_transform.cpp nrg_libraries.cpp nrg_adapters.cpp parameter_file.cpp manifest.cpp solver_construction.cpp options_and_result.cpp param_rendering.cpp nrg_output.cpp broadening.cpp dmft_causality.cpp dmft_self_energy.cpp dmft_measurements.cpp dmft_lattice.cpp dmft_mixing.cpp dmft_mu_control.cpp dmft_convergence.cpp)
+set(unit_tests refreq_log.cpp hilbert_transform.cpp nrg_libraries.cpp nrg_adapters.cpp parameter_file.cpp manifest.cpp solver_construction.cpp options_and_result.cpp param_rendering.cpp nrg_output.cpp broadening.cpp dmft_causality.cpp dmft_self_energy.cpp dmft_measurements.cpp dmft_lattice.cpp dmft_mixing.cpp dmft_mu_control.cpp dmft_convergence.cpp dmft_loop.cpp)
 set(solver_tests siam.cpp solver_hdf5.cpp raw_results.cpp independent_solves.cpp deferred_broadening.cpp)
 set(long_tests)
 set(all_tests ${unit_tests} ${solver_tests} ${long_tests})
@@ -82,6 +82,11 @@ set_property(TEST independent_solves_np2 APPEND PROPERTY ENVIRONMENT
   NRGIF_TEMPLATE_DIR=${PROJECT_SOURCE_DIR}/templates
 )
 set_property(TEST independent_solves_np2 APPEND PROPERTY LABELS solver)
+
+# The DMFT loop on 2 ranks: every rank holds rank 0's state (mock solver, no NRG run)
+add_test(NAME dmft_loop_np2 COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2 ${MPIEXEC_PREFLAGS} $<TARGET_FILE:dmft_loop> --gtest_filter=Loop.AllRanksAgree ${MPIEXEC_POSTFLAGS}
+         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+set_property(TEST dmft_loop_np2 APPEND PROPERTY LABELS unit)
 
 # Deferred broadening in a fresh process, from the file the first run writes
 add_test(NAME deferred_broadening_fresh COMMAND deferred_broadening --gtest_filter=DeferredBroadeningFromFile.*

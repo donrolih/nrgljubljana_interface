@@ -157,7 +157,9 @@ TEST(MuControl, WeightCheck) {
   setup_t const s;
   g_w_t narrow = sigma(refreq_log{1e-4, 0.6, 1.05}); // the mesh cuts the band
   mu_input_t in{narrow, mu0, T, degeneracy};
-  expect_error<std::runtime_error>([&] { (void)mu_control_t{}.adjust(in, s.lattice); }, "the lattice spectral weight at μ = 0.1 is off by");
+  expect_error<std::runtime_error>([&] { (void)mu_control_t{with_goal(0.8)}.adjust(in, s.lattice); }, "the lattice spectral weight at μ = 0.1 is off by");
+  auto const fixed = mu_control_t{}.adjust(in, s.lattice); // without a goal the weight error is only reported
+  EXPECT_GT(fixed.report.weight_error_used, 0.1);
 }
 
 TEST(MuControl, Parameters) {

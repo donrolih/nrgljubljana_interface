@@ -50,6 +50,12 @@ namespace nrgljubljana_interface::dmft {
 
     virtual mix_result_t mix(mix_input_t const &input) = 0;
 
+    /// Whether the mixer sets μ in this iteration (mix_result_t::mu_next); then the loop takes μ from it
+    [[nodiscard]] virtual bool moves_mu(long iteration) const {
+      (void)iteration;
+      return false;
+    }
+
     /// Write the type, the parameters and the state, for the checkpoint
     virtual void h5_write(h5::group g, std::string const &name) const = 0;
 
