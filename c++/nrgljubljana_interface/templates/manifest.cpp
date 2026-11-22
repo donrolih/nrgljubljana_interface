@@ -162,7 +162,7 @@ namespace nrgljubljana_interface::templates {
 
     // Known sections and keys; an empty key list means any key
     std::map<std::string, std::vector<std::string>> const known = {
-       {"template", {"format", "model", "symtype", "channels", "ops", "params"}},
+       {"template", {"format", "model", "symtype", "channels", "ops", "params", "pipeline"}},
        {"structure", {"gf", "delta", "degeneracy"}},
        {"bath", {"layout", "coefficient_channels"}},
        {"correlators", {}},
@@ -204,6 +204,9 @@ namespace nrgljubljana_interface::templates {
     if (m.channels < 1) fail(source, where("template", "channels"), "expected a positive integer");
     m.ops    = parse_unique_list(required("template", "ops"), source, where("template", "ops"));
     m.params = parse_unique_list(required("template", "params"), source, where("template", "params"));
+    if (section("template").contains("pipeline")) m.pipeline = section("template").at("pipeline");
+    if (m.pipeline != "scripts" and m.pipeline != "library")
+      fail(source, where("template", "pipeline"), "unknown pipeline \"" + m.pipeline + "\" (scripts or library)");
 
     // [structure]
     m.gf = parse_structure(required("structure", "gf"), source, where("structure", "gf"));
@@ -314,6 +317,12 @@ namespace nrgljubljana_interface::templates {
     result.field        = info.field;
     auto const mismatch = [&](std::string const &at, std::string const &what) { fail(manifest, at, what + " (" + data_in + ")"); };
 
+    for (auto const *script : template_scripts) {
+      bool const present = std::filesystem::exists(dir / script);
+      if (m.pipeline == "scripts" and not present) fail(manifest, where("template", "pipeline"), "scripts, but the template has no " + std::string(script));
+      if (m.pipeline == "library" and present)
+        fail(manifest, where("template", "pipeline"), "library, but the template still has the script " + std::string(script));
+    }
     if (m.symtype != info.symmetry) mismatch(where("template", "symtype"), "\"" + m.symtype + "\", but data.in states \"" + info.symmetry + "\"");
     if (m.channels != static_cast<long>(info.channels))
       mismatch(where("template", "channels"), std::to_string(m.channels) + ", but data.in states " + std::to_string(info.channels));

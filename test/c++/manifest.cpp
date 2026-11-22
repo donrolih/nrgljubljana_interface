@@ -248,6 +248,10 @@ TEST(Manifest, TemplateValues) {
   EXPECT_TRUE(contains(error_of(replaced(siam_qs, "channels=1", "channels=x")), "[template] channels"));
   EXPECT_TRUE(contains(error_of(replaced(siam_qs, "hop0 A_d", "hop0 hop0 A_d")), "[template] ops: \"hop0\" given twice"));
   EXPECT_TRUE(contains(error_of(replaced(siam_qs, "symtype=QS", "symtype=")), "[template] symtype: empty"));
+  EXPECT_EQ(parse_manifest(siam_qs).pipeline, "scripts"); // the default
+  EXPECT_EQ(parse_manifest(replaced(siam_qs, "params=U1 eps1", "params=U1 eps1\npipeline=library")).pipeline, "library");
+  EXPECT_TRUE(contains(error_of(replaced(siam_qs, "params=U1 eps1", "params=U1 eps1\npipeline=perl")),
+                       "[template] pipeline: unknown pipeline \"perl\" (scripts or library)"));
 }
 
 TEST(Manifest, StructureValues) {
@@ -363,5 +367,22 @@ TEST(Template, ShippedManifests) {
   for (auto const *name : {"SIAM/QS", "SIAM/QSZ", "SIAM/ISO", "2orb-UJ/QS", "Holstein/Nph=10/QS", "CLEAN/QS"}) {
     auto const dir = template_dir(name);
     EXPECT_NO_THROW(check_against_template(load_manifest(dir), dir)) << name;
+    EXPECT_EQ(load_manifest(dir).pipeline, "scripts") << name;
   }
+}
+
+// The route of a template must match its files: scripts needs every script, library none
+TEST(Template, Pipeline) {
+  namespace fs       = std::filesystem;
+  auto const library = replaced(siam_qs, "params=U1 eps1", "params=U1 eps1\npipeline=library");
+  EXPECT_TRUE(contains(check_error_of(library), "[template] pipeline: library, but the template still has the script prepare"));
+
+  std::string const copy = "siam_qs_without_scripts";
+  fs::remove_all(copy);
+  fs::copy(template_dir("SIAM/QS"), copy, fs::copy_options::recursive);
+  fs::remove(fs::path(copy) / "wilson");
+  EXPECT_TRUE(contains(check_error_of(siam_qs, copy), "[template] pipeline: scripts, but the template has no wilson"));
+  for (auto const *script : template_scripts) fs::remove(fs::path(copy) / script);
+  EXPECT_EQ(check_error_of(library, copy), "");
+  fs::remove_all(copy);
 }

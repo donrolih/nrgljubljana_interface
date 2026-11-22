@@ -82,6 +82,7 @@ namespace nrgljubljana_interface {
     } catch (std::invalid_argument const &e) { TRIQS_RUNTIME_ERROR << e.what(); }
     correlator_type = check.correlator_type;
     auto const &m   = manifest;
+    if (m.pipeline != "scripts") TRIQS_RUNTIME_ERROR << dir << "/manifest: pipeline=" << m.pipeline << " is not available yet; only scripts";
 
     gf_struct    = m.gf;
     Delta_struct = m.delta;

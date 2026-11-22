@@ -51,6 +51,8 @@ namespace nrgljubljana_interface::templates {
     std::string model, symtype;
     long channels = 0;
     std::vector<std::string> ops, params;
+    /// How a solve runs: "scripts" (the template's prepare, discretize, instantiate, wilson) or "library" (in-process)
+    std::string pipeline = "scripts";
 
     // [structure]
     block_structure_t gf, delta;
@@ -85,9 +87,12 @@ namespace nrgljubljana_interface::templates {
    * given twice; a block element outside its structure; degeneracy not covering exactly the blocks of gf; an
    * unknown layout; a correlator whose operators are not in ops; F_l, F_r, I not given together with G for the
    * same elements, or without a [hartree] entry (an operator, or 0) for each of them; a [hartree] entry for another element; a
-   * [levels] entry that is off-diagonal or names a parameter not in params.
+   * [levels] entry that is off-diagonal or names a parameter not in params; a pipeline other than scripts or library.
    */
   manifest_t parse_manifest(std::string_view text, std::string_view source = {});
+
+  /// The scripts of a template on the script route
+  inline constexpr char const *template_scripts[] = {"prepare", "discretize", "instantiate", "wilson"};
 
   /// Read and parse <template_dir>/manifest
   manifest_t load_manifest(std::string const &template_dir);
@@ -110,7 +115,8 @@ namespace nrgljubljana_interface::templates {
    * The operator types of a correlator must form a spectrum list as in NRG Ljubljana: s-s, p-p, g-g, s-g, g-s
    * (specs), t-t (spect), o-o (specot), d-d (specd), q-q (specq). A d-d correlator carries the spin suffix -u/-d
    * exactly when the symmetry type has a field; other correlators never do. A [hartree] operator must be of type s.
-   * The number of coefficient channels must be channels or twice that.
+   * The number of coefficient channels must be channels or twice that. With pipeline=scripts the template has each of
+   * template_scripts; with pipeline=library it has none of them.
    *
    * Throws std::invalid_argument naming the template, the file and the entry on a mismatch.
    */
