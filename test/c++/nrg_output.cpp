@@ -1,4 +1,5 @@
-// Parsers of NRG Ljubljana output files (nrg/output.hpp); the fixtures are taken from a SIAM/QS run
+// Output files of NRG Ljubljana through nrg/output.hpp (NRG Ljubljana's readers, the interface's types); the fixtures
+// are taken from a SIAM/QS run
 
 #include <gtest/gtest.h>
 
@@ -34,7 +35,7 @@ namespace {
   template <typename F> std::string error_of(F f) {
     try {
       f();
-    } catch (std::invalid_argument const &e) { return e.what(); }
+    } catch (std::runtime_error const &e) { return e.what(); }
     return {};
   }
 
@@ -57,15 +58,15 @@ TEST(NrgOutput, FinalValues) {
   EXPECT_EQ(v.size(), 5u);
   EXPECT_EQ(v.at("T"), 0.001);
   EXPECT_EQ(v.at("F_fdm"), -2.814620886);
-  EXPECT_TRUE(contains(error_of([] { parse_final_values(custom, "customfdm"); }), "customfdm: expected exactly one row, got 2"));
+  EXPECT_TRUE(contains(error_of([] { parse_final_values(custom, "customfdm"); }), "customfdm: expected exactly one row, found 2"));
 }
 
 TEST(NrgOutput, StepTableErrors) {
   EXPECT_TRUE(contains(error_of([] { parse_step_table("1 2\n", "td"); }), "td: line 1: data before a header line"));
-  EXPECT_TRUE(contains(error_of([] { parse_step_table("# T E\n1 2 3\n", "td"); }), "td: line 2: expected 2 values, got 3"));
+  EXPECT_TRUE(contains(error_of([] { parse_step_table("# T E\n1 2 3\n", "td"); }), "td: line 2: expected 2 values, found 3"));
   EXPECT_TRUE(contains(error_of([] { parse_step_table("# T E\n1 x\n", "td"); }), "not a number: \"x\""));
   EXPECT_TRUE(contains(error_of([] { parse_step_table("", "td"); }), "no header line"));
-  EXPECT_TRUE(contains(error_of([] { parse_step_table("# T E\n1 2\n# T E\n", "td"); }), "header line after data"));
+  EXPECT_TRUE(contains(error_of([] { parse_step_table("# T E\n1 2\n# T E\n", "td"); }), "header line after the data"));
 }
 
 TEST(NrgOutput, EnergyFlow) {
@@ -99,5 +100,8 @@ TEST(NrgOutput, SpectrumFile) {
   EXPECT_EQ(spectrum_file("sigma_d-sigma_d", 't'), "spin_FDM_dens_sigma_d-sigma_d.bin");
   EXPECT_EQ(spectrum_file("x-x", 'o'), "orbspin_FDM_dens_x-x.bin");
   EXPECT_EQ(spectrum_file("x-x", 'q'), "specq_FDM_dens_x-x.bin");
+  EXPECT_EQ(spectrum_file("A_d-A_d-d", 'd'), "spec_FDM_dens_A_d-A_d-d.bin");
   EXPECT_THROW(spectrum_file("x-x", 'p'), std::invalid_argument);
+  EXPECT_THROW(spectrum_file("A_d-A_d-x", 'd'), std::invalid_argument);
+  EXPECT_THROW(spectrum_file("A_d", 'd'), std::invalid_argument);
 }

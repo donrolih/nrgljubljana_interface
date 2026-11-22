@@ -1,5 +1,5 @@
 // Output files of an NRG Ljubljana run: tables of expectation values and thermodynamics, the energy flow, and the
-// names of the spectrum files.
+// names of the spectrum files. The parsing is NRG Ljubljana's (solver_output.hpp); these give the interface's types.
 
 #pragma once
 
@@ -44,23 +44,25 @@ namespace nrgljubljana_interface::nrg {
    *
    * The column names are those of the last '#' line before the data ("# T name ..."; custom has a line of column
    * numbers before it). Each further line is one row with a value per column.
-   * Throws std::invalid_argument, with the source and line, on a missing header or a row of the wrong length.
+   * Throws std::runtime_error, with the source and line, on malformed text.
    */
   step_table_t parse_step_table(std::string_view text, std::string_view source = {});
 
-  /// Parse customfdm or tdfdm: a table with exactly one row, as column name -> value
+  /// Parse customfdm or tdfdm: a table with exactly one row, as column name -> value; errors as parse_step_table
   std::map<std::string, double> parse_final_values(std::string_view text, std::string_view source = {});
 
   /**
    * Parse annotated.dat with grouped levels: per line "energy (qn ...) (qn ...) ... [degeneracy]", one group of
-   * degenerate levels; an empty line ends each NRG step.
-   * Throws std::invalid_argument, with the source and line, on a malformed line.
+   * degenerate levels; an empty line ends each NRG step. A file written with dumpgroups=false is refused.
+   * Throws std::runtime_error, with the source and line, on malformed text.
    */
   energy_flow_t parse_energy_flow(std::string_view text, std::string_view source = {});
 
   /**
    * The file NRG Ljubljana writes the FDM spectral bins of an NRG correlator to, given its spectrum list (s, t, o, d,
-   * q): "<prefix>_FDM_dens_<correlator>.bin" with the prefix corr, spin, orbspin, spec or specq.
+   * q): "<prefix>_FDM_dens_<correlator>.bin" with the prefix corr, spin, orbspin, spec or specq. The correlator is
+   * "op1-op2", or "op1-op2-u" / "op1-op2-d" for one spin of a doublet list under a symmetry type with a field.
+   * Throws std::invalid_argument for another type or form.
    */
   std::string spectrum_file(std::string const &nrg_correlator, char type);
 
