@@ -90,6 +90,7 @@ namespace nrgljubljana_interface {
       h5_write(grp, "customfdm", t.customfdm);
       h5_write(grp, "tdfdm", t.tdfdm);
       write_energy_flow(grp, "energy_flow", t.energy_flow);
+      if (not t.chain.channels.empty()) nrg::h5_write(grp, "chain", t.chain);
     }
 
     void read_twist(h5::group g, std::string const &name, twist_result_t &t) {
@@ -103,6 +104,8 @@ namespace nrgljubljana_interface {
       h5_read(grp, "customfdm", t.customfdm);
       h5_read(grp, "tdfdm", t.tdfdm);
       read_energy_flow(grp, "energy_flow", t.energy_flow);
+      t.chain = {};
+      if (grp.has_key("chain")) nrg::h5_read(grp, "chain", t.chain);
     }
 
   } // namespace
@@ -129,6 +132,8 @@ namespace nrgljubljana_interface {
     h5_write(grp, "mesh", r.mesh);
     h5_write(grp, "z", r.z);
     h5_write(grp, "complete_z_average", r.complete_z_average);
+    h5_write(grp, "Gamma_projected_points", r.Gamma_projected_points);
+    h5_write(grp, "Gamma_largest_violation", r.Gamma_largest_violation);
     auto twists = grp.create_group("twists");
     for (std::size_t k = 0; k < r.twists.size(); ++k) write_twist(twists, std::to_string(k), r.twists[k], with_bins);
     h5_write(grp, "expv", r.expv);
@@ -150,6 +155,10 @@ namespace nrgljubljana_interface {
     h5_read(grp, "mesh", r.mesh);
     h5_read(grp, "z", r.z);
     h5_read(grp, "complete_z_average", r.complete_z_average);
+    r.Gamma_projected_points  = 0; // absent in files written before they existed
+    r.Gamma_largest_violation = 0;
+    if (grp.has_key("Gamma_projected_points")) h5_read(grp, "Gamma_projected_points", r.Gamma_projected_points);
+    if (grp.has_key("Gamma_largest_violation")) h5_read(grp, "Gamma_largest_violation", r.Gamma_largest_violation);
     auto twists = grp.open_group("twists");
     r.twists.clear();
     for (std::size_t k = 0; twists.has_key(std::to_string(k)); ++k) read_twist(twists, std::to_string(k), r.twists.emplace_back());

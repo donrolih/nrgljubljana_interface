@@ -205,6 +205,14 @@ namespace nrgljubljana_interface {
      */
     void generate_param_file(double z);
 
+    // The text of the parameter file for z (the script route writes it as param)
+    std::string param_text(double z);
+
+    // The in-process route (pipeline=library): Γ projected and grouped by the manifest's coefficient channels, the
+    // chains of all twists on rank 0, then initialization and solve of each twist on its rank, in work/<k+1>; the raw
+    // results of every twist read into r
+    void solve_library(std::vector<double> const &z, std::string const &work, std::map<std::string, std::string> const &spectra, result_t &r);
+
     /// Parameters used for the solver construction.
     constr_params_t constr_params;
 

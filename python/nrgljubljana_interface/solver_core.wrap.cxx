@@ -240,6 +240,7 @@ static int synth_constructor_1(PyObject *self, PyObject *args, PyObject *kwargs)
   de("gamma", self_c.gamma, true);
   de("method", self_c.method, true);
   de("bandrescale", self_c.bandrescale, true);
+  de("Gamma_floor", self_c.Gamma_floor, true);
   de("model_parameters", self_c.model_parameters, false);
   return de.check();
 }
@@ -247,8 +248,8 @@ static int synth_constructor_1(PyObject *self, PyObject *args, PyObject *kwargs)
 template <> constexpr initproc c2py::tp_init<_c2py_cls_1> = synth_constructor_1;
 
 template <>
-const std::string c2py::tp_ctor_doc<_c2py_cls_1> =
-   c2py::replace_tags(R"DOC(Synthesized constructor with the following keyword arguments:
+const std::string c2py::tp_ctor_doc<_c2py_cls_1> = c2py::replace_tags(
+   R"DOC(Synthesized constructor with the following keyword arguments:
 
 Parameters
 ----------
@@ -276,12 +277,14 @@ method : {par_10}, default=""
 
 bandrescale : {par_11}, default=-1.0
 
+Gamma_floor : {par_12}, default=1e-8
+
 )DOC",
-                      "par",
-                      {c2py::python_typename<std::map<std::string, double>>(), c2py::python_typename<double>(), c2py::python_typename<int>(),
-                       c2py::python_typename<double>(), c2py::python_typename<size_t>(), c2py::python_typename<double>(),
-                       c2py::python_typename<size_t>(), c2py::python_typename<double>(), c2py::python_typename<double>(),
-                       c2py::python_typename<double>(), c2py::python_typename<std::string>(), c2py::python_typename<double>()});
+   "par",
+   {c2py::python_typename<std::map<std::string, double>>(), c2py::python_typename<double>(), c2py::python_typename<int>(),
+    c2py::python_typename<double>(), c2py::python_typename<size_t>(), c2py::python_typename<double>(), c2py::python_typename<size_t>(),
+    c2py::python_typename<double>(), c2py::python_typename<double>(), c2py::python_typename<double>(), c2py::python_typename<std::string>(),
+    c2py::python_typename<double>(), c2py::python_typename<double>()});
 
 // ----- Method table ----
 template <>
@@ -302,7 +305,10 @@ constexpr auto _c2py_doc_member_26 = R"DOC(Parameter for the Gaussian convolutio
 constexpr auto _c2py_doc_member_27 = R"DOC(Deprecated: FDM is the only method. Accepted values are "" (not set) and "fdm".)DOC";
 constexpr auto _c2py_doc_member_28 =
    R"DOC(Band rescaling factor (half-width of the support of the hybridisation function); set to mesh_max if negative.)DOC";
-constexpr auto _c2py_doc_member_29 = R"DOC(Model parameters (name to value map, e.g. U1, eps1).)DOC";
+constexpr auto _c2py_doc_member_29 =
+   R"DOC(Floor of the hybridisation spectrum Γ = (Δ† − Δ)/2i: eigenvalues below it are raised to it (in-process route;
+the script route raises each element of −Im Δ below it).)DOC";
+constexpr auto _c2py_doc_member_30 = R"DOC(Model parameters (name to value map, e.g. U1, eps1).)DOC";
 static PyObject *prop_get_dict_1(PyObject *self, void *) {
   auto &self_c = *(((c2py::wrap<_c2py_cls_1> *)self)->_c);
   c2py::pydict dic;
@@ -317,6 +323,7 @@ static PyObject *prop_get_dict_1(PyObject *self, void *) {
   dic["gamma"]            = self_c.gamma;
   dic["method"]           = self_c.method;
   dic["bandrescale"]      = self_c.bandrescale;
+  dic["Gamma_floor"]      = self_c.Gamma_floor;
   dic["model_parameters"] = self_c.model_parameters;
   return dic.new_ref();
 }
@@ -336,7 +343,8 @@ constinit PyGetSetDef c2py::tp_getset<_c2py_cls_1>[] = {
    c2py::getsetdef_from_member<&_c2py_cls_1::gamma, _c2py_cls_1>("gamma", _c2py_doc_member_26),
    c2py::getsetdef_from_member<&_c2py_cls_1::method, _c2py_cls_1>("method", _c2py_doc_member_27),
    c2py::getsetdef_from_member<&_c2py_cls_1::bandrescale, _c2py_cls_1>("bandrescale", _c2py_doc_member_28),
-   c2py::getsetdef_from_member<&_c2py_cls_1::model_parameters, _c2py_cls_1>("model_parameters", _c2py_doc_member_29),
+   c2py::getsetdef_from_member<&_c2py_cls_1::Gamma_floor, _c2py_cls_1>("Gamma_floor", _c2py_doc_member_29),
+   c2py::getsetdef_from_member<&_c2py_cls_1::model_parameters, _c2py_cls_1>("model_parameters", _c2py_doc_member_30),
    {"__dict__", (getter)prop_get_dict_1, nullptr, "", nullptr},
    {nullptr, nullptr, nullptr, nullptr, nullptr}};
 
@@ -377,6 +385,7 @@ static int synth_constructor_2(PyObject *self, PyObject *args, PyObject *kwargs)
   de("Nmax", self_c.Nmax, true);
   de("xmax", self_c.xmax, true);
   de("discretization", self_c.discretization, true);
+  de("density_interpolation", self_c.density_interpolation, true);
   de("z", self_c.z, true);
   de("tri", self_c.tri, true);
   de("preccpp", self_c.preccpp, true);
@@ -493,155 +502,157 @@ xmax : {par_13}, default=-1.0
 
 discretization : {par_14}, default="Z"
 
-z : {par_15}, default=1.0
+density_interpolation : {par_15}, default="steffen"
 
-tri : {par_16}, default="old"
+z : {par_16}, default=1.0
 
-preccpp : {par_17}, default=2000
+tri : {par_17}, default="old"
 
-diag : {par_18}, default="default"
+preccpp : {par_18}, default=2000
 
-diagratio : {par_19}, default=1.0
+diag : {par_19}, default="default"
 
-dsyevrlimit : {par_20}, default=100
+diagratio : {par_20}, default=1.0
 
-zheevrlimit : {par_21}, default=100
+dsyevrlimit : {par_21}, default=100
 
-restart : {par_22}, default=true
+zheevrlimit : {par_22}, default=100
 
-restartfactor : {par_23}, default=2.0
+restart : {par_23}, default=true
 
-safeguard : {par_24}, default=1e-5
+restartfactor : {par_24}, default=2.0
 
-safeguardmax : {par_25}, default=200
+safeguard : {par_25}, default=1e-5
 
-fixeps : {par_26}, default=1e-15
+safeguardmax : {par_26}, default=200
 
-betabar : {par_27}, default=1.0
+fixeps : {par_27}, default=1e-15
 
-gtp : {par_28}, default=0.7
+betabar : {par_28}, default=1.0
 
-chitp : {par_29}, default=1.0
+gtp : {par_29}, default=0.7
 
-finite : {par_30}, default=false
+chitp : {par_30}, default=1.0
 
-cfsgt : {par_31}, default=false
+finite : {par_31}, default=false
 
-cfsls : {par_32}, default=false
+cfsgt : {par_32}, default=false
 
-fdmgt : {par_33}, default=false
+cfsls : {par_33}, default=false
 
-fdmls : {par_34}, default=false
+fdmgt : {par_34}, default=false
 
-fdmexpvn : {par_35}, default=0
+fdmls : {par_35}, default=false
 
-finitemats : {par_36}, default=false
+fdmexpvn : {par_36}, default=0
 
-dm : {par_37}, default=false
+finitemats : {par_37}, default=false
 
-broaden_min_ratio : {par_38}, default=3.0
+dm : {par_38}, default=false
 
-omega0 : {par_39}, default=-1.0
+broaden_min_ratio : {par_39}, default=3.0
 
-omega0_ratio : {par_40}, default=1.0
+omega0 : {par_40}, default=-1.0
 
-diagth : {par_41}, default=1
+omega0_ratio : {par_41}, default=1.0
 
-substeps : {par_42}, default=false
+diagth : {par_42}, default=1
 
-strategy : {par_43}, default="kept"
+substeps : {par_43}, default=false
 
-Ninit : {par_44}, default=0
+strategy : {par_44}, default="kept"
 
-reim : {par_45}, default=false
+Ninit : {par_45}, default=0
 
-dumpannotated : {par_46}, default=0
+reim : {par_46}, default=false
 
-dumpabs : {par_47}, default=false
+dumpannotated : {par_47}, default=0
 
-dumpscaled : {par_48}, default=true
+dumpabs : {par_48}, default=false
 
-dumpprecision : {par_49}, default=8
+dumpscaled : {par_49}, default=true
 
-dumpgroups : {par_50}, default=true
+dumpprecision : {par_50}, default=8
 
-grouptol : {par_51}, default=1e-6
+dumpgroups : {par_51}, default=true
 
-dumpdiagonal : {par_52}, default=0
+grouptol : {par_52}, default=1e-6
 
-savebins : {par_53}, default=true
+dumpdiagonal : {par_53}, default=0
 
-broaden : {par_54}, default=false
+savebins : {par_54}, default=true
 
-emin : {par_55}, default=-1.0
+broaden : {par_55}, default=false
 
-emax : {par_56}, default=-1.0
+emin : {par_56}, default=-1.0
 
-bins : {par_57}, default=1000
+emax : {par_57}, default=-1.0
 
-accumulation : {par_58}, default=0.0
+bins : {par_58}, default=1000
 
-linstep : {par_59}, default=0
+accumulation : {par_59}, default=0.0
 
-discard_trim : {par_60}, default=1e-16
+linstep : {par_60}, default=0
 
-discard_immediately : {par_61}, default=1e-16
+discard_trim : {par_61}, default=1e-16
 
-goodE : {par_62}, default=2.0
+discard_immediately : {par_62}, default=1e-16
 
-NN1 : {par_63}, default=false
+goodE : {par_63}, default=2.0
 
-NN2even : {par_64}, default=true
+NN1 : {par_64}, default=false
 
-NN2avg : {par_65}, default=false
+NN2even : {par_65}, default=true
 
-NNtanh : {par_66}, default=0.0
+NN2avg : {par_66}, default=false
 
-width_td : {par_67}, default=16
+NNtanh : {par_67}, default=0.0
 
-width_custom : {par_68}, default=16
+width_td : {par_68}, default=16
 
-prec_td : {par_69}, default=10
+width_custom : {par_69}, default=16
 
-prec_custom : {par_70}, default=10
+prec_td : {par_70}, default=10
 
-prec_xy : {par_71}, default=10
+prec_custom : {par_71}, default=10
 
-resume : {par_72}, default=false
+prec_xy : {par_72}, default=10
 
-log : {par_73}, default=""
+resume : {par_73}, default=false
 
-logall : {par_74}, default=false
+log : {par_74}, default=""
 
-done : {par_75}, default=true
+logall : {par_75}, default=false
 
-calc0 : {par_76}, default=true
+done : {par_76}, default=true
 
-lastall : {par_77}, default=false
+calc0 : {par_77}, default=true
 
-lastalloverride : {par_78}, default=false
+lastall : {par_78}, default=false
 
-dumpsubspaces : {par_79}, default=false
+lastalloverride : {par_79}, default=false
 
-dump_f : {par_80}, default=false
+dumpsubspaces : {par_80}, default=false
 
-dumpenergies : {par_81}, default=false
+dump_f : {par_81}, default=false
 
-logenumber : {par_82}, default=10
+dumpenergies : {par_82}, default=false
 
-stopafter : {par_83}, default=""
+logenumber : {par_83}, default=10
 
-forcestop : {par_84}, default=-1
+stopafter : {par_84}, default=""
 
-removefiles : {par_85}, default=true
+forcestop : {par_85}, default=-1
 
-noimag : {par_86}, default=true
+removefiles : {par_86}, default=true
 
-checksumrules : {par_87}, default=false
+noimag : {par_87}, default=true
 
-checkdiag : {par_88}, default=false
+checksumrules : {par_88}, default=false
 
-checkrho : {par_89}, default=false
+checkdiag : {par_89}, default=false
+
+checkrho : {par_90}, default=false
 
 )DOC",
                       "par", {c2py::python_typename<bool>(),        c2py::python_typename<bool>(),        c2py::python_typename<bool>(),
@@ -649,31 +660,32 @@ checkrho : {par_89}, default=false
                               c2py::python_typename<size_t>(),      c2py::python_typename<std::string>(), c2py::python_typename<std::string>(),
                               c2py::python_typename<std::string>(), c2py::python_typename<bool>(),        c2py::python_typename<int>(),
                               c2py::python_typename<int>(),         c2py::python_typename<double>(),      c2py::python_typename<std::string>(),
-                              c2py::python_typename<double>(),      c2py::python_typename<std::string>(), c2py::python_typename<size_t>(),
-                              c2py::python_typename<std::string>(), c2py::python_typename<double>(),      c2py::python_typename<size_t>(),
-                              c2py::python_typename<size_t>(),      c2py::python_typename<bool>(),        c2py::python_typename<double>(),
+                              c2py::python_typename<std::string>(), c2py::python_typename<double>(),      c2py::python_typename<std::string>(),
+                              c2py::python_typename<size_t>(),      c2py::python_typename<std::string>(), c2py::python_typename<double>(),
+                              c2py::python_typename<size_t>(),      c2py::python_typename<size_t>(),      c2py::python_typename<bool>(),
+                              c2py::python_typename<double>(),      c2py::python_typename<double>(),      c2py::python_typename<size_t>(),
+                              c2py::python_typename<double>(),      c2py::python_typename<double>(),      c2py::python_typename<double>(),
+                              c2py::python_typename<double>(),      c2py::python_typename<bool>(),        c2py::python_typename<bool>(),
+                              c2py::python_typename<bool>(),        c2py::python_typename<bool>(),        c2py::python_typename<bool>(),
+                              c2py::python_typename<size_t>(),      c2py::python_typename<bool>(),        c2py::python_typename<bool>(),
+                              c2py::python_typename<double>(),      c2py::python_typename<double>(),      c2py::python_typename<double>(),
+                              c2py::python_typename<int>(),         c2py::python_typename<bool>(),        c2py::python_typename<std::string>(),
+                              c2py::python_typename<size_t>(),      c2py::python_typename<bool>(),        c2py::python_typename<size_t>(),
+                              c2py::python_typename<bool>(),        c2py::python_typename<bool>(),        c2py::python_typename<size_t>(),
+                              c2py::python_typename<bool>(),        c2py::python_typename<double>(),      c2py::python_typename<size_t>(),
+                              c2py::python_typename<bool>(),        c2py::python_typename<bool>(),        c2py::python_typename<double>(),
                               c2py::python_typename<double>(),      c2py::python_typename<size_t>(),      c2py::python_typename<double>(),
                               c2py::python_typename<double>(),      c2py::python_typename<double>(),      c2py::python_typename<double>(),
+                              c2py::python_typename<double>(),      c2py::python_typename<bool>(),        c2py::python_typename<bool>(),
+                              c2py::python_typename<bool>(),        c2py::python_typename<double>(),      c2py::python_typename<size_t>(),
+                              c2py::python_typename<size_t>(),      c2py::python_typename<size_t>(),      c2py::python_typename<size_t>(),
+                              c2py::python_typename<size_t>(),      c2py::python_typename<bool>(),        c2py::python_typename<std::string>(),
+                              c2py::python_typename<bool>(),        c2py::python_typename<bool>(),        c2py::python_typename<bool>(),
                               c2py::python_typename<bool>(),        c2py::python_typename<bool>(),        c2py::python_typename<bool>(),
                               c2py::python_typename<bool>(),        c2py::python_typename<bool>(),        c2py::python_typename<size_t>(),
-                              c2py::python_typename<bool>(),        c2py::python_typename<bool>(),        c2py::python_typename<double>(),
-                              c2py::python_typename<double>(),      c2py::python_typename<double>(),      c2py::python_typename<int>(),
-                              c2py::python_typename<bool>(),        c2py::python_typename<std::string>(), c2py::python_typename<size_t>(),
-                              c2py::python_typename<bool>(),        c2py::python_typename<size_t>(),      c2py::python_typename<bool>(),
-                              c2py::python_typename<bool>(),        c2py::python_typename<size_t>(),      c2py::python_typename<bool>(),
-                              c2py::python_typename<double>(),      c2py::python_typename<size_t>(),      c2py::python_typename<bool>(),
-                              c2py::python_typename<bool>(),        c2py::python_typename<double>(),      c2py::python_typename<double>(),
-                              c2py::python_typename<size_t>(),      c2py::python_typename<double>(),      c2py::python_typename<double>(),
-                              c2py::python_typename<double>(),      c2py::python_typename<double>(),      c2py::python_typename<double>(),
+                              c2py::python_typename<std::string>(), c2py::python_typename<int>(),         c2py::python_typename<bool>(),
                               c2py::python_typename<bool>(),        c2py::python_typename<bool>(),        c2py::python_typename<bool>(),
-                              c2py::python_typename<double>(),      c2py::python_typename<size_t>(),      c2py::python_typename<size_t>(),
-                              c2py::python_typename<size_t>(),      c2py::python_typename<size_t>(),      c2py::python_typename<size_t>(),
-                              c2py::python_typename<bool>(),        c2py::python_typename<std::string>(), c2py::python_typename<bool>(),
-                              c2py::python_typename<bool>(),        c2py::python_typename<bool>(),        c2py::python_typename<bool>(),
-                              c2py::python_typename<bool>(),        c2py::python_typename<bool>(),        c2py::python_typename<bool>(),
-                              c2py::python_typename<bool>(),        c2py::python_typename<size_t>(),      c2py::python_typename<std::string>(),
-                              c2py::python_typename<int>(),         c2py::python_typename<bool>(),        c2py::python_typename<bool>(),
-                              c2py::python_typename<bool>(),        c2py::python_typename<bool>(),        c2py::python_typename<bool>()});
+                              c2py::python_typename<bool>()});
 
 // ----- Method table ----
 template <>
@@ -682,189 +694,193 @@ PyMethodDef c2py::tp_methods<_c2py_cls_2>[] = {
    {nullptr, nullptr, 0, nullptr} // Sentinel
 };
 
-constexpr auto _c2py_doc_member_30  = R"DOC(Perform a DMNRG (density-matrix NRG) calculation.)DOC";
-constexpr auto _c2py_doc_member_31  = R"DOC(Perform a CFS (complete Fock space) calculation.)DOC";
-constexpr auto _c2py_doc_member_32  = R"DOC(Perform an FDM (full-density-matrix) calculation.)DOC";
-constexpr auto _c2py_doc_member_33  = R"DOC(Calculate expectation values using the FDM algorithm.)DOC";
-constexpr auto _c2py_doc_member_34  = R"DOC(Perform the DMNRG calculation on the Matsubara axis.)DOC";
-constexpr auto _c2py_doc_member_35  = R"DOC(Perform the FDM calculation on the Matsubara axis.)DOC";
-constexpr auto _c2py_doc_member_36  = R"DOC(Number of Matsubara points to collect.)DOC";
-constexpr auto _c2py_doc_member_37  = R"DOC(Conductance curves to compute.)DOC";
-constexpr auto _c2py_doc_member_38  = R"DOC(:math:`I_1` curves to compute.)DOC";
-constexpr auto _c2py_doc_member_39  = R"DOC(:math:`I_2` curves to compute.)DOC";
-constexpr auto _c2py_doc_member_40  = R"DOC(Compute the 3-leg vertex on the Matsubara/Matsubara axis.)DOC";
-constexpr auto _c2py_doc_member_41  = R"DOC(Number of sites in the star representation (:math:`-1`: automatically determined).)DOC";
-constexpr auto _c2py_doc_member_42  = R"DOC(Number of sites in the Wilson chain (:math:`-1`: automatically determined).)DOC";
-constexpr auto _c2py_doc_member_43  = R"DOC(Largest :math:`x` in the discretization ODE solver (:math:`-1`: automatically determined).)DOC";
-constexpr auto _c2py_doc_member_44  = R"DOC(Discretization scheme.)DOC";
-constexpr auto _c2py_doc_member_45  = R"DOC(Parameter :math:`z` (twist) in the logarithmic discretization.)DOC";
-constexpr auto _c2py_doc_member_46  = R"DOC(Tridiagonalisation approach.)DOC";
-constexpr auto _c2py_doc_member_47  = R"DOC(Precision for tridiagonalisation.)DOC";
-constexpr auto _c2py_doc_member_48  = R"DOC(Eigensolver routine (dsyev|dsyevr|zheev|zheevr|default).)DOC";
-constexpr auto _c2py_doc_member_49  = R"DOC(Ratio of eigenstates computed in partial diagonalisation.)DOC";
-constexpr auto _c2py_doc_member_50  = R"DOC(Minimal matrix size for dsyevr.)DOC";
-constexpr auto _c2py_doc_member_51  = R"DOC(Minimal matrix size for zheevr.)DOC";
-constexpr auto _c2py_doc_member_52  = R"DOC(Restart the calculation to achieve the truncation goal.)DOC";
-constexpr auto _c2py_doc_member_53  = R"DOC(Rescale factor used when restart is true.)DOC";
-constexpr auto _c2py_doc_member_54  = R"DOC(Additional states to keep in case of a near degeneracy.)DOC";
-constexpr auto _c2py_doc_member_55  = R"DOC(Maximal number of additional states to keep.)DOC";
-constexpr auto _c2py_doc_member_56  = R"DOC(Threshold value for eigenvalue splitting corrections.)DOC";
-constexpr auto _c2py_doc_member_57  = R"DOC(Parameter :math:`\bar{\beta}` for thermodynamics.)DOC";
-constexpr auto _c2py_doc_member_58  = R"DOC(Parameter :math:`p` for :math:`G(T)` calculations.)DOC";
-constexpr auto _c2py_doc_member_59  = R"DOC(Parameter :math:`p` for :math:`\chi(T)` calculations.)DOC";
-constexpr auto _c2py_doc_member_60  = R"DOC(Perform a Costi-Hewson-Zlatic finite-T calculation.)DOC";
-constexpr auto _c2py_doc_member_61  = R"DOC(Compute the CFS greater correlation function.)DOC";
-constexpr auto _c2py_doc_member_62  = R"DOC(Compute the CFS lesser correlation function.)DOC";
-constexpr auto _c2py_doc_member_63  = R"DOC(Compute the FDM greater correlation function.)DOC";
-constexpr auto _c2py_doc_member_64  = R"DOC(Compute the FDM lesser correlation function.)DOC";
-constexpr auto _c2py_doc_member_65  = R"DOC(Iteration at which the expectation values are evaluated.)DOC";
-constexpr auto _c2py_doc_member_66  = R"DOC(Perform a :math:`T > 0` calculation on the Matsubara axis.)DOC";
-constexpr auto _c2py_doc_member_67  = R"DOC(Compute density matrices.)DOC";
-constexpr auto _c2py_doc_member_68  = R"DOC(Auto-tune the `broaden_min` parameter.)DOC";
-constexpr auto _c2py_doc_member_69  = R"DOC(Smallest energy scale in the problem, :math:`\omega_0`.)DOC";
-constexpr auto _c2py_doc_member_70  = R"DOC(Sets :math:`\omega_0 = \mathtt{omega0\_ratio} \times T`.)DOC";
-constexpr auto _c2py_doc_member_71  = R"DOC(Number of diagonalisation threads.)DOC";
-constexpr auto _c2py_doc_member_72  = R"DOC(Use the interleaved diagonalization scheme.)DOC";
-constexpr auto _c2py_doc_member_73  = R"DOC(Recalculation strategy.)DOC";
-constexpr auto _c2py_doc_member_74  = R"DOC(Number of initial Wilson chain operators.)DOC";
-constexpr auto _c2py_doc_member_75  = R"DOC(Output the imaginary parts of the correlators.)DOC";
-constexpr auto _c2py_doc_member_76  = R"DOC(Number of eigenvalues to dump.)DOC";
-constexpr auto _c2py_doc_member_77  = R"DOC(Dump in terms of absolute energies.)DOC";
-constexpr auto _c2py_doc_member_78  = R"DOC(Dump using omega_N energy units.)DOC";
-constexpr auto _c2py_doc_member_79  = R"DOC(Number of digits of precision used when dumping.)DOC";
-constexpr auto _c2py_doc_member_80  = R"DOC(Dump by grouping degenerate states.)DOC";
-constexpr auto _c2py_doc_member_81  = R"DOC(Energy tolerance for considering two states as degenerate.)DOC";
-constexpr auto _c2py_doc_member_82  = R"DOC(Dump diagonal matrix elements.)DOC";
-constexpr auto _c2py_doc_member_83  = R"DOC(Save binned (unbroadened) data.)DOC";
-constexpr auto _c2py_doc_member_84  = R"DOC(Enable broadening of spectra.)DOC";
-constexpr auto _c2py_doc_member_85  = R"DOC(Lower binning limit.)DOC";
-constexpr auto _c2py_doc_member_86  = R"DOC(Upper binning limit.)DOC";
-constexpr auto _c2py_doc_member_87  = R"DOC(Number of bins per decade for spectral data.)DOC";
-constexpr auto _c2py_doc_member_88  = R"DOC(Shift of the accumulation points for binning.)DOC";
-constexpr auto _c2py_doc_member_89  = R"DOC(Bin width for the linear mesh.)DOC";
-constexpr auto _c2py_doc_member_90  = R"DOC(Peak clipping at the end of the run.)DOC";
-constexpr auto _c2py_doc_member_91  = R"DOC(Peak clipping on the fly.)DOC";
-constexpr auto _c2py_doc_member_92  = R"DOC(Energy window parameter for patching.)DOC";
-constexpr auto _c2py_doc_member_93  = R"DOC(Perform N/N+1 patching.)DOC";
-constexpr auto _c2py_doc_member_94  = R"DOC(Use even iterations in N/N+2 patching.)DOC";
-constexpr auto _c2py_doc_member_95  = R"DOC(Average over even and odd N/N+2 spectra.)DOC";
-constexpr auto _c2py_doc_member_96  = R"DOC(Parameter :math:`a` in the :math:`\tanh[a(x-0.5)]` window function.)DOC";
-constexpr auto _c2py_doc_member_97  = R"DOC(Width of columns in the 'td' output file.)DOC";
-constexpr auto _c2py_doc_member_98  = R"DOC(Width of columns in the 'custom' output file.)DOC";
-constexpr auto _c2py_doc_member_99  = R"DOC(Precision of columns in the 'td' output file.)DOC";
-constexpr auto _c2py_doc_member_100 = R"DOC(Precision of columns in the 'custom' output file.)DOC";
-constexpr auto _c2py_doc_member_101 = R"DOC(Precision of the spectral function output.)DOC";
-constexpr auto _c2py_doc_member_102 = R"DOC(Attempt to restart the calculation.)DOC";
-constexpr auto _c2py_doc_member_103 = R"DOC(List of tokens defining what to log.)DOC";
-constexpr auto _c2py_doc_member_104 = R"DOC(Log everything.)DOC";
-constexpr auto _c2py_doc_member_105 = R"DOC(Create a DONE file.)DOC";
-constexpr auto _c2py_doc_member_106 = R"DOC(Perform calculations at the 0-th iteration.)DOC";
-constexpr auto _c2py_doc_member_107 = R"DOC(Keep all states in the last iteration for DMNRG.)DOC";
-constexpr auto _c2py_doc_member_108 = R"DOC(Override the automatic lastall setting.)DOC";
-constexpr auto _c2py_doc_member_109 = R"DOC(Save detailed subspace info.)DOC";
-constexpr auto _c2py_doc_member_110 = R"DOC(Dump :math:`\langle f \rangle` matrix elements.)DOC";
-constexpr auto _c2py_doc_member_111 = R"DOC(Dump all energies to a file.)DOC";
-constexpr auto _c2py_doc_member_112 = R"DOC(Number of eigenvalues to show for log=e.)DOC";
-constexpr auto _c2py_doc_member_113 = R"DOC(Stop the calculation at a given point.)DOC";
-constexpr auto _c2py_doc_member_114 = R"DOC(Force stop at the given iteration (-1: disabled).)DOC";
-constexpr auto _c2py_doc_member_115 = R"DOC(Remove temporary data files.)DOC";
-constexpr auto _c2py_doc_member_116 = R"DOC(Do not output the imaginary parts of expectation values.)DOC";
-constexpr auto _c2py_doc_member_117 = R"DOC(Check operator sum rules.)DOC";
-constexpr auto _c2py_doc_member_118 = R"DOC(Test the diagonalisation results.)DOC";
-constexpr auto _c2py_doc_member_119 = R"DOC(Test that :math:`\mathrm{tr}(\rho) = 1`.)DOC";
+constexpr auto _c2py_doc_member_31 = R"DOC(Perform a DMNRG (density-matrix NRG) calculation.)DOC";
+constexpr auto _c2py_doc_member_32 = R"DOC(Perform a CFS (complete Fock space) calculation.)DOC";
+constexpr auto _c2py_doc_member_33 = R"DOC(Perform an FDM (full-density-matrix) calculation.)DOC";
+constexpr auto _c2py_doc_member_34 = R"DOC(Calculate expectation values using the FDM algorithm.)DOC";
+constexpr auto _c2py_doc_member_35 = R"DOC(Perform the DMNRG calculation on the Matsubara axis.)DOC";
+constexpr auto _c2py_doc_member_36 = R"DOC(Perform the FDM calculation on the Matsubara axis.)DOC";
+constexpr auto _c2py_doc_member_37 = R"DOC(Number of Matsubara points to collect.)DOC";
+constexpr auto _c2py_doc_member_38 = R"DOC(Conductance curves to compute.)DOC";
+constexpr auto _c2py_doc_member_39 = R"DOC(:math:`I_1` curves to compute.)DOC";
+constexpr auto _c2py_doc_member_40 = R"DOC(:math:`I_2` curves to compute.)DOC";
+constexpr auto _c2py_doc_member_41 = R"DOC(Compute the 3-leg vertex on the Matsubara/Matsubara axis.)DOC";
+constexpr auto _c2py_doc_member_42 = R"DOC(Number of sites in the star representation (:math:`-1`: automatically determined).)DOC";
+constexpr auto _c2py_doc_member_43 = R"DOC(Number of sites in the Wilson chain (:math:`-1`: automatically determined).)DOC";
+constexpr auto _c2py_doc_member_44 = R"DOC(Largest :math:`x` in the discretization ODE solver (:math:`-1`: automatically determined).)DOC";
+constexpr auto _c2py_doc_member_45 = R"DOC(Discretization scheme.)DOC";
+constexpr auto _c2py_doc_member_46 =
+   R"DOC(Interpolation of Γ between its mesh points in the discretization of the in-process route (mixchain): steffen
+(monotone cubic) or linear.)DOC";
+constexpr auto _c2py_doc_member_47  = R"DOC(Parameter :math:`z` (twist) in the logarithmic discretization.)DOC";
+constexpr auto _c2py_doc_member_48  = R"DOC(Tridiagonalisation approach.)DOC";
+constexpr auto _c2py_doc_member_49  = R"DOC(Precision for tridiagonalisation.)DOC";
+constexpr auto _c2py_doc_member_50  = R"DOC(Eigensolver routine (dsyev|dsyevr|zheev|zheevr|default).)DOC";
+constexpr auto _c2py_doc_member_51  = R"DOC(Ratio of eigenstates computed in partial diagonalisation.)DOC";
+constexpr auto _c2py_doc_member_52  = R"DOC(Minimal matrix size for dsyevr.)DOC";
+constexpr auto _c2py_doc_member_53  = R"DOC(Minimal matrix size for zheevr.)DOC";
+constexpr auto _c2py_doc_member_54  = R"DOC(Restart the calculation to achieve the truncation goal.)DOC";
+constexpr auto _c2py_doc_member_55  = R"DOC(Rescale factor used when restart is true.)DOC";
+constexpr auto _c2py_doc_member_56  = R"DOC(Additional states to keep in case of a near degeneracy.)DOC";
+constexpr auto _c2py_doc_member_57  = R"DOC(Maximal number of additional states to keep.)DOC";
+constexpr auto _c2py_doc_member_58  = R"DOC(Threshold value for eigenvalue splitting corrections.)DOC";
+constexpr auto _c2py_doc_member_59  = R"DOC(Parameter :math:`\bar{\beta}` for thermodynamics.)DOC";
+constexpr auto _c2py_doc_member_60  = R"DOC(Parameter :math:`p` for :math:`G(T)` calculations.)DOC";
+constexpr auto _c2py_doc_member_61  = R"DOC(Parameter :math:`p` for :math:`\chi(T)` calculations.)DOC";
+constexpr auto _c2py_doc_member_62  = R"DOC(Perform a Costi-Hewson-Zlatic finite-T calculation.)DOC";
+constexpr auto _c2py_doc_member_63  = R"DOC(Compute the CFS greater correlation function.)DOC";
+constexpr auto _c2py_doc_member_64  = R"DOC(Compute the CFS lesser correlation function.)DOC";
+constexpr auto _c2py_doc_member_65  = R"DOC(Compute the FDM greater correlation function.)DOC";
+constexpr auto _c2py_doc_member_66  = R"DOC(Compute the FDM lesser correlation function.)DOC";
+constexpr auto _c2py_doc_member_67  = R"DOC(Iteration at which the expectation values are evaluated.)DOC";
+constexpr auto _c2py_doc_member_68  = R"DOC(Perform a :math:`T > 0` calculation on the Matsubara axis.)DOC";
+constexpr auto _c2py_doc_member_69  = R"DOC(Compute density matrices.)DOC";
+constexpr auto _c2py_doc_member_70  = R"DOC(Auto-tune the `broaden_min` parameter.)DOC";
+constexpr auto _c2py_doc_member_71  = R"DOC(Smallest energy scale in the problem, :math:`\omega_0`.)DOC";
+constexpr auto _c2py_doc_member_72  = R"DOC(Sets :math:`\omega_0 = \mathtt{omega0\_ratio} \times T`.)DOC";
+constexpr auto _c2py_doc_member_73  = R"DOC(Number of diagonalisation threads.)DOC";
+constexpr auto _c2py_doc_member_74  = R"DOC(Use the interleaved diagonalization scheme.)DOC";
+constexpr auto _c2py_doc_member_75  = R"DOC(Recalculation strategy.)DOC";
+constexpr auto _c2py_doc_member_76  = R"DOC(Number of initial Wilson chain operators.)DOC";
+constexpr auto _c2py_doc_member_77  = R"DOC(Output the imaginary parts of the correlators.)DOC";
+constexpr auto _c2py_doc_member_78  = R"DOC(Number of eigenvalues to dump.)DOC";
+constexpr auto _c2py_doc_member_79  = R"DOC(Dump in terms of absolute energies.)DOC";
+constexpr auto _c2py_doc_member_80  = R"DOC(Dump using omega_N energy units.)DOC";
+constexpr auto _c2py_doc_member_81  = R"DOC(Number of digits of precision used when dumping.)DOC";
+constexpr auto _c2py_doc_member_82  = R"DOC(Dump by grouping degenerate states.)DOC";
+constexpr auto _c2py_doc_member_83  = R"DOC(Energy tolerance for considering two states as degenerate.)DOC";
+constexpr auto _c2py_doc_member_84  = R"DOC(Dump diagonal matrix elements.)DOC";
+constexpr auto _c2py_doc_member_85  = R"DOC(Save binned (unbroadened) data.)DOC";
+constexpr auto _c2py_doc_member_86  = R"DOC(Enable broadening of spectra.)DOC";
+constexpr auto _c2py_doc_member_87  = R"DOC(Lower binning limit.)DOC";
+constexpr auto _c2py_doc_member_88  = R"DOC(Upper binning limit.)DOC";
+constexpr auto _c2py_doc_member_89  = R"DOC(Number of bins per decade for spectral data.)DOC";
+constexpr auto _c2py_doc_member_90  = R"DOC(Shift of the accumulation points for binning.)DOC";
+constexpr auto _c2py_doc_member_91  = R"DOC(Bin width for the linear mesh.)DOC";
+constexpr auto _c2py_doc_member_92  = R"DOC(Peak clipping at the end of the run.)DOC";
+constexpr auto _c2py_doc_member_93  = R"DOC(Peak clipping on the fly.)DOC";
+constexpr auto _c2py_doc_member_94  = R"DOC(Energy window parameter for patching.)DOC";
+constexpr auto _c2py_doc_member_95  = R"DOC(Perform N/N+1 patching.)DOC";
+constexpr auto _c2py_doc_member_96  = R"DOC(Use even iterations in N/N+2 patching.)DOC";
+constexpr auto _c2py_doc_member_97  = R"DOC(Average over even and odd N/N+2 spectra.)DOC";
+constexpr auto _c2py_doc_member_98  = R"DOC(Parameter :math:`a` in the :math:`\tanh[a(x-0.5)]` window function.)DOC";
+constexpr auto _c2py_doc_member_99  = R"DOC(Width of columns in the 'td' output file.)DOC";
+constexpr auto _c2py_doc_member_100 = R"DOC(Width of columns in the 'custom' output file.)DOC";
+constexpr auto _c2py_doc_member_101 = R"DOC(Precision of columns in the 'td' output file.)DOC";
+constexpr auto _c2py_doc_member_102 = R"DOC(Precision of columns in the 'custom' output file.)DOC";
+constexpr auto _c2py_doc_member_103 = R"DOC(Precision of the spectral function output.)DOC";
+constexpr auto _c2py_doc_member_104 = R"DOC(Attempt to restart the calculation.)DOC";
+constexpr auto _c2py_doc_member_105 = R"DOC(List of tokens defining what to log.)DOC";
+constexpr auto _c2py_doc_member_106 = R"DOC(Log everything.)DOC";
+constexpr auto _c2py_doc_member_107 = R"DOC(Create a DONE file.)DOC";
+constexpr auto _c2py_doc_member_108 = R"DOC(Perform calculations at the 0-th iteration.)DOC";
+constexpr auto _c2py_doc_member_109 = R"DOC(Keep all states in the last iteration for DMNRG.)DOC";
+constexpr auto _c2py_doc_member_110 = R"DOC(Override the automatic lastall setting.)DOC";
+constexpr auto _c2py_doc_member_111 = R"DOC(Save detailed subspace info.)DOC";
+constexpr auto _c2py_doc_member_112 = R"DOC(Dump :math:`\langle f \rangle` matrix elements.)DOC";
+constexpr auto _c2py_doc_member_113 = R"DOC(Dump all energies to a file.)DOC";
+constexpr auto _c2py_doc_member_114 = R"DOC(Number of eigenvalues to show for log=e.)DOC";
+constexpr auto _c2py_doc_member_115 = R"DOC(Stop the calculation at a given point.)DOC";
+constexpr auto _c2py_doc_member_116 = R"DOC(Force stop at the given iteration (-1: disabled).)DOC";
+constexpr auto _c2py_doc_member_117 = R"DOC(Remove temporary data files.)DOC";
+constexpr auto _c2py_doc_member_118 = R"DOC(Do not output the imaginary parts of expectation values.)DOC";
+constexpr auto _c2py_doc_member_119 = R"DOC(Check operator sum rules.)DOC";
+constexpr auto _c2py_doc_member_120 = R"DOC(Test the diagonalisation results.)DOC";
+constexpr auto _c2py_doc_member_121 = R"DOC(Test that :math:`\mathrm{tr}(\rho) = 1`.)DOC";
 static PyObject *prop_get_dict_2(PyObject *self, void *) {
   auto &self_c = *(((c2py::wrap<_c2py_cls_2> *)self)->_c);
   c2py::pydict dic;
-  dic["dmnrg"]               = self_c.dmnrg;
-  dic["cfs"]                 = self_c.cfs;
-  dic["fdm"]                 = self_c.fdm;
-  dic["fdmexpv"]             = self_c.fdmexpv;
-  dic["dmnrgmats"]           = self_c.dmnrgmats;
-  dic["fdmmats"]             = self_c.fdmmats;
-  dic["mats"]                = self_c.mats;
-  dic["specgt"]              = self_c.specgt;
-  dic["speci1t"]             = self_c.speci1t;
-  dic["speci2t"]             = self_c.speci2t;
-  dic["v3mm"]                = self_c.v3mm;
-  dic["mMAX"]                = self_c.mMAX;
-  dic["Nmax"]                = self_c.Nmax;
-  dic["xmax"]                = self_c.xmax;
-  dic["discretization"]      = self_c.discretization;
-  dic["z"]                   = self_c.z;
-  dic["tri"]                 = self_c.tri;
-  dic["preccpp"]             = self_c.preccpp;
-  dic["diag"]                = self_c.diag;
-  dic["diagratio"]           = self_c.diagratio;
-  dic["dsyevrlimit"]         = self_c.dsyevrlimit;
-  dic["zheevrlimit"]         = self_c.zheevrlimit;
-  dic["restart"]             = self_c.restart;
-  dic["restartfactor"]       = self_c.restartfactor;
-  dic["safeguard"]           = self_c.safeguard;
-  dic["safeguardmax"]        = self_c.safeguardmax;
-  dic["fixeps"]              = self_c.fixeps;
-  dic["betabar"]             = self_c.betabar;
-  dic["gtp"]                 = self_c.gtp;
-  dic["chitp"]               = self_c.chitp;
-  dic["finite"]              = self_c.finite;
-  dic["cfsgt"]               = self_c.cfsgt;
-  dic["cfsls"]               = self_c.cfsls;
-  dic["fdmgt"]               = self_c.fdmgt;
-  dic["fdmls"]               = self_c.fdmls;
-  dic["fdmexpvn"]            = self_c.fdmexpvn;
-  dic["finitemats"]          = self_c.finitemats;
-  dic["dm"]                  = self_c.dm;
-  dic["broaden_min_ratio"]   = self_c.broaden_min_ratio;
-  dic["omega0"]              = self_c.omega0;
-  dic["omega0_ratio"]        = self_c.omega0_ratio;
-  dic["diagth"]              = self_c.diagth;
-  dic["substeps"]            = self_c.substeps;
-  dic["strategy"]            = self_c.strategy;
-  dic["Ninit"]               = self_c.Ninit;
-  dic["reim"]                = self_c.reim;
-  dic["dumpannotated"]       = self_c.dumpannotated;
-  dic["dumpabs"]             = self_c.dumpabs;
-  dic["dumpscaled"]          = self_c.dumpscaled;
-  dic["dumpprecision"]       = self_c.dumpprecision;
-  dic["dumpgroups"]          = self_c.dumpgroups;
-  dic["grouptol"]            = self_c.grouptol;
-  dic["dumpdiagonal"]        = self_c.dumpdiagonal;
-  dic["savebins"]            = self_c.savebins;
-  dic["broaden"]             = self_c.broaden;
-  dic["emin"]                = self_c.emin;
-  dic["emax"]                = self_c.emax;
-  dic["bins"]                = self_c.bins;
-  dic["accumulation"]        = self_c.accumulation;
-  dic["linstep"]             = self_c.linstep;
-  dic["discard_trim"]        = self_c.discard_trim;
-  dic["discard_immediately"] = self_c.discard_immediately;
-  dic["goodE"]               = self_c.goodE;
-  dic["NN1"]                 = self_c.NN1;
-  dic["NN2even"]             = self_c.NN2even;
-  dic["NN2avg"]              = self_c.NN2avg;
-  dic["NNtanh"]              = self_c.NNtanh;
-  dic["width_td"]            = self_c.width_td;
-  dic["width_custom"]        = self_c.width_custom;
-  dic["prec_td"]             = self_c.prec_td;
-  dic["prec_custom"]         = self_c.prec_custom;
-  dic["prec_xy"]             = self_c.prec_xy;
-  dic["resume"]              = self_c.resume;
-  dic["log"]                 = self_c.log;
-  dic["logall"]              = self_c.logall;
-  dic["done"]                = self_c.done;
-  dic["calc0"]               = self_c.calc0;
-  dic["lastall"]             = self_c.lastall;
-  dic["lastalloverride"]     = self_c.lastalloverride;
-  dic["dumpsubspaces"]       = self_c.dumpsubspaces;
-  dic["dump_f"]              = self_c.dump_f;
-  dic["dumpenergies"]        = self_c.dumpenergies;
-  dic["logenumber"]          = self_c.logenumber;
-  dic["stopafter"]           = self_c.stopafter;
-  dic["forcestop"]           = self_c.forcestop;
-  dic["removefiles"]         = self_c.removefiles;
-  dic["noimag"]              = self_c.noimag;
-  dic["checksumrules"]       = self_c.checksumrules;
-  dic["checkdiag"]           = self_c.checkdiag;
-  dic["checkrho"]            = self_c.checkrho;
+  dic["dmnrg"]                 = self_c.dmnrg;
+  dic["cfs"]                   = self_c.cfs;
+  dic["fdm"]                   = self_c.fdm;
+  dic["fdmexpv"]               = self_c.fdmexpv;
+  dic["dmnrgmats"]             = self_c.dmnrgmats;
+  dic["fdmmats"]               = self_c.fdmmats;
+  dic["mats"]                  = self_c.mats;
+  dic["specgt"]                = self_c.specgt;
+  dic["speci1t"]               = self_c.speci1t;
+  dic["speci2t"]               = self_c.speci2t;
+  dic["v3mm"]                  = self_c.v3mm;
+  dic["mMAX"]                  = self_c.mMAX;
+  dic["Nmax"]                  = self_c.Nmax;
+  dic["xmax"]                  = self_c.xmax;
+  dic["discretization"]        = self_c.discretization;
+  dic["density_interpolation"] = self_c.density_interpolation;
+  dic["z"]                     = self_c.z;
+  dic["tri"]                   = self_c.tri;
+  dic["preccpp"]               = self_c.preccpp;
+  dic["diag"]                  = self_c.diag;
+  dic["diagratio"]             = self_c.diagratio;
+  dic["dsyevrlimit"]           = self_c.dsyevrlimit;
+  dic["zheevrlimit"]           = self_c.zheevrlimit;
+  dic["restart"]               = self_c.restart;
+  dic["restartfactor"]         = self_c.restartfactor;
+  dic["safeguard"]             = self_c.safeguard;
+  dic["safeguardmax"]          = self_c.safeguardmax;
+  dic["fixeps"]                = self_c.fixeps;
+  dic["betabar"]               = self_c.betabar;
+  dic["gtp"]                   = self_c.gtp;
+  dic["chitp"]                 = self_c.chitp;
+  dic["finite"]                = self_c.finite;
+  dic["cfsgt"]                 = self_c.cfsgt;
+  dic["cfsls"]                 = self_c.cfsls;
+  dic["fdmgt"]                 = self_c.fdmgt;
+  dic["fdmls"]                 = self_c.fdmls;
+  dic["fdmexpvn"]              = self_c.fdmexpvn;
+  dic["finitemats"]            = self_c.finitemats;
+  dic["dm"]                    = self_c.dm;
+  dic["broaden_min_ratio"]     = self_c.broaden_min_ratio;
+  dic["omega0"]                = self_c.omega0;
+  dic["omega0_ratio"]          = self_c.omega0_ratio;
+  dic["diagth"]                = self_c.diagth;
+  dic["substeps"]              = self_c.substeps;
+  dic["strategy"]              = self_c.strategy;
+  dic["Ninit"]                 = self_c.Ninit;
+  dic["reim"]                  = self_c.reim;
+  dic["dumpannotated"]         = self_c.dumpannotated;
+  dic["dumpabs"]               = self_c.dumpabs;
+  dic["dumpscaled"]            = self_c.dumpscaled;
+  dic["dumpprecision"]         = self_c.dumpprecision;
+  dic["dumpgroups"]            = self_c.dumpgroups;
+  dic["grouptol"]              = self_c.grouptol;
+  dic["dumpdiagonal"]          = self_c.dumpdiagonal;
+  dic["savebins"]              = self_c.savebins;
+  dic["broaden"]               = self_c.broaden;
+  dic["emin"]                  = self_c.emin;
+  dic["emax"]                  = self_c.emax;
+  dic["bins"]                  = self_c.bins;
+  dic["accumulation"]          = self_c.accumulation;
+  dic["linstep"]               = self_c.linstep;
+  dic["discard_trim"]          = self_c.discard_trim;
+  dic["discard_immediately"]   = self_c.discard_immediately;
+  dic["goodE"]                 = self_c.goodE;
+  dic["NN1"]                   = self_c.NN1;
+  dic["NN2even"]               = self_c.NN2even;
+  dic["NN2avg"]                = self_c.NN2avg;
+  dic["NNtanh"]                = self_c.NNtanh;
+  dic["width_td"]              = self_c.width_td;
+  dic["width_custom"]          = self_c.width_custom;
+  dic["prec_td"]               = self_c.prec_td;
+  dic["prec_custom"]           = self_c.prec_custom;
+  dic["prec_xy"]               = self_c.prec_xy;
+  dic["resume"]                = self_c.resume;
+  dic["log"]                   = self_c.log;
+  dic["logall"]                = self_c.logall;
+  dic["done"]                  = self_c.done;
+  dic["calc0"]                 = self_c.calc0;
+  dic["lastall"]               = self_c.lastall;
+  dic["lastalloverride"]       = self_c.lastalloverride;
+  dic["dumpsubspaces"]         = self_c.dumpsubspaces;
+  dic["dump_f"]                = self_c.dump_f;
+  dic["dumpenergies"]          = self_c.dumpenergies;
+  dic["logenumber"]            = self_c.logenumber;
+  dic["stopafter"]             = self_c.stopafter;
+  dic["forcestop"]             = self_c.forcestop;
+  dic["removefiles"]           = self_c.removefiles;
+  dic["noimag"]                = self_c.noimag;
+  dic["checksumrules"]         = self_c.checksumrules;
+  dic["checkdiag"]             = self_c.checkdiag;
+  dic["checkrho"]              = self_c.checkrho;
   return dic.new_ref();
 }
 
@@ -872,96 +888,97 @@ static PyObject *prop_get_dict_2(PyObject *self, void *) {
 
 template <>
 constinit PyGetSetDef c2py::tp_getset<_c2py_cls_2>[] = {
-   c2py::getsetdef_from_member<&_c2py_cls_2::dmnrg, _c2py_cls_2>("dmnrg", _c2py_doc_member_30),
-   c2py::getsetdef_from_member<&_c2py_cls_2::cfs, _c2py_cls_2>("cfs", _c2py_doc_member_31),
-   c2py::getsetdef_from_member<&_c2py_cls_2::fdm, _c2py_cls_2>("fdm", _c2py_doc_member_32),
-   c2py::getsetdef_from_member<&_c2py_cls_2::fdmexpv, _c2py_cls_2>("fdmexpv", _c2py_doc_member_33),
-   c2py::getsetdef_from_member<&_c2py_cls_2::dmnrgmats, _c2py_cls_2>("dmnrgmats", _c2py_doc_member_34),
-   c2py::getsetdef_from_member<&_c2py_cls_2::fdmmats, _c2py_cls_2>("fdmmats", _c2py_doc_member_35),
-   c2py::getsetdef_from_member<&_c2py_cls_2::mats, _c2py_cls_2>("mats", _c2py_doc_member_36),
-   c2py::getsetdef_from_member<&_c2py_cls_2::specgt, _c2py_cls_2>("specgt", _c2py_doc_member_37),
-   c2py::getsetdef_from_member<&_c2py_cls_2::speci1t, _c2py_cls_2>("speci1t", _c2py_doc_member_38),
-   c2py::getsetdef_from_member<&_c2py_cls_2::speci2t, _c2py_cls_2>("speci2t", _c2py_doc_member_39),
-   c2py::getsetdef_from_member<&_c2py_cls_2::v3mm, _c2py_cls_2>("v3mm", _c2py_doc_member_40),
-   c2py::getsetdef_from_member<&_c2py_cls_2::mMAX, _c2py_cls_2>("mMAX", _c2py_doc_member_41),
-   c2py::getsetdef_from_member<&_c2py_cls_2::Nmax, _c2py_cls_2>("Nmax", _c2py_doc_member_42),
-   c2py::getsetdef_from_member<&_c2py_cls_2::xmax, _c2py_cls_2>("xmax", _c2py_doc_member_43),
-   c2py::getsetdef_from_member<&_c2py_cls_2::discretization, _c2py_cls_2>("discretization", _c2py_doc_member_44),
-   c2py::getsetdef_from_member<&_c2py_cls_2::z, _c2py_cls_2>("z", _c2py_doc_member_45),
-   c2py::getsetdef_from_member<&_c2py_cls_2::tri, _c2py_cls_2>("tri", _c2py_doc_member_46),
-   c2py::getsetdef_from_member<&_c2py_cls_2::preccpp, _c2py_cls_2>("preccpp", _c2py_doc_member_47),
-   c2py::getsetdef_from_member<&_c2py_cls_2::diag, _c2py_cls_2>("diag", _c2py_doc_member_48),
-   c2py::getsetdef_from_member<&_c2py_cls_2::diagratio, _c2py_cls_2>("diagratio", _c2py_doc_member_49),
-   c2py::getsetdef_from_member<&_c2py_cls_2::dsyevrlimit, _c2py_cls_2>("dsyevrlimit", _c2py_doc_member_50),
-   c2py::getsetdef_from_member<&_c2py_cls_2::zheevrlimit, _c2py_cls_2>("zheevrlimit", _c2py_doc_member_51),
-   c2py::getsetdef_from_member<&_c2py_cls_2::restart, _c2py_cls_2>("restart", _c2py_doc_member_52),
-   c2py::getsetdef_from_member<&_c2py_cls_2::restartfactor, _c2py_cls_2>("restartfactor", _c2py_doc_member_53),
-   c2py::getsetdef_from_member<&_c2py_cls_2::safeguard, _c2py_cls_2>("safeguard", _c2py_doc_member_54),
-   c2py::getsetdef_from_member<&_c2py_cls_2::safeguardmax, _c2py_cls_2>("safeguardmax", _c2py_doc_member_55),
-   c2py::getsetdef_from_member<&_c2py_cls_2::fixeps, _c2py_cls_2>("fixeps", _c2py_doc_member_56),
-   c2py::getsetdef_from_member<&_c2py_cls_2::betabar, _c2py_cls_2>("betabar", _c2py_doc_member_57),
-   c2py::getsetdef_from_member<&_c2py_cls_2::gtp, _c2py_cls_2>("gtp", _c2py_doc_member_58),
-   c2py::getsetdef_from_member<&_c2py_cls_2::chitp, _c2py_cls_2>("chitp", _c2py_doc_member_59),
-   c2py::getsetdef_from_member<&_c2py_cls_2::finite, _c2py_cls_2>("finite", _c2py_doc_member_60),
-   c2py::getsetdef_from_member<&_c2py_cls_2::cfsgt, _c2py_cls_2>("cfsgt", _c2py_doc_member_61),
-   c2py::getsetdef_from_member<&_c2py_cls_2::cfsls, _c2py_cls_2>("cfsls", _c2py_doc_member_62),
-   c2py::getsetdef_from_member<&_c2py_cls_2::fdmgt, _c2py_cls_2>("fdmgt", _c2py_doc_member_63),
-   c2py::getsetdef_from_member<&_c2py_cls_2::fdmls, _c2py_cls_2>("fdmls", _c2py_doc_member_64),
-   c2py::getsetdef_from_member<&_c2py_cls_2::fdmexpvn, _c2py_cls_2>("fdmexpvn", _c2py_doc_member_65),
-   c2py::getsetdef_from_member<&_c2py_cls_2::finitemats, _c2py_cls_2>("finitemats", _c2py_doc_member_66),
-   c2py::getsetdef_from_member<&_c2py_cls_2::dm, _c2py_cls_2>("dm", _c2py_doc_member_67),
-   c2py::getsetdef_from_member<&_c2py_cls_2::broaden_min_ratio, _c2py_cls_2>("broaden_min_ratio", _c2py_doc_member_68),
-   c2py::getsetdef_from_member<&_c2py_cls_2::omega0, _c2py_cls_2>("omega0", _c2py_doc_member_69),
-   c2py::getsetdef_from_member<&_c2py_cls_2::omega0_ratio, _c2py_cls_2>("omega0_ratio", _c2py_doc_member_70),
-   c2py::getsetdef_from_member<&_c2py_cls_2::diagth, _c2py_cls_2>("diagth", _c2py_doc_member_71),
-   c2py::getsetdef_from_member<&_c2py_cls_2::substeps, _c2py_cls_2>("substeps", _c2py_doc_member_72),
-   c2py::getsetdef_from_member<&_c2py_cls_2::strategy, _c2py_cls_2>("strategy", _c2py_doc_member_73),
-   c2py::getsetdef_from_member<&_c2py_cls_2::Ninit, _c2py_cls_2>("Ninit", _c2py_doc_member_74),
-   c2py::getsetdef_from_member<&_c2py_cls_2::reim, _c2py_cls_2>("reim", _c2py_doc_member_75),
-   c2py::getsetdef_from_member<&_c2py_cls_2::dumpannotated, _c2py_cls_2>("dumpannotated", _c2py_doc_member_76),
-   c2py::getsetdef_from_member<&_c2py_cls_2::dumpabs, _c2py_cls_2>("dumpabs", _c2py_doc_member_77),
-   c2py::getsetdef_from_member<&_c2py_cls_2::dumpscaled, _c2py_cls_2>("dumpscaled", _c2py_doc_member_78),
-   c2py::getsetdef_from_member<&_c2py_cls_2::dumpprecision, _c2py_cls_2>("dumpprecision", _c2py_doc_member_79),
-   c2py::getsetdef_from_member<&_c2py_cls_2::dumpgroups, _c2py_cls_2>("dumpgroups", _c2py_doc_member_80),
-   c2py::getsetdef_from_member<&_c2py_cls_2::grouptol, _c2py_cls_2>("grouptol", _c2py_doc_member_81),
-   c2py::getsetdef_from_member<&_c2py_cls_2::dumpdiagonal, _c2py_cls_2>("dumpdiagonal", _c2py_doc_member_82),
-   c2py::getsetdef_from_member<&_c2py_cls_2::savebins, _c2py_cls_2>("savebins", _c2py_doc_member_83),
-   c2py::getsetdef_from_member<&_c2py_cls_2::broaden, _c2py_cls_2>("broaden", _c2py_doc_member_84),
-   c2py::getsetdef_from_member<&_c2py_cls_2::emin, _c2py_cls_2>("emin", _c2py_doc_member_85),
-   c2py::getsetdef_from_member<&_c2py_cls_2::emax, _c2py_cls_2>("emax", _c2py_doc_member_86),
-   c2py::getsetdef_from_member<&_c2py_cls_2::bins, _c2py_cls_2>("bins", _c2py_doc_member_87),
-   c2py::getsetdef_from_member<&_c2py_cls_2::accumulation, _c2py_cls_2>("accumulation", _c2py_doc_member_88),
-   c2py::getsetdef_from_member<&_c2py_cls_2::linstep, _c2py_cls_2>("linstep", _c2py_doc_member_89),
-   c2py::getsetdef_from_member<&_c2py_cls_2::discard_trim, _c2py_cls_2>("discard_trim", _c2py_doc_member_90),
-   c2py::getsetdef_from_member<&_c2py_cls_2::discard_immediately, _c2py_cls_2>("discard_immediately", _c2py_doc_member_91),
-   c2py::getsetdef_from_member<&_c2py_cls_2::goodE, _c2py_cls_2>("goodE", _c2py_doc_member_92),
-   c2py::getsetdef_from_member<&_c2py_cls_2::NN1, _c2py_cls_2>("NN1", _c2py_doc_member_93),
-   c2py::getsetdef_from_member<&_c2py_cls_2::NN2even, _c2py_cls_2>("NN2even", _c2py_doc_member_94),
-   c2py::getsetdef_from_member<&_c2py_cls_2::NN2avg, _c2py_cls_2>("NN2avg", _c2py_doc_member_95),
-   c2py::getsetdef_from_member<&_c2py_cls_2::NNtanh, _c2py_cls_2>("NNtanh", _c2py_doc_member_96),
-   c2py::getsetdef_from_member<&_c2py_cls_2::width_td, _c2py_cls_2>("width_td", _c2py_doc_member_97),
-   c2py::getsetdef_from_member<&_c2py_cls_2::width_custom, _c2py_cls_2>("width_custom", _c2py_doc_member_98),
-   c2py::getsetdef_from_member<&_c2py_cls_2::prec_td, _c2py_cls_2>("prec_td", _c2py_doc_member_99),
-   c2py::getsetdef_from_member<&_c2py_cls_2::prec_custom, _c2py_cls_2>("prec_custom", _c2py_doc_member_100),
-   c2py::getsetdef_from_member<&_c2py_cls_2::prec_xy, _c2py_cls_2>("prec_xy", _c2py_doc_member_101),
-   c2py::getsetdef_from_member<&_c2py_cls_2::resume, _c2py_cls_2>("resume", _c2py_doc_member_102),
-   c2py::getsetdef_from_member<&_c2py_cls_2::log, _c2py_cls_2>("log", _c2py_doc_member_103),
-   c2py::getsetdef_from_member<&_c2py_cls_2::logall, _c2py_cls_2>("logall", _c2py_doc_member_104),
-   c2py::getsetdef_from_member<&_c2py_cls_2::done, _c2py_cls_2>("done", _c2py_doc_member_105),
-   c2py::getsetdef_from_member<&_c2py_cls_2::calc0, _c2py_cls_2>("calc0", _c2py_doc_member_106),
-   c2py::getsetdef_from_member<&_c2py_cls_2::lastall, _c2py_cls_2>("lastall", _c2py_doc_member_107),
-   c2py::getsetdef_from_member<&_c2py_cls_2::lastalloverride, _c2py_cls_2>("lastalloverride", _c2py_doc_member_108),
-   c2py::getsetdef_from_member<&_c2py_cls_2::dumpsubspaces, _c2py_cls_2>("dumpsubspaces", _c2py_doc_member_109),
-   c2py::getsetdef_from_member<&_c2py_cls_2::dump_f, _c2py_cls_2>("dump_f", _c2py_doc_member_110),
-   c2py::getsetdef_from_member<&_c2py_cls_2::dumpenergies, _c2py_cls_2>("dumpenergies", _c2py_doc_member_111),
-   c2py::getsetdef_from_member<&_c2py_cls_2::logenumber, _c2py_cls_2>("logenumber", _c2py_doc_member_112),
-   c2py::getsetdef_from_member<&_c2py_cls_2::stopafter, _c2py_cls_2>("stopafter", _c2py_doc_member_113),
-   c2py::getsetdef_from_member<&_c2py_cls_2::forcestop, _c2py_cls_2>("forcestop", _c2py_doc_member_114),
-   c2py::getsetdef_from_member<&_c2py_cls_2::removefiles, _c2py_cls_2>("removefiles", _c2py_doc_member_115),
-   c2py::getsetdef_from_member<&_c2py_cls_2::noimag, _c2py_cls_2>("noimag", _c2py_doc_member_116),
-   c2py::getsetdef_from_member<&_c2py_cls_2::checksumrules, _c2py_cls_2>("checksumrules", _c2py_doc_member_117),
-   c2py::getsetdef_from_member<&_c2py_cls_2::checkdiag, _c2py_cls_2>("checkdiag", _c2py_doc_member_118),
-   c2py::getsetdef_from_member<&_c2py_cls_2::checkrho, _c2py_cls_2>("checkrho", _c2py_doc_member_119),
+   c2py::getsetdef_from_member<&_c2py_cls_2::dmnrg, _c2py_cls_2>("dmnrg", _c2py_doc_member_31),
+   c2py::getsetdef_from_member<&_c2py_cls_2::cfs, _c2py_cls_2>("cfs", _c2py_doc_member_32),
+   c2py::getsetdef_from_member<&_c2py_cls_2::fdm, _c2py_cls_2>("fdm", _c2py_doc_member_33),
+   c2py::getsetdef_from_member<&_c2py_cls_2::fdmexpv, _c2py_cls_2>("fdmexpv", _c2py_doc_member_34),
+   c2py::getsetdef_from_member<&_c2py_cls_2::dmnrgmats, _c2py_cls_2>("dmnrgmats", _c2py_doc_member_35),
+   c2py::getsetdef_from_member<&_c2py_cls_2::fdmmats, _c2py_cls_2>("fdmmats", _c2py_doc_member_36),
+   c2py::getsetdef_from_member<&_c2py_cls_2::mats, _c2py_cls_2>("mats", _c2py_doc_member_37),
+   c2py::getsetdef_from_member<&_c2py_cls_2::specgt, _c2py_cls_2>("specgt", _c2py_doc_member_38),
+   c2py::getsetdef_from_member<&_c2py_cls_2::speci1t, _c2py_cls_2>("speci1t", _c2py_doc_member_39),
+   c2py::getsetdef_from_member<&_c2py_cls_2::speci2t, _c2py_cls_2>("speci2t", _c2py_doc_member_40),
+   c2py::getsetdef_from_member<&_c2py_cls_2::v3mm, _c2py_cls_2>("v3mm", _c2py_doc_member_41),
+   c2py::getsetdef_from_member<&_c2py_cls_2::mMAX, _c2py_cls_2>("mMAX", _c2py_doc_member_42),
+   c2py::getsetdef_from_member<&_c2py_cls_2::Nmax, _c2py_cls_2>("Nmax", _c2py_doc_member_43),
+   c2py::getsetdef_from_member<&_c2py_cls_2::xmax, _c2py_cls_2>("xmax", _c2py_doc_member_44),
+   c2py::getsetdef_from_member<&_c2py_cls_2::discretization, _c2py_cls_2>("discretization", _c2py_doc_member_45),
+   c2py::getsetdef_from_member<&_c2py_cls_2::density_interpolation, _c2py_cls_2>("density_interpolation", _c2py_doc_member_46),
+   c2py::getsetdef_from_member<&_c2py_cls_2::z, _c2py_cls_2>("z", _c2py_doc_member_47),
+   c2py::getsetdef_from_member<&_c2py_cls_2::tri, _c2py_cls_2>("tri", _c2py_doc_member_48),
+   c2py::getsetdef_from_member<&_c2py_cls_2::preccpp, _c2py_cls_2>("preccpp", _c2py_doc_member_49),
+   c2py::getsetdef_from_member<&_c2py_cls_2::diag, _c2py_cls_2>("diag", _c2py_doc_member_50),
+   c2py::getsetdef_from_member<&_c2py_cls_2::diagratio, _c2py_cls_2>("diagratio", _c2py_doc_member_51),
+   c2py::getsetdef_from_member<&_c2py_cls_2::dsyevrlimit, _c2py_cls_2>("dsyevrlimit", _c2py_doc_member_52),
+   c2py::getsetdef_from_member<&_c2py_cls_2::zheevrlimit, _c2py_cls_2>("zheevrlimit", _c2py_doc_member_53),
+   c2py::getsetdef_from_member<&_c2py_cls_2::restart, _c2py_cls_2>("restart", _c2py_doc_member_54),
+   c2py::getsetdef_from_member<&_c2py_cls_2::restartfactor, _c2py_cls_2>("restartfactor", _c2py_doc_member_55),
+   c2py::getsetdef_from_member<&_c2py_cls_2::safeguard, _c2py_cls_2>("safeguard", _c2py_doc_member_56),
+   c2py::getsetdef_from_member<&_c2py_cls_2::safeguardmax, _c2py_cls_2>("safeguardmax", _c2py_doc_member_57),
+   c2py::getsetdef_from_member<&_c2py_cls_2::fixeps, _c2py_cls_2>("fixeps", _c2py_doc_member_58),
+   c2py::getsetdef_from_member<&_c2py_cls_2::betabar, _c2py_cls_2>("betabar", _c2py_doc_member_59),
+   c2py::getsetdef_from_member<&_c2py_cls_2::gtp, _c2py_cls_2>("gtp", _c2py_doc_member_60),
+   c2py::getsetdef_from_member<&_c2py_cls_2::chitp, _c2py_cls_2>("chitp", _c2py_doc_member_61),
+   c2py::getsetdef_from_member<&_c2py_cls_2::finite, _c2py_cls_2>("finite", _c2py_doc_member_62),
+   c2py::getsetdef_from_member<&_c2py_cls_2::cfsgt, _c2py_cls_2>("cfsgt", _c2py_doc_member_63),
+   c2py::getsetdef_from_member<&_c2py_cls_2::cfsls, _c2py_cls_2>("cfsls", _c2py_doc_member_64),
+   c2py::getsetdef_from_member<&_c2py_cls_2::fdmgt, _c2py_cls_2>("fdmgt", _c2py_doc_member_65),
+   c2py::getsetdef_from_member<&_c2py_cls_2::fdmls, _c2py_cls_2>("fdmls", _c2py_doc_member_66),
+   c2py::getsetdef_from_member<&_c2py_cls_2::fdmexpvn, _c2py_cls_2>("fdmexpvn", _c2py_doc_member_67),
+   c2py::getsetdef_from_member<&_c2py_cls_2::finitemats, _c2py_cls_2>("finitemats", _c2py_doc_member_68),
+   c2py::getsetdef_from_member<&_c2py_cls_2::dm, _c2py_cls_2>("dm", _c2py_doc_member_69),
+   c2py::getsetdef_from_member<&_c2py_cls_2::broaden_min_ratio, _c2py_cls_2>("broaden_min_ratio", _c2py_doc_member_70),
+   c2py::getsetdef_from_member<&_c2py_cls_2::omega0, _c2py_cls_2>("omega0", _c2py_doc_member_71),
+   c2py::getsetdef_from_member<&_c2py_cls_2::omega0_ratio, _c2py_cls_2>("omega0_ratio", _c2py_doc_member_72),
+   c2py::getsetdef_from_member<&_c2py_cls_2::diagth, _c2py_cls_2>("diagth", _c2py_doc_member_73),
+   c2py::getsetdef_from_member<&_c2py_cls_2::substeps, _c2py_cls_2>("substeps", _c2py_doc_member_74),
+   c2py::getsetdef_from_member<&_c2py_cls_2::strategy, _c2py_cls_2>("strategy", _c2py_doc_member_75),
+   c2py::getsetdef_from_member<&_c2py_cls_2::Ninit, _c2py_cls_2>("Ninit", _c2py_doc_member_76),
+   c2py::getsetdef_from_member<&_c2py_cls_2::reim, _c2py_cls_2>("reim", _c2py_doc_member_77),
+   c2py::getsetdef_from_member<&_c2py_cls_2::dumpannotated, _c2py_cls_2>("dumpannotated", _c2py_doc_member_78),
+   c2py::getsetdef_from_member<&_c2py_cls_2::dumpabs, _c2py_cls_2>("dumpabs", _c2py_doc_member_79),
+   c2py::getsetdef_from_member<&_c2py_cls_2::dumpscaled, _c2py_cls_2>("dumpscaled", _c2py_doc_member_80),
+   c2py::getsetdef_from_member<&_c2py_cls_2::dumpprecision, _c2py_cls_2>("dumpprecision", _c2py_doc_member_81),
+   c2py::getsetdef_from_member<&_c2py_cls_2::dumpgroups, _c2py_cls_2>("dumpgroups", _c2py_doc_member_82),
+   c2py::getsetdef_from_member<&_c2py_cls_2::grouptol, _c2py_cls_2>("grouptol", _c2py_doc_member_83),
+   c2py::getsetdef_from_member<&_c2py_cls_2::dumpdiagonal, _c2py_cls_2>("dumpdiagonal", _c2py_doc_member_84),
+   c2py::getsetdef_from_member<&_c2py_cls_2::savebins, _c2py_cls_2>("savebins", _c2py_doc_member_85),
+   c2py::getsetdef_from_member<&_c2py_cls_2::broaden, _c2py_cls_2>("broaden", _c2py_doc_member_86),
+   c2py::getsetdef_from_member<&_c2py_cls_2::emin, _c2py_cls_2>("emin", _c2py_doc_member_87),
+   c2py::getsetdef_from_member<&_c2py_cls_2::emax, _c2py_cls_2>("emax", _c2py_doc_member_88),
+   c2py::getsetdef_from_member<&_c2py_cls_2::bins, _c2py_cls_2>("bins", _c2py_doc_member_89),
+   c2py::getsetdef_from_member<&_c2py_cls_2::accumulation, _c2py_cls_2>("accumulation", _c2py_doc_member_90),
+   c2py::getsetdef_from_member<&_c2py_cls_2::linstep, _c2py_cls_2>("linstep", _c2py_doc_member_91),
+   c2py::getsetdef_from_member<&_c2py_cls_2::discard_trim, _c2py_cls_2>("discard_trim", _c2py_doc_member_92),
+   c2py::getsetdef_from_member<&_c2py_cls_2::discard_immediately, _c2py_cls_2>("discard_immediately", _c2py_doc_member_93),
+   c2py::getsetdef_from_member<&_c2py_cls_2::goodE, _c2py_cls_2>("goodE", _c2py_doc_member_94),
+   c2py::getsetdef_from_member<&_c2py_cls_2::NN1, _c2py_cls_2>("NN1", _c2py_doc_member_95),
+   c2py::getsetdef_from_member<&_c2py_cls_2::NN2even, _c2py_cls_2>("NN2even", _c2py_doc_member_96),
+   c2py::getsetdef_from_member<&_c2py_cls_2::NN2avg, _c2py_cls_2>("NN2avg", _c2py_doc_member_97),
+   c2py::getsetdef_from_member<&_c2py_cls_2::NNtanh, _c2py_cls_2>("NNtanh", _c2py_doc_member_98),
+   c2py::getsetdef_from_member<&_c2py_cls_2::width_td, _c2py_cls_2>("width_td", _c2py_doc_member_99),
+   c2py::getsetdef_from_member<&_c2py_cls_2::width_custom, _c2py_cls_2>("width_custom", _c2py_doc_member_100),
+   c2py::getsetdef_from_member<&_c2py_cls_2::prec_td, _c2py_cls_2>("prec_td", _c2py_doc_member_101),
+   c2py::getsetdef_from_member<&_c2py_cls_2::prec_custom, _c2py_cls_2>("prec_custom", _c2py_doc_member_102),
+   c2py::getsetdef_from_member<&_c2py_cls_2::prec_xy, _c2py_cls_2>("prec_xy", _c2py_doc_member_103),
+   c2py::getsetdef_from_member<&_c2py_cls_2::resume, _c2py_cls_2>("resume", _c2py_doc_member_104),
+   c2py::getsetdef_from_member<&_c2py_cls_2::log, _c2py_cls_2>("log", _c2py_doc_member_105),
+   c2py::getsetdef_from_member<&_c2py_cls_2::logall, _c2py_cls_2>("logall", _c2py_doc_member_106),
+   c2py::getsetdef_from_member<&_c2py_cls_2::done, _c2py_cls_2>("done", _c2py_doc_member_107),
+   c2py::getsetdef_from_member<&_c2py_cls_2::calc0, _c2py_cls_2>("calc0", _c2py_doc_member_108),
+   c2py::getsetdef_from_member<&_c2py_cls_2::lastall, _c2py_cls_2>("lastall", _c2py_doc_member_109),
+   c2py::getsetdef_from_member<&_c2py_cls_2::lastalloverride, _c2py_cls_2>("lastalloverride", _c2py_doc_member_110),
+   c2py::getsetdef_from_member<&_c2py_cls_2::dumpsubspaces, _c2py_cls_2>("dumpsubspaces", _c2py_doc_member_111),
+   c2py::getsetdef_from_member<&_c2py_cls_2::dump_f, _c2py_cls_2>("dump_f", _c2py_doc_member_112),
+   c2py::getsetdef_from_member<&_c2py_cls_2::dumpenergies, _c2py_cls_2>("dumpenergies", _c2py_doc_member_113),
+   c2py::getsetdef_from_member<&_c2py_cls_2::logenumber, _c2py_cls_2>("logenumber", _c2py_doc_member_114),
+   c2py::getsetdef_from_member<&_c2py_cls_2::stopafter, _c2py_cls_2>("stopafter", _c2py_doc_member_115),
+   c2py::getsetdef_from_member<&_c2py_cls_2::forcestop, _c2py_cls_2>("forcestop", _c2py_doc_member_116),
+   c2py::getsetdef_from_member<&_c2py_cls_2::removefiles, _c2py_cls_2>("removefiles", _c2py_doc_member_117),
+   c2py::getsetdef_from_member<&_c2py_cls_2::noimag, _c2py_cls_2>("noimag", _c2py_doc_member_118),
+   c2py::getsetdef_from_member<&_c2py_cls_2::checksumrules, _c2py_cls_2>("checksumrules", _c2py_doc_member_119),
+   c2py::getsetdef_from_member<&_c2py_cls_2::checkdiag, _c2py_cls_2>("checkdiag", _c2py_doc_member_120),
+   c2py::getsetdef_from_member<&_c2py_cls_2::checkrho, _c2py_cls_2>("checkrho", _c2py_doc_member_121),
    {"__dict__", (getter)prop_get_dict_2, nullptr, "", nullptr},
    {nullptr, nullptr, nullptr, nullptr, nullptr}};
 
@@ -1031,14 +1048,14 @@ PyMethodDef c2py::tp_methods<_c2py_cls_3>[] = {
    {nullptr, nullptr, 0, nullptr} // Sentinel
 };
 
-constexpr auto _c2py_doc_member_120 = R"DOC(Run the FDM sweep after the forward sweep (FDM expectation values, thermodynamics and spectra))DOC";
-constexpr auto _c2py_doc_member_121 = R"DOC(Correlators to compute (G, F_l, F_r, I, chi_SS, ...: names from the manifest).
+constexpr auto _c2py_doc_member_122 = R"DOC(Run the FDM sweep after the forward sweep (FDM expectation values, thermodynamics and spectra))DOC";
+constexpr auto _c2py_doc_member_123 = R"DOC(Correlators to compute (G, F_l, F_r, I, chi_SS, ...: names from the manifest).
 Unset: all the template provides if fdm, none otherwise. Empty: none.)DOC";
-constexpr auto _c2py_doc_member_122 = R"DOC(Broaden the selected spectra in the solve; without it the result holds only the bins)DOC";
-constexpr auto _c2py_doc_member_123 = R"DOC(Keep the raw spectral bins in the result; required if not broaden)DOC";
-constexpr auto _c2py_doc_member_124 = R"DOC(Lowest levels per NRG step returned in the energy flow; 0 for none)DOC";
-constexpr auto _c2py_doc_member_125 = R"DOC(Twist values in (0, 1] to solve; empty for i/Nz, i = 1..Nz)DOC";
-constexpr auto _c2py_doc_member_126 = R"DOC(Keep the working directory after the solve)DOC";
+constexpr auto _c2py_doc_member_124 = R"DOC(Broaden the selected spectra in the solve; without it the result holds only the bins)DOC";
+constexpr auto _c2py_doc_member_125 = R"DOC(Keep the raw spectral bins in the result; required if not broaden)DOC";
+constexpr auto _c2py_doc_member_126 = R"DOC(Lowest levels per NRG step returned in the energy flow; 0 for none)DOC";
+constexpr auto _c2py_doc_member_127 = R"DOC(Twist values in (0, 1] to solve; empty for i/Nz, i = 1..Nz)DOC";
+constexpr auto _c2py_doc_member_128 = R"DOC(Keep the working directory after the solve)DOC";
 static PyObject *prop_get_dict_3(PyObject *self, void *) {
   auto &self_c = *(((c2py::wrap<_c2py_cls_3> *)self)->_c);
   c2py::pydict dic;
@@ -1056,13 +1073,13 @@ static PyObject *prop_get_dict_3(PyObject *self, void *) {
 
 template <>
 constinit PyGetSetDef c2py::tp_getset<_c2py_cls_3>[] = {
-   c2py::getsetdef_from_member<&_c2py_cls_3::fdm, _c2py_cls_3>("fdm", _c2py_doc_member_120),
-   c2py::getsetdef_from_member<&_c2py_cls_3::correlators, _c2py_cls_3>("correlators", _c2py_doc_member_121),
-   c2py::getsetdef_from_member<&_c2py_cls_3::broaden, _c2py_cls_3>("broaden", _c2py_doc_member_122),
-   c2py::getsetdef_from_member<&_c2py_cls_3::keep_bins, _c2py_cls_3>("keep_bins", _c2py_doc_member_123),
-   c2py::getsetdef_from_member<&_c2py_cls_3::energies, _c2py_cls_3>("energies", _c2py_doc_member_124),
-   c2py::getsetdef_from_member<&_c2py_cls_3::z, _c2py_cls_3>("z", _c2py_doc_member_125),
-   c2py::getsetdef_from_member<&_c2py_cls_3::keep_workdir, _c2py_cls_3>("keep_workdir", _c2py_doc_member_126),
+   c2py::getsetdef_from_member<&_c2py_cls_3::fdm, _c2py_cls_3>("fdm", _c2py_doc_member_122),
+   c2py::getsetdef_from_member<&_c2py_cls_3::correlators, _c2py_cls_3>("correlators", _c2py_doc_member_123),
+   c2py::getsetdef_from_member<&_c2py_cls_3::broaden, _c2py_cls_3>("broaden", _c2py_doc_member_124),
+   c2py::getsetdef_from_member<&_c2py_cls_3::keep_bins, _c2py_cls_3>("keep_bins", _c2py_doc_member_125),
+   c2py::getsetdef_from_member<&_c2py_cls_3::energies, _c2py_cls_3>("energies", _c2py_doc_member_126),
+   c2py::getsetdef_from_member<&_c2py_cls_3::z, _c2py_cls_3>("z", _c2py_doc_member_127),
+   c2py::getsetdef_from_member<&_c2py_cls_3::keep_workdir, _c2py_cls_3>("keep_workdir", _c2py_doc_member_128),
    {"__dict__", (getter)prop_get_dict_3, nullptr, "", nullptr},
    {nullptr, nullptr, nullptr, nullptr, nullptr}};
 
@@ -1070,14 +1087,15 @@ template <>
 const std::string c2py::tp_doc<_c2py_cls_3> = R"DOC(Options of a solve: what NRG Ljubljana computes and what the solver returns)DOC"
    + std::string{"\n\n----------\n\n"} + c2py::tp_ctor_doc<_c2py_cls_3>;
 // --------- class _c2py_cls_4 -----------
-using _c2py_cls_4                                            = nrgljubljana_interface::nrg::step_table_t;
+using _c2py_cls_4                                            = nrgljubljana_interface::nrg::channel_coefficients_t;
 template <> constexpr bool c2py::is_wrapped<_c2py_cls_4>     = true;
-template <> inline constexpr auto c2py::tp_name<_c2py_cls_4> = "nrgljubljana_interface.solver_core.StepTableT";
+template <> inline constexpr auto c2py::tp_name<_c2py_cls_4> = "nrgljubljana_interface.solver_core.ChannelCoefficientsT";
 
 static int synth_constructor_4(PyObject *self, PyObject *args, PyObject *kwargs) {
   if (args and PyTuple_Check(args) and (PyTuple_Size(args) > 0)) {
-    PyErr_SetString(PyExc_RuntimeError,
-                    ("Error in constructing nrgljubljana_interface::nrg::step_table_t.\nNo positional arguments allowed. Use keywords arguments"));
+    PyErr_SetString(
+       PyExc_RuntimeError,
+       ("Error in constructing nrgljubljana_interface::nrg::channel_coefficients_t.\nNo positional arguments allowed. Use keywords arguments"));
     return -1;
   }
   c2py::pydict_extractor de{kwargs};
@@ -1085,19 +1103,180 @@ static int synth_constructor_4(PyObject *self, PyObject *args, PyObject *kwargs)
     ((c2py::wrap<_c2py_cls_4> *)self)->_c = new _c2py_cls_4{};
   } catch (std::exception const &e) {
     PyErr_SetString(PyExc_RuntimeError,
-                    ("Error in constructing nrgljubljana_interface::nrg::step_table_t from a Python dict.\n   "s + e.what()).c_str());
+                    ("Error in constructing nrgljubljana_interface::nrg::channel_coefficients_t from a Python dict.\n   "s + e.what()).c_str());
     return -1;
   }
   auto &self_c = *(((c2py::wrap<_c2py_cls_4> *)self)->_c);
-  de("columns", self_c.columns, false);
-  de("values", self_c.values, false);
+  de("theta", self_c.theta, true);
+  de("xi", self_c.xi, true);
+  de("zeta", self_c.zeta, true);
   return de.check();
 }
 
 template <> constexpr initproc c2py::tp_init<_c2py_cls_4> = synth_constructor_4;
 
 template <>
-const std::string c2py::tp_ctor_doc<_c2py_cls_4> = c2py::replace_tags(
+const std::string c2py::tp_ctor_doc<_c2py_cls_4> =
+   c2py::replace_tags(R"DOC(Synthesized constructor with the following keyword arguments:
+
+Parameters
+----------
+theta : {par_0}, default=0
+
+xi : {par_1}, default={}
+
+zeta : {par_2}, default={}
+
+)DOC",
+                      "par",
+                      {c2py::python_typename<double>(), c2py::python_typename<std::vector<double>>(), c2py::python_typename<std::vector<double>>()});
+
+// ----- Method table ----
+template <>
+PyMethodDef c2py::tp_methods<_c2py_cls_4>[] = {
+
+   {nullptr, nullptr, 0, nullptr} // Sentinel
+};
+
+constexpr auto _c2py_doc_member_129 = R"DOC()DOC";
+constexpr auto _c2py_doc_member_130 = R"DOC()DOC";
+constexpr auto _c2py_doc_member_131 = R"DOC()DOC";
+static PyObject *prop_get_dict_4(PyObject *self, void *) {
+  auto &self_c = *(((c2py::wrap<_c2py_cls_4> *)self)->_c);
+  c2py::pydict dic;
+  dic["theta"] = self_c.theta;
+  dic["xi"]    = self_c.xi;
+  dic["zeta"]  = self_c.zeta;
+  return dic.new_ref();
+}
+
+// ----- Member and property table ----
+
+template <>
+constinit PyGetSetDef c2py::tp_getset<_c2py_cls_4>[] = {c2py::getsetdef_from_member<&_c2py_cls_4::theta, _c2py_cls_4>("theta", _c2py_doc_member_129),
+                                                        c2py::getsetdef_from_member<&_c2py_cls_4::xi, _c2py_cls_4>("xi", _c2py_doc_member_130),
+                                                        c2py::getsetdef_from_member<&_c2py_cls_4::zeta, _c2py_cls_4>("zeta", _c2py_doc_member_131),
+                                                        {"__dict__", (getter)prop_get_dict_4, nullptr, "", nullptr},
+                                                        {nullptr, nullptr, nullptr, nullptr, nullptr}};
+
+template <>
+const std::string c2py::tp_doc<_c2py_cls_4> =
+   R"DOC(The coefficients of one channel of a Wilson chain: the coupling θ and the on-site energies ξ and hoppings ζ)DOC"
+   + std::string{"\n\n----------\n\n"} + c2py::tp_ctor_doc<_c2py_cls_4>;
+// --------- class _c2py_cls_5 -----------
+using _c2py_cls_5                                            = nrgljubljana_interface::nrg::chain_coefficients_t;
+template <> constexpr bool c2py::is_wrapped<_c2py_cls_5>     = true;
+template <> inline constexpr auto c2py::tp_name<_c2py_cls_5> = "nrgljubljana_interface.solver_core.ChainCoefficientsT";
+
+static int synth_constructor_5(PyObject *self, PyObject *args, PyObject *kwargs) {
+  if (args and PyTuple_Check(args) and (PyTuple_Size(args) > 0)) {
+    PyErr_SetString(
+       PyExc_RuntimeError,
+       ("Error in constructing nrgljubljana_interface::nrg::chain_coefficients_t.\nNo positional arguments allowed. Use keywords arguments"));
+    return -1;
+  }
+  c2py::pydict_extractor de{kwargs};
+  try {
+    ((c2py::wrap<_c2py_cls_5> *)self)->_c = new _c2py_cls_5{};
+  } catch (std::exception const &e) {
+    PyErr_SetString(PyExc_RuntimeError,
+                    ("Error in constructing nrgljubljana_interface::nrg::chain_coefficients_t from a Python dict.\n   "s + e.what()).c_str());
+    return -1;
+  }
+  auto &self_c = *(((c2py::wrap<_c2py_cls_5> *)self)->_c);
+  de("z", self_c.z, true);
+  de("Lambda", self_c.Lambda, true);
+  de("bandrescale", self_c.bandrescale, true);
+  de("channels", self_c.channels, true);
+  return de.check();
+}
+
+template <> constexpr initproc c2py::tp_init<_c2py_cls_5> = synth_constructor_5;
+
+template <>
+const std::string c2py::tp_ctor_doc<_c2py_cls_5> =
+   c2py::replace_tags(R"DOC(Synthesized constructor with the following keyword arguments:
+
+Parameters
+----------
+z : {par_0}, default=0
+
+Lambda : {par_1}, default=0
+
+bandrescale : {par_2}, default=1
+
+channels : {par_3}, default={}
+
+)DOC",
+                      "par",
+                      {c2py::python_typename<double>(), c2py::python_typename<double>(), c2py::python_typename<double>(),
+                       c2py::python_typename<std::vector<nrgljubljana_interface::nrg::channel_coefficients_t>>()});
+
+// ----- Method table ----
+template <>
+PyMethodDef c2py::tp_methods<_c2py_cls_5>[] = {
+
+   {nullptr, nullptr, 0, nullptr} // Sentinel
+};
+
+constexpr auto _c2py_doc_member_132 = R"DOC()DOC";
+constexpr auto _c2py_doc_member_133 = R"DOC()DOC";
+constexpr auto _c2py_doc_member_134 = R"DOC()DOC";
+constexpr auto _c2py_doc_member_135 = R"DOC()DOC";
+static PyObject *prop_get_dict_5(PyObject *self, void *) {
+  auto &self_c = *(((c2py::wrap<_c2py_cls_5> *)self)->_c);
+  c2py::pydict dic;
+  dic["z"]           = self_c.z;
+  dic["Lambda"]      = self_c.Lambda;
+  dic["bandrescale"] = self_c.bandrescale;
+  dic["channels"]    = self_c.channels;
+  return dic.new_ref();
+}
+
+// ----- Member and property table ----
+
+template <>
+constinit PyGetSetDef c2py::tp_getset<_c2py_cls_5>[] = {
+   c2py::getsetdef_from_member<&_c2py_cls_5::z, _c2py_cls_5>("z", _c2py_doc_member_132),
+   c2py::getsetdef_from_member<&_c2py_cls_5::Lambda, _c2py_cls_5>("Lambda", _c2py_doc_member_133),
+   c2py::getsetdef_from_member<&_c2py_cls_5::bandrescale, _c2py_cls_5>("bandrescale", _c2py_doc_member_134),
+   c2py::getsetdef_from_member<&_c2py_cls_5::channels, _c2py_cls_5>("channels", _c2py_doc_member_135),
+   {"__dict__", (getter)prop_get_dict_5, nullptr, "", nullptr},
+   {nullptr, nullptr, nullptr, nullptr, nullptr}};
+
+template <>
+const std::string c2py::tp_doc<_c2py_cls_5> =
+   R"DOC(The coefficients of the Wilson chain of one twist, per coefficient channel (adapter A1: uncoupled channels))DOC"
+   + std::string{"\n\n----------\n\n"} + c2py::tp_ctor_doc<_c2py_cls_5>;
+// --------- class _c2py_cls_6 -----------
+using _c2py_cls_6                                            = nrgljubljana_interface::nrg::step_table_t;
+template <> constexpr bool c2py::is_wrapped<_c2py_cls_6>     = true;
+template <> inline constexpr auto c2py::tp_name<_c2py_cls_6> = "nrgljubljana_interface.solver_core.StepTableT";
+
+static int synth_constructor_6(PyObject *self, PyObject *args, PyObject *kwargs) {
+  if (args and PyTuple_Check(args) and (PyTuple_Size(args) > 0)) {
+    PyErr_SetString(PyExc_RuntimeError,
+                    ("Error in constructing nrgljubljana_interface::nrg::step_table_t.\nNo positional arguments allowed. Use keywords arguments"));
+    return -1;
+  }
+  c2py::pydict_extractor de{kwargs};
+  try {
+    ((c2py::wrap<_c2py_cls_6> *)self)->_c = new _c2py_cls_6{};
+  } catch (std::exception const &e) {
+    PyErr_SetString(PyExc_RuntimeError,
+                    ("Error in constructing nrgljubljana_interface::nrg::step_table_t from a Python dict.\n   "s + e.what()).c_str());
+    return -1;
+  }
+  auto &self_c = *(((c2py::wrap<_c2py_cls_6> *)self)->_c);
+  de("columns", self_c.columns, false);
+  de("values", self_c.values, false);
+  return de.check();
+}
+
+template <> constexpr initproc c2py::tp_init<_c2py_cls_6> = synth_constructor_6;
+
+template <>
+const std::string c2py::tp_ctor_doc<_c2py_cls_6> = c2py::replace_tags(
    R"DOC(Synthesized constructor with the following keyword arguments:
 
 Parameters
@@ -1113,15 +1292,15 @@ values : {par_1}
 
 // ----- Method table ----
 template <>
-PyMethodDef c2py::tp_methods<_c2py_cls_4>[] = {
+PyMethodDef c2py::tp_methods<_c2py_cls_6>[] = {
 
    {nullptr, nullptr, 0, nullptr} // Sentinel
 };
 
-constexpr auto _c2py_doc_member_127 = R"DOC(Column names)DOC";
-constexpr auto _c2py_doc_member_128 = R"DOC(Values, indexed (step, column))DOC";
-static PyObject *prop_get_dict_4(PyObject *self, void *) {
-  auto &self_c = *(((c2py::wrap<_c2py_cls_4> *)self)->_c);
+constexpr auto _c2py_doc_member_136 = R"DOC(Column names)DOC";
+constexpr auto _c2py_doc_member_137 = R"DOC(Values, indexed (step, column))DOC";
+static PyObject *prop_get_dict_6(PyObject *self, void *) {
+  auto &self_c = *(((c2py::wrap<_c2py_cls_6> *)self)->_c);
   c2py::pydict dic;
   dic["columns"] = self_c.columns;
   dic["values"]  = self_c.values;
@@ -1131,21 +1310,21 @@ static PyObject *prop_get_dict_4(PyObject *self, void *) {
 // ----- Member and property table ----
 
 template <>
-constinit PyGetSetDef c2py::tp_getset<_c2py_cls_4>[] = {
-   c2py::getsetdef_from_member<&_c2py_cls_4::columns, _c2py_cls_4>("columns", _c2py_doc_member_127),
-   c2py::getsetdef_from_member<&_c2py_cls_4::values, _c2py_cls_4>("values", _c2py_doc_member_128),
-   {"__dict__", (getter)prop_get_dict_4, nullptr, "", nullptr},
+constinit PyGetSetDef c2py::tp_getset<_c2py_cls_6>[] = {
+   c2py::getsetdef_from_member<&_c2py_cls_6::columns, _c2py_cls_6>("columns", _c2py_doc_member_136),
+   c2py::getsetdef_from_member<&_c2py_cls_6::values, _c2py_cls_6>("values", _c2py_doc_member_137),
+   {"__dict__", (getter)prop_get_dict_6, nullptr, "", nullptr},
    {nullptr, nullptr, nullptr, nullptr, nullptr}};
 
 template <>
-const std::string c2py::tp_doc<_c2py_cls_4> = R"DOC(A table with one row per NRG step (custom, td): column names and values)DOC"
-   + std::string{"\n\n----------\n\n"} + c2py::tp_ctor_doc<_c2py_cls_4>;
-// --------- class _c2py_cls_5 -----------
-using _c2py_cls_5                                            = nrgljubljana_interface::nrg::energy_level_t;
-template <> constexpr bool c2py::is_wrapped<_c2py_cls_5>     = true;
-template <> inline constexpr auto c2py::tp_name<_c2py_cls_5> = "nrgljubljana_interface.solver_core.EnergyLevelT";
+const std::string c2py::tp_doc<_c2py_cls_6> = R"DOC(A table with one row per NRG step (custom, td): column names and values)DOC"
+   + std::string{"\n\n----------\n\n"} + c2py::tp_ctor_doc<_c2py_cls_6>;
+// --------- class _c2py_cls_7 -----------
+using _c2py_cls_7                                            = nrgljubljana_interface::nrg::energy_level_t;
+template <> constexpr bool c2py::is_wrapped<_c2py_cls_7>     = true;
+template <> inline constexpr auto c2py::tp_name<_c2py_cls_7> = "nrgljubljana_interface.solver_core.EnergyLevelT";
 
-static int synth_constructor_5(PyObject *self, PyObject *args, PyObject *kwargs) {
+static int synth_constructor_7(PyObject *self, PyObject *args, PyObject *kwargs) {
   if (args and PyTuple_Check(args) and (PyTuple_Size(args) > 0)) {
     PyErr_SetString(PyExc_RuntimeError,
                     ("Error in constructing nrgljubljana_interface::nrg::energy_level_t.\nNo positional arguments allowed. Use keywords arguments"));
@@ -1153,23 +1332,23 @@ static int synth_constructor_5(PyObject *self, PyObject *args, PyObject *kwargs)
   }
   c2py::pydict_extractor de{kwargs};
   try {
-    ((c2py::wrap<_c2py_cls_5> *)self)->_c = new _c2py_cls_5{};
+    ((c2py::wrap<_c2py_cls_7> *)self)->_c = new _c2py_cls_7{};
   } catch (std::exception const &e) {
     PyErr_SetString(PyExc_RuntimeError,
                     ("Error in constructing nrgljubljana_interface::nrg::energy_level_t from a Python dict.\n   "s + e.what()).c_str());
     return -1;
   }
-  auto &self_c = *(((c2py::wrap<_c2py_cls_5> *)self)->_c);
+  auto &self_c = *(((c2py::wrap<_c2py_cls_7> *)self)->_c);
   de("energy", self_c.energy, true);
   de("subspaces", self_c.subspaces, false);
   de("degeneracy", self_c.degeneracy, true);
   return de.check();
 }
 
-template <> constexpr initproc c2py::tp_init<_c2py_cls_5> = synth_constructor_5;
+template <> constexpr initproc c2py::tp_init<_c2py_cls_7> = synth_constructor_7;
 
 template <>
-const std::string c2py::tp_ctor_doc<_c2py_cls_5> =
+const std::string c2py::tp_ctor_doc<_c2py_cls_7> =
    c2py::replace_tags(R"DOC(Synthesized constructor with the following keyword arguments:
 
 Parameters
@@ -1186,16 +1365,16 @@ degeneracy : {par_2}, default=0
 
 // ----- Method table ----
 template <>
-PyMethodDef c2py::tp_methods<_c2py_cls_5>[] = {
+PyMethodDef c2py::tp_methods<_c2py_cls_7>[] = {
 
    {nullptr, nullptr, 0, nullptr} // Sentinel
 };
 
-constexpr auto _c2py_doc_member_129 = R"DOC(Energy of the group)DOC";
-constexpr auto _c2py_doc_member_130 = R"DOC(Quantum numbers of each invariant subspace in the group)DOC";
-constexpr auto _c2py_doc_member_131 = R"DOC(Total number of states, including multiplicity)DOC";
-static PyObject *prop_get_dict_5(PyObject *self, void *) {
-  auto &self_c = *(((c2py::wrap<_c2py_cls_5> *)self)->_c);
+constexpr auto _c2py_doc_member_138 = R"DOC(Energy of the group)DOC";
+constexpr auto _c2py_doc_member_139 = R"DOC(Quantum numbers of each invariant subspace in the group)DOC";
+constexpr auto _c2py_doc_member_140 = R"DOC(Total number of states, including multiplicity)DOC";
+static PyObject *prop_get_dict_7(PyObject *self, void *) {
+  auto &self_c = *(((c2py::wrap<_c2py_cls_7> *)self)->_c);
   c2py::pydict dic;
   dic["energy"]     = self_c.energy;
   dic["subspaces"]  = self_c.subspaces;
@@ -1206,22 +1385,22 @@ static PyObject *prop_get_dict_5(PyObject *self, void *) {
 // ----- Member and property table ----
 
 template <>
-constinit PyGetSetDef c2py::tp_getset<_c2py_cls_5>[] = {
-   c2py::getsetdef_from_member<&_c2py_cls_5::energy, _c2py_cls_5>("energy", _c2py_doc_member_129),
-   c2py::getsetdef_from_member<&_c2py_cls_5::subspaces, _c2py_cls_5>("subspaces", _c2py_doc_member_130),
-   c2py::getsetdef_from_member<&_c2py_cls_5::degeneracy, _c2py_cls_5>("degeneracy", _c2py_doc_member_131),
-   {"__dict__", (getter)prop_get_dict_5, nullptr, "", nullptr},
+constinit PyGetSetDef c2py::tp_getset<_c2py_cls_7>[] = {
+   c2py::getsetdef_from_member<&_c2py_cls_7::energy, _c2py_cls_7>("energy", _c2py_doc_member_138),
+   c2py::getsetdef_from_member<&_c2py_cls_7::subspaces, _c2py_cls_7>("subspaces", _c2py_doc_member_139),
+   c2py::getsetdef_from_member<&_c2py_cls_7::degeneracy, _c2py_cls_7>("degeneracy", _c2py_doc_member_140),
+   {"__dict__", (getter)prop_get_dict_7, nullptr, "", nullptr},
    {nullptr, nullptr, nullptr, nullptr, nullptr}};
 
 template <>
-const std::string c2py::tp_doc<_c2py_cls_5> =
-   R"DOC(A group of degenerate levels of one NRG step, as in annotated.dat)DOC" + std::string{"\n\n----------\n\n"} + c2py::tp_ctor_doc<_c2py_cls_5>;
-// --------- class _c2py_cls_6 -----------
-using _c2py_cls_6                                            = nrgljubljana_interface::nrg::spectrum_bins_t;
-template <> constexpr bool c2py::is_wrapped<_c2py_cls_6>     = true;
-template <> inline constexpr auto c2py::tp_name<_c2py_cls_6> = "nrgljubljana_interface.solver_core.SpectrumBinsT";
+const std::string c2py::tp_doc<_c2py_cls_7> =
+   R"DOC(A group of degenerate levels of one NRG step, as in annotated.dat)DOC" + std::string{"\n\n----------\n\n"} + c2py::tp_ctor_doc<_c2py_cls_7>;
+// --------- class _c2py_cls_8 -----------
+using _c2py_cls_8                                            = nrgljubljana_interface::nrg::spectrum_bins_t;
+template <> constexpr bool c2py::is_wrapped<_c2py_cls_8>     = true;
+template <> inline constexpr auto c2py::tp_name<_c2py_cls_8> = "nrgljubljana_interface.solver_core.SpectrumBinsT";
 
-static int synth_constructor_6(PyObject *self, PyObject *args, PyObject *kwargs) {
+static int synth_constructor_8(PyObject *self, PyObject *args, PyObject *kwargs) {
   if (args and PyTuple_Check(args) and (PyTuple_Size(args) > 0)) {
     PyErr_SetString(PyExc_RuntimeError,
                     ("Error in constructing nrgljubljana_interface::nrg::spectrum_bins_t.\nNo positional arguments allowed. Use keywords arguments"));
@@ -1229,13 +1408,13 @@ static int synth_constructor_6(PyObject *self, PyObject *args, PyObject *kwargs)
   }
   c2py::pydict_extractor de{kwargs};
   try {
-    ((c2py::wrap<_c2py_cls_6> *)self)->_c = new _c2py_cls_6{};
+    ((c2py::wrap<_c2py_cls_8> *)self)->_c = new _c2py_cls_8{};
   } catch (std::exception const &e) {
     PyErr_SetString(PyExc_RuntimeError,
                     ("Error in constructing nrgljubljana_interface::nrg::spectrum_bins_t from a Python dict.\n   "s + e.what()).c_str());
     return -1;
   }
-  auto &self_c = *(((c2py::wrap<_c2py_cls_6> *)self)->_c);
+  auto &self_c = *(((c2py::wrap<_c2py_cls_8> *)self)->_c);
   de("frequency", self_c.frequency, false);
   de("weight", self_c.weight, false);
   de("weight_imag", self_c.weight_imag, false);
@@ -1243,10 +1422,10 @@ static int synth_constructor_6(PyObject *self, PyObject *args, PyObject *kwargs)
   return de.check();
 }
 
-template <> constexpr initproc c2py::tp_init<_c2py_cls_6> = synth_constructor_6;
+template <> constexpr initproc c2py::tp_init<_c2py_cls_8> = synth_constructor_8;
 
 template <>
-const std::string c2py::tp_ctor_doc<_c2py_cls_6> =
+const std::string c2py::tp_ctor_doc<_c2py_cls_8> =
    c2py::replace_tags(R"DOC(Synthesized constructor with the following keyword arguments:
 
 Parameters
@@ -1266,17 +1445,17 @@ is_complex : {par_3}, default=false
 
 // ----- Method table ----
 template <>
-PyMethodDef c2py::tp_methods<_c2py_cls_6>[] = {
+PyMethodDef c2py::tp_methods<_c2py_cls_8>[] = {
 
    {nullptr, nullptr, 0, nullptr} // Sentinel
 };
 
-constexpr auto _c2py_doc_member_132 = R"DOC(Frequency of each bin)DOC";
-constexpr auto _c2py_doc_member_133 = R"DOC(Weight of each bin (its real part for a complex spectrum))DOC";
-constexpr auto _c2py_doc_member_134 = R"DOC(Imaginary part of each weight; empty unless is_complex)DOC";
-constexpr auto _c2py_doc_member_135 = R"DOC(Whether the spectrum is complex)DOC";
-static PyObject *prop_get_dict_6(PyObject *self, void *) {
-  auto &self_c = *(((c2py::wrap<_c2py_cls_6> *)self)->_c);
+constexpr auto _c2py_doc_member_141 = R"DOC(Frequency of each bin)DOC";
+constexpr auto _c2py_doc_member_142 = R"DOC(Weight of each bin (its real part for a complex spectrum))DOC";
+constexpr auto _c2py_doc_member_143 = R"DOC(Imaginary part of each weight; empty unless is_complex)DOC";
+constexpr auto _c2py_doc_member_144 = R"DOC(Whether the spectrum is complex)DOC";
+static PyObject *prop_get_dict_8(PyObject *self, void *) {
+  auto &self_c = *(((c2py::wrap<_c2py_cls_8> *)self)->_c);
   c2py::pydict dic;
   dic["frequency"]   = self_c.frequency;
   dic["weight"]      = self_c.weight;
@@ -1288,24 +1467,24 @@ static PyObject *prop_get_dict_6(PyObject *self, void *) {
 // ----- Member and property table ----
 
 template <>
-constinit PyGetSetDef c2py::tp_getset<_c2py_cls_6>[] = {
-   c2py::getsetdef_from_member<&_c2py_cls_6::frequency, _c2py_cls_6>("frequency", _c2py_doc_member_132),
-   c2py::getsetdef_from_member<&_c2py_cls_6::weight, _c2py_cls_6>("weight", _c2py_doc_member_133),
-   c2py::getsetdef_from_member<&_c2py_cls_6::weight_imag, _c2py_cls_6>("weight_imag", _c2py_doc_member_134),
-   c2py::getsetdef_from_member<&_c2py_cls_6::is_complex, _c2py_cls_6>("is_complex", _c2py_doc_member_135),
-   {"__dict__", (getter)prop_get_dict_6, nullptr, "", nullptr},
+constinit PyGetSetDef c2py::tp_getset<_c2py_cls_8>[] = {
+   c2py::getsetdef_from_member<&_c2py_cls_8::frequency, _c2py_cls_8>("frequency", _c2py_doc_member_141),
+   c2py::getsetdef_from_member<&_c2py_cls_8::weight, _c2py_cls_8>("weight", _c2py_doc_member_142),
+   c2py::getsetdef_from_member<&_c2py_cls_8::weight_imag, _c2py_cls_8>("weight_imag", _c2py_doc_member_143),
+   c2py::getsetdef_from_member<&_c2py_cls_8::is_complex, _c2py_cls_8>("is_complex", _c2py_doc_member_144),
+   {"__dict__", (getter)prop_get_dict_8, nullptr, "", nullptr},
    {nullptr, nullptr, nullptr, nullptr, nullptr}};
 
 template <>
-const std::string c2py::tp_doc<_c2py_cls_6> = R"DOC(Spectral bins (frequency, weight) of one correlator, in file order.
+const std::string c2py::tp_doc<_c2py_cls_8> = R"DOC(Spectral bins (frequency, weight) of one correlator, in file order.
 For a complex spectrum, weight holds the real part and weight_imag the imaginary part of each weight.)DOC"
-   + std::string{"\n\n----------\n\n"} + c2py::tp_ctor_doc<_c2py_cls_6>;
-// --------- class _c2py_cls_7 -----------
-using _c2py_cls_7                                            = nrgljubljana_interface::twist_result_t;
-template <> constexpr bool c2py::is_wrapped<_c2py_cls_7>     = true;
-template <> inline constexpr auto c2py::tp_name<_c2py_cls_7> = "nrgljubljana_interface.solver_core.TwistResultT";
+   + std::string{"\n\n----------\n\n"} + c2py::tp_ctor_doc<_c2py_cls_8>;
+// --------- class _c2py_cls_9 -----------
+using _c2py_cls_9                                            = nrgljubljana_interface::twist_result_t;
+template <> constexpr bool c2py::is_wrapped<_c2py_cls_9>     = true;
+template <> inline constexpr auto c2py::tp_name<_c2py_cls_9> = "nrgljubljana_interface.solver_core.TwistResultT";
 
-static int synth_constructor_7(PyObject *self, PyObject *args, PyObject *kwargs) {
+static int synth_constructor_9(PyObject *self, PyObject *args, PyObject *kwargs) {
   if (args and PyTuple_Check(args) and (PyTuple_Size(args) > 0)) {
     PyErr_SetString(PyExc_RuntimeError,
                     ("Error in constructing nrgljubljana_interface::twist_result_t.\nNo positional arguments allowed. Use keywords arguments"));
@@ -1313,13 +1492,13 @@ static int synth_constructor_7(PyObject *self, PyObject *args, PyObject *kwargs)
   }
   c2py::pydict_extractor de{kwargs};
   try {
-    ((c2py::wrap<_c2py_cls_7> *)self)->_c = new _c2py_cls_7{};
+    ((c2py::wrap<_c2py_cls_9> *)self)->_c = new _c2py_cls_9{};
   } catch (std::exception const &e) {
     PyErr_SetString(PyExc_RuntimeError,
                     ("Error in constructing nrgljubljana_interface::twist_result_t from a Python dict.\n   "s + e.what()).c_str());
     return -1;
   }
-  auto &self_c = *(((c2py::wrap<_c2py_cls_7> *)self)->_c);
+  auto &self_c = *(((c2py::wrap<_c2py_cls_9> *)self)->_c);
   de("z", self_c.z, true);
   de("param", self_c.param, false);
   de("spectra", self_c.spectra, false);
@@ -1328,13 +1507,14 @@ static int synth_constructor_7(PyObject *self, PyObject *args, PyObject *kwargs)
   de("customfdm", self_c.customfdm, false);
   de("tdfdm", self_c.tdfdm, false);
   de("energy_flow", self_c.energy_flow, false);
+  de("chain", self_c.chain, true);
   return de.check();
 }
 
-template <> constexpr initproc c2py::tp_init<_c2py_cls_7> = synth_constructor_7;
+template <> constexpr initproc c2py::tp_init<_c2py_cls_9> = synth_constructor_9;
 
 template <>
-const std::string c2py::tp_ctor_doc<_c2py_cls_7> = c2py::replace_tags(
+const std::string c2py::tp_ctor_doc<_c2py_cls_9> = c2py::replace_tags(
    R"DOC(Synthesized constructor with the following keyword arguments:
 
 Parameters
@@ -1355,30 +1535,34 @@ energy_flow : {par_6}
 
 z : {par_7}, default=1
 
+chain : {par_8}, default={}
+
 )DOC",
    "par",
    {c2py::python_typename<std::string>(), c2py::python_typename<std::map<std::string, nrgljubljana_interface::nrg::spectrum_bins_t>>(),
     c2py::python_typename<nrgljubljana_interface::nrg::step_table_t>(), c2py::python_typename<nrgljubljana_interface::nrg::step_table_t>(),
     c2py::python_typename<std::map<std::string, double>>(), c2py::python_typename<std::map<std::string, double>>(),
-    c2py::python_typename<nrgljubljana_interface::nrg::energy_flow_t>(), c2py::python_typename<double>()});
+    c2py::python_typename<nrgljubljana_interface::nrg::energy_flow_t>(), c2py::python_typename<double>(),
+    c2py::python_typename<nrgljubljana_interface::nrg::chain_coefficients_t>()});
 
 // ----- Method table ----
 template <>
-PyMethodDef c2py::tp_methods<_c2py_cls_7>[] = {
+PyMethodDef c2py::tp_methods<_c2py_cls_9>[] = {
 
    {nullptr, nullptr, 0, nullptr} // Sentinel
 };
 
-constexpr auto _c2py_doc_member_136 = R"DOC(Twist value)DOC";
-constexpr auto _c2py_doc_member_137 = R"DOC(The rendered NRG Ljubljana parameter file)DOC";
-constexpr auto _c2py_doc_member_138 = R"DOC(Spectral bins of each NRG correlator)DOC";
-constexpr auto _c2py_doc_member_139 = R"DOC(Expectation values per NRG step (custom))DOC";
-constexpr auto _c2py_doc_member_140 = R"DOC(Thermodynamics per NRG step (td))DOC";
-constexpr auto _c2py_doc_member_141 = R"DOC(FDM expectation values (customfdm))DOC";
-constexpr auto _c2py_doc_member_142 = R"DOC(FDM thermodynamics (tdfdm))DOC";
-constexpr auto _c2py_doc_member_143 = R"DOC(Lowest levels of each NRG step (empty unless options.energies > 0))DOC";
-static PyObject *prop_get_dict_7(PyObject *self, void *) {
-  auto &self_c = *(((c2py::wrap<_c2py_cls_7> *)self)->_c);
+constexpr auto _c2py_doc_member_145 = R"DOC(Twist value)DOC";
+constexpr auto _c2py_doc_member_146 = R"DOC(The rendered NRG Ljubljana parameter file)DOC";
+constexpr auto _c2py_doc_member_147 = R"DOC(Spectral bins of each NRG correlator)DOC";
+constexpr auto _c2py_doc_member_148 = R"DOC(Expectation values per NRG step (custom))DOC";
+constexpr auto _c2py_doc_member_149 = R"DOC(Thermodynamics per NRG step (td))DOC";
+constexpr auto _c2py_doc_member_150 = R"DOC(FDM expectation values (customfdm))DOC";
+constexpr auto _c2py_doc_member_151 = R"DOC(FDM thermodynamics (tdfdm))DOC";
+constexpr auto _c2py_doc_member_152 = R"DOC(Lowest levels of each NRG step (empty unless options.energies > 0))DOC";
+constexpr auto _c2py_doc_member_153 = R"DOC(The Wilson chain coefficients of the twist (in-process route; empty on the script route))DOC";
+static PyObject *prop_get_dict_9(PyObject *self, void *) {
+  auto &self_c = *(((c2py::wrap<_c2py_cls_9> *)self)->_c);
   c2py::pydict dic;
   dic["z"]           = self_c.z;
   dic["param"]       = self_c.param;
@@ -1388,32 +1572,34 @@ static PyObject *prop_get_dict_7(PyObject *self, void *) {
   dic["customfdm"]   = self_c.customfdm;
   dic["tdfdm"]       = self_c.tdfdm;
   dic["energy_flow"] = self_c.energy_flow;
+  dic["chain"]       = self_c.chain;
   return dic.new_ref();
 }
 
 // ----- Member and property table ----
 
 template <>
-constinit PyGetSetDef c2py::tp_getset<_c2py_cls_7>[] = {
-   c2py::getsetdef_from_member<&_c2py_cls_7::z, _c2py_cls_7>("z", _c2py_doc_member_136),
-   c2py::getsetdef_from_member<&_c2py_cls_7::param, _c2py_cls_7>("param", _c2py_doc_member_137),
-   c2py::getsetdef_from_member<&_c2py_cls_7::spectra, _c2py_cls_7>("spectra", _c2py_doc_member_138),
-   c2py::getsetdef_from_member<&_c2py_cls_7::custom, _c2py_cls_7>("custom", _c2py_doc_member_139),
-   c2py::getsetdef_from_member<&_c2py_cls_7::td, _c2py_cls_7>("td", _c2py_doc_member_140),
-   c2py::getsetdef_from_member<&_c2py_cls_7::customfdm, _c2py_cls_7>("customfdm", _c2py_doc_member_141),
-   c2py::getsetdef_from_member<&_c2py_cls_7::tdfdm, _c2py_cls_7>("tdfdm", _c2py_doc_member_142),
-   c2py::getsetdef_from_member<&_c2py_cls_7::energy_flow, _c2py_cls_7>("energy_flow", _c2py_doc_member_143),
-   {"__dict__", (getter)prop_get_dict_7, nullptr, "", nullptr},
+constinit PyGetSetDef c2py::tp_getset<_c2py_cls_9>[] = {
+   c2py::getsetdef_from_member<&_c2py_cls_9::z, _c2py_cls_9>("z", _c2py_doc_member_145),
+   c2py::getsetdef_from_member<&_c2py_cls_9::param, _c2py_cls_9>("param", _c2py_doc_member_146),
+   c2py::getsetdef_from_member<&_c2py_cls_9::spectra, _c2py_cls_9>("spectra", _c2py_doc_member_147),
+   c2py::getsetdef_from_member<&_c2py_cls_9::custom, _c2py_cls_9>("custom", _c2py_doc_member_148),
+   c2py::getsetdef_from_member<&_c2py_cls_9::td, _c2py_cls_9>("td", _c2py_doc_member_149),
+   c2py::getsetdef_from_member<&_c2py_cls_9::customfdm, _c2py_cls_9>("customfdm", _c2py_doc_member_150),
+   c2py::getsetdef_from_member<&_c2py_cls_9::tdfdm, _c2py_cls_9>("tdfdm", _c2py_doc_member_151),
+   c2py::getsetdef_from_member<&_c2py_cls_9::energy_flow, _c2py_cls_9>("energy_flow", _c2py_doc_member_152),
+   c2py::getsetdef_from_member<&_c2py_cls_9::chain, _c2py_cls_9>("chain", _c2py_doc_member_153),
+   {"__dict__", (getter)prop_get_dict_9, nullptr, "", nullptr},
    {nullptr, nullptr, nullptr, nullptr, nullptr}};
 
 template <>
-const std::string c2py::tp_doc<_c2py_cls_7> = R"DOC(Raw data of one twist)DOC" + std::string{"\n\n----------\n\n"} + c2py::tp_ctor_doc<_c2py_cls_7>;
-// --------- class _c2py_cls_8 -----------
-using _c2py_cls_8                                            = nrgljubljana_interface::result_t;
-template <> constexpr bool c2py::is_wrapped<_c2py_cls_8>     = true;
-template <> inline constexpr auto c2py::tp_name<_c2py_cls_8> = "nrgljubljana_interface.solver_core.ResultT";
+const std::string c2py::tp_doc<_c2py_cls_9> = R"DOC(Raw data of one twist)DOC" + std::string{"\n\n----------\n\n"} + c2py::tp_ctor_doc<_c2py_cls_9>;
+// --------- class _c2py_cls_10 -----------
+using _c2py_cls_10                                            = nrgljubljana_interface::result_t;
+template <> constexpr bool c2py::is_wrapped<_c2py_cls_10>     = true;
+template <> inline constexpr auto c2py::tp_name<_c2py_cls_10> = "nrgljubljana_interface.solver_core.ResultT";
 
-static int synth_constructor_8(PyObject *self, PyObject *args, PyObject *kwargs) {
+static int synth_constructor_10(PyObject *self, PyObject *args, PyObject *kwargs) {
   if (args and PyTuple_Check(args) and (PyTuple_Size(args) > 0)) {
     PyErr_SetString(PyExc_RuntimeError,
                     ("Error in constructing nrgljubljana_interface::result_t.\nNo positional arguments allowed. Use keywords arguments"));
@@ -1421,12 +1607,12 @@ static int synth_constructor_8(PyObject *self, PyObject *args, PyObject *kwargs)
   }
   c2py::pydict_extractor de{kwargs};
   try {
-    ((c2py::wrap<_c2py_cls_8> *)self)->_c = new _c2py_cls_8{};
+    ((c2py::wrap<_c2py_cls_10> *)self)->_c = new _c2py_cls_10{};
   } catch (std::exception const &e) {
     PyErr_SetString(PyExc_RuntimeError, ("Error in constructing nrgljubljana_interface::result_t from a Python dict.\n   "s + e.what()).c_str());
     return -1;
   }
-  auto &self_c = *(((c2py::wrap<_c2py_cls_8> *)self)->_c);
+  auto &self_c = *(((c2py::wrap<_c2py_cls_10> *)self)->_c);
   de("options", self_c.options, false);
   de("solve_params", self_c.solve_params, false);
   de("nrg_params", self_c.nrg_params, false);
@@ -1439,16 +1625,18 @@ static int synth_constructor_8(PyObject *self, PyObject *args, PyObject *kwargs)
   de("z", self_c.z, false);
   de("complete_z_average", self_c.complete_z_average, true);
   de("twists", self_c.twists, false);
+  de("Gamma_projected_points", self_c.Gamma_projected_points, true);
+  de("Gamma_largest_violation", self_c.Gamma_largest_violation, true);
   de("expv", self_c.expv, false);
   de("tdfdm", self_c.tdfdm, false);
   de("processed", self_c.processed, false);
   return de.check();
 }
 
-template <> constexpr initproc c2py::tp_init<_c2py_cls_8> = synth_constructor_8;
+template <> constexpr initproc c2py::tp_init<_c2py_cls_10> = synth_constructor_10;
 
 template <>
-const std::string c2py::tp_ctor_doc<_c2py_cls_8> = c2py::replace_tags(
+const std::string c2py::tp_ctor_doc<_c2py_cls_10> = c2py::replace_tags(
    R"DOC(Synthesized constructor with the following keyword arguments:
 
 Parameters
@@ -1483,6 +1671,10 @@ processed : {par_13}
 
 complete_z_average : {par_14}, default=false
 
+Gamma_projected_points : {par_15}, default=0
+
+Gamma_largest_violation : {par_16}, default=0
+
 )DOC",
    "par",
    {c2py::python_typename<nrgljubljana_interface::options_t>(), c2py::python_typename<nrgljubljana_interface::solve_params_t>(),
@@ -1491,10 +1683,10 @@ complete_z_average : {par_14}, default=false
     c2py::python_typename<triqs::mesh::refreq_log>(), c2py::python_typename<std::vector<double>>(),
     c2py::python_typename<std::vector<nrgljubljana_interface::twist_result_t>>(), c2py::python_typename<std::map<std::string, double>>(),
     c2py::python_typename<std::map<std::string, double>>(), c2py::python_typename<std::map<std::string, nrgljubljana_interface::g_w_t>>(),
-    c2py::python_typename<bool>()});
+    c2py::python_typename<bool>(), c2py::python_typename<long>(), c2py::python_typename<double>()});
 // without_bins
 static auto const _c2py_fun_1 =
-   c2py::dispatcher_f_kw_t{c2py::cmethod([](_c2py_cls_8 const &self) -> decltype(auto) { return self.without_bins(); }, "self")};
+   c2py::dispatcher_f_kw_t{c2py::cmethod([](_c2py_cls_10 const &self) -> decltype(auto) { return self.without_bins(); }, "self")};
 
 static const auto _c2py_doc_1 = _c2py_fun_1.doc(R"DOC(
 A copy without the raw spectral bins: smaller in HDF5, but cannot be broadened again
@@ -1502,82 +1694,89 @@ A copy without the raw spectral bins: smaller in HDF5, but cannot be broadened a
 
 // ----- Method table ----
 template <>
-PyMethodDef c2py::tp_methods<_c2py_cls_8>[] = {
+PyMethodDef c2py::tp_methods<_c2py_cls_10>[] = {
    {"without_bins", (PyCFunction)c2py::pyfkw<_c2py_fun_1>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_1.c_str()},
-   {"__write_hdf5__", c2py::tpxx_write_h5<_c2py_cls_8>, METH_VARARGS, "  "},
-   {"__getstate__", c2py::getstate_h5<_c2py_cls_8>, METH_NOARGS, ""},
-   {"__setstate__", c2py::setstate_h5<_c2py_cls_8>, METH_O, ""},
+   {"__write_hdf5__", c2py::tpxx_write_h5<_c2py_cls_10>, METH_VARARGS, "  "},
+   {"__getstate__", c2py::getstate_h5<_c2py_cls_10>, METH_NOARGS, ""},
+   {"__setstate__", c2py::setstate_h5<_c2py_cls_10>, METH_O, ""},
    {nullptr, nullptr, 0, nullptr} // Sentinel
 };
 
-constexpr auto _c2py_doc_member_144 = R"DOC(Options of the solve)DOC";
-constexpr auto _c2py_doc_member_145 = R"DOC(Solve parameters, as given)DOC";
-constexpr auto _c2py_doc_member_146 = R"DOC(NRG parameters, as given (the values used for each twist are in its parameter file))DOC";
-constexpr auto _c2py_doc_member_147 = R"DOC(Model (template))DOC";
-constexpr auto _c2py_doc_member_148 = R"DOC(Symmetry type (template))DOC";
-constexpr auto _c2py_doc_member_149 = R"DOC(The manifest text of the template)DOC";
-constexpr auto _c2py_doc_member_150 = R"DOC(Spectrum list of each NRG correlator: s, t, o, d or q)DOC";
-constexpr auto _c2py_doc_member_151 = R"DOC(NRG Ljubljana source revision)DOC";
-constexpr auto _c2py_doc_member_152 = R"DOC(The solver mesh: of processed, and the default of broaden)DOC";
-constexpr auto _c2py_doc_member_153 = R"DOC(Twist values solved)DOC";
-constexpr auto _c2py_doc_member_154 = R"DOC(Whether z is the full set i/Nz)DOC";
-constexpr auto _c2py_doc_member_155 = R"DOC(Raw data of each twist)DOC";
-constexpr auto _c2py_doc_member_156 = R"DOC(FDM expectation values, averaged over the twists)DOC";
-constexpr auto _c2py_doc_member_157 = R"DOC(FDM thermodynamics, averaged over the twists)DOC";
-constexpr auto _c2py_doc_member_158 = R"DOC(Green's function of each broadened correlator (and Sigma, SigmaHartree) on the solver mesh)DOC";
-static PyObject *prop_get_dict_8(PyObject *self, void *) {
-  auto &self_c = *(((c2py::wrap<_c2py_cls_8> *)self)->_c);
+constexpr auto _c2py_doc_member_154 = R"DOC(Options of the solve)DOC";
+constexpr auto _c2py_doc_member_155 = R"DOC(Solve parameters, as given)DOC";
+constexpr auto _c2py_doc_member_156 = R"DOC(NRG parameters, as given (the values used for each twist are in its parameter file))DOC";
+constexpr auto _c2py_doc_member_157 = R"DOC(Model (template))DOC";
+constexpr auto _c2py_doc_member_158 = R"DOC(Symmetry type (template))DOC";
+constexpr auto _c2py_doc_member_159 = R"DOC(The manifest text of the template)DOC";
+constexpr auto _c2py_doc_member_160 = R"DOC(Spectrum list of each NRG correlator: s, t, o, d or q)DOC";
+constexpr auto _c2py_doc_member_161 = R"DOC(NRG Ljubljana source revision)DOC";
+constexpr auto _c2py_doc_member_162 = R"DOC(The solver mesh: of processed, and the default of broaden)DOC";
+constexpr auto _c2py_doc_member_163 = R"DOC(Twist values solved)DOC";
+constexpr auto _c2py_doc_member_164 = R"DOC(Whether z is the full set i/Nz)DOC";
+constexpr auto _c2py_doc_member_165 = R"DOC(Raw data of each twist)DOC";
+constexpr auto _c2py_doc_member_166 = R"DOC(The points (block, frequency) at which an eigenvalue of Γ was raised to the floor, and the largest amount
+(in-process route; 0 on the script route))DOC";
+constexpr auto _c2py_doc_member_167 = R"DOC()DOC";
+constexpr auto _c2py_doc_member_168 = R"DOC(FDM expectation values, averaged over the twists)DOC";
+constexpr auto _c2py_doc_member_169 = R"DOC(FDM thermodynamics, averaged over the twists)DOC";
+constexpr auto _c2py_doc_member_170 = R"DOC(Green's function of each broadened correlator (and Sigma, SigmaHartree) on the solver mesh)DOC";
+static PyObject *prop_get_dict_10(PyObject *self, void *) {
+  auto &self_c = *(((c2py::wrap<_c2py_cls_10> *)self)->_c);
   c2py::pydict dic;
-  dic["options"]            = self_c.options;
-  dic["solve_params"]       = self_c.solve_params;
-  dic["nrg_params"]         = self_c.nrg_params;
-  dic["model"]              = self_c.model;
-  dic["symtype"]            = self_c.symtype;
-  dic["manifest"]           = self_c.manifest;
-  dic["correlator_type"]    = self_c.correlator_type;
-  dic["nrg_revision"]       = self_c.nrg_revision;
-  dic["mesh"]               = self_c.mesh;
-  dic["z"]                  = self_c.z;
-  dic["complete_z_average"] = self_c.complete_z_average;
-  dic["twists"]             = self_c.twists;
-  dic["expv"]               = self_c.expv;
-  dic["tdfdm"]              = self_c.tdfdm;
-  dic["processed"]          = self_c.processed;
+  dic["options"]                 = self_c.options;
+  dic["solve_params"]            = self_c.solve_params;
+  dic["nrg_params"]              = self_c.nrg_params;
+  dic["model"]                   = self_c.model;
+  dic["symtype"]                 = self_c.symtype;
+  dic["manifest"]                = self_c.manifest;
+  dic["correlator_type"]         = self_c.correlator_type;
+  dic["nrg_revision"]            = self_c.nrg_revision;
+  dic["mesh"]                    = self_c.mesh;
+  dic["z"]                       = self_c.z;
+  dic["complete_z_average"]      = self_c.complete_z_average;
+  dic["twists"]                  = self_c.twists;
+  dic["Gamma_projected_points"]  = self_c.Gamma_projected_points;
+  dic["Gamma_largest_violation"] = self_c.Gamma_largest_violation;
+  dic["expv"]                    = self_c.expv;
+  dic["tdfdm"]                   = self_c.tdfdm;
+  dic["processed"]               = self_c.processed;
   return dic.new_ref();
 }
 
 // ----- Member and property table ----
 
 template <>
-constinit PyGetSetDef c2py::tp_getset<_c2py_cls_8>[] = {
-   c2py::getsetdef_from_member<&_c2py_cls_8::options, _c2py_cls_8>("options", _c2py_doc_member_144),
-   c2py::getsetdef_from_member<&_c2py_cls_8::solve_params, _c2py_cls_8>("solve_params", _c2py_doc_member_145),
-   c2py::getsetdef_from_member<&_c2py_cls_8::nrg_params, _c2py_cls_8>("nrg_params", _c2py_doc_member_146),
-   c2py::getsetdef_from_member<&_c2py_cls_8::model, _c2py_cls_8>("model", _c2py_doc_member_147),
-   c2py::getsetdef_from_member<&_c2py_cls_8::symtype, _c2py_cls_8>("symtype", _c2py_doc_member_148),
-   c2py::getsetdef_from_member<&_c2py_cls_8::manifest, _c2py_cls_8>("manifest", _c2py_doc_member_149),
-   c2py::getsetdef_from_member<&_c2py_cls_8::correlator_type, _c2py_cls_8>("correlator_type", _c2py_doc_member_150),
-   c2py::getsetdef_from_member<&_c2py_cls_8::nrg_revision, _c2py_cls_8>("nrg_revision", _c2py_doc_member_151),
-   c2py::getsetdef_from_member<&_c2py_cls_8::mesh, _c2py_cls_8>("mesh", _c2py_doc_member_152),
-   c2py::getsetdef_from_member<&_c2py_cls_8::z, _c2py_cls_8>("z", _c2py_doc_member_153),
-   c2py::getsetdef_from_member<&_c2py_cls_8::complete_z_average, _c2py_cls_8>("complete_z_average", _c2py_doc_member_154),
-   c2py::getsetdef_from_member<&_c2py_cls_8::twists, _c2py_cls_8>("twists", _c2py_doc_member_155),
-   c2py::getsetdef_from_member<&_c2py_cls_8::expv, _c2py_cls_8>("expv", _c2py_doc_member_156),
-   c2py::getsetdef_from_member<&_c2py_cls_8::tdfdm, _c2py_cls_8>("tdfdm", _c2py_doc_member_157),
-   c2py::getsetdef_from_member<&_c2py_cls_8::processed, _c2py_cls_8>("processed", _c2py_doc_member_158),
-   {"__dict__", (getter)prop_get_dict_8, nullptr, "", nullptr},
+constinit PyGetSetDef c2py::tp_getset<_c2py_cls_10>[] = {
+   c2py::getsetdef_from_member<&_c2py_cls_10::options, _c2py_cls_10>("options", _c2py_doc_member_154),
+   c2py::getsetdef_from_member<&_c2py_cls_10::solve_params, _c2py_cls_10>("solve_params", _c2py_doc_member_155),
+   c2py::getsetdef_from_member<&_c2py_cls_10::nrg_params, _c2py_cls_10>("nrg_params", _c2py_doc_member_156),
+   c2py::getsetdef_from_member<&_c2py_cls_10::model, _c2py_cls_10>("model", _c2py_doc_member_157),
+   c2py::getsetdef_from_member<&_c2py_cls_10::symtype, _c2py_cls_10>("symtype", _c2py_doc_member_158),
+   c2py::getsetdef_from_member<&_c2py_cls_10::manifest, _c2py_cls_10>("manifest", _c2py_doc_member_159),
+   c2py::getsetdef_from_member<&_c2py_cls_10::correlator_type, _c2py_cls_10>("correlator_type", _c2py_doc_member_160),
+   c2py::getsetdef_from_member<&_c2py_cls_10::nrg_revision, _c2py_cls_10>("nrg_revision", _c2py_doc_member_161),
+   c2py::getsetdef_from_member<&_c2py_cls_10::mesh, _c2py_cls_10>("mesh", _c2py_doc_member_162),
+   c2py::getsetdef_from_member<&_c2py_cls_10::z, _c2py_cls_10>("z", _c2py_doc_member_163),
+   c2py::getsetdef_from_member<&_c2py_cls_10::complete_z_average, _c2py_cls_10>("complete_z_average", _c2py_doc_member_164),
+   c2py::getsetdef_from_member<&_c2py_cls_10::twists, _c2py_cls_10>("twists", _c2py_doc_member_165),
+   c2py::getsetdef_from_member<&_c2py_cls_10::Gamma_projected_points, _c2py_cls_10>("Gamma_projected_points", _c2py_doc_member_166),
+   c2py::getsetdef_from_member<&_c2py_cls_10::Gamma_largest_violation, _c2py_cls_10>("Gamma_largest_violation", _c2py_doc_member_167),
+   c2py::getsetdef_from_member<&_c2py_cls_10::expv, _c2py_cls_10>("expv", _c2py_doc_member_168),
+   c2py::getsetdef_from_member<&_c2py_cls_10::tdfdm, _c2py_cls_10>("tdfdm", _c2py_doc_member_169),
+   c2py::getsetdef_from_member<&_c2py_cls_10::processed, _c2py_cls_10>("processed", _c2py_doc_member_170),
+   {"__dict__", (getter)prop_get_dict_10, nullptr, "", nullptr},
    {nullptr, nullptr, nullptr, nullptr, nullptr}};
 
 template <>
-const std::string c2py::tp_doc<_c2py_cls_8> =
+const std::string c2py::tp_doc<_c2py_cls_10> =
    R"DOC(The result of a solve: what was solved, the raw data of each twist, their averages and the Green's functions)DOC"
-   + std::string{"\n\n----------\n\n"} + c2py::tp_ctor_doc<_c2py_cls_8>;
-// --------- class _c2py_cls_9 -----------
-using _c2py_cls_9                                            = nrgljubljana_interface::broadening_params_t;
-template <> constexpr bool c2py::is_wrapped<_c2py_cls_9>     = true;
-template <> inline constexpr auto c2py::tp_name<_c2py_cls_9> = "nrgljubljana_interface.solver_core.BroadeningParamsT";
+   + std::string{"\n\n----------\n\n"} + c2py::tp_ctor_doc<_c2py_cls_10>;
+// --------- class _c2py_cls_11 -----------
+using _c2py_cls_11                                            = nrgljubljana_interface::broadening_params_t;
+template <> constexpr bool c2py::is_wrapped<_c2py_cls_11>     = true;
+template <> inline constexpr auto c2py::tp_name<_c2py_cls_11> = "nrgljubljana_interface.solver_core.BroadeningParamsT";
 
-static int synth_constructor_9(PyObject *self, PyObject *args, PyObject *kwargs) {
+static int synth_constructor_11(PyObject *self, PyObject *args, PyObject *kwargs) {
   if (args and PyTuple_Check(args) and (PyTuple_Size(args) > 0)) {
     PyErr_SetString(PyExc_RuntimeError,
                     ("Error in constructing nrgljubljana_interface::broadening_params_t.\nNo positional arguments allowed. Use keywords arguments"));
@@ -1585,23 +1784,23 @@ static int synth_constructor_9(PyObject *self, PyObject *args, PyObject *kwargs)
   }
   c2py::pydict_extractor de{kwargs};
   try {
-    ((c2py::wrap<_c2py_cls_9> *)self)->_c = new _c2py_cls_9{};
+    ((c2py::wrap<_c2py_cls_11> *)self)->_c = new _c2py_cls_11{};
   } catch (std::exception const &e) {
     PyErr_SetString(PyExc_RuntimeError,
                     ("Error in constructing nrgljubljana_interface::broadening_params_t from a Python dict.\n   "s + e.what()).c_str());
     return -1;
   }
-  auto &self_c = *(((c2py::wrap<_c2py_cls_9> *)self)->_c);
+  auto &self_c = *(((c2py::wrap<_c2py_cls_11> *)self)->_c);
   de("alpha", self_c.alpha, true);
   de("gamma", self_c.gamma, true);
   de("omega0_ratio", self_c.omega0_ratio, true);
   return de.check();
 }
 
-template <> constexpr initproc c2py::tp_init<_c2py_cls_9> = synth_constructor_9;
+template <> constexpr initproc c2py::tp_init<_c2py_cls_11> = synth_constructor_11;
 
 template <>
-const std::string c2py::tp_ctor_doc<_c2py_cls_9> = c2py::replace_tags(
+const std::string c2py::tp_ctor_doc<_c2py_cls_11> = c2py::replace_tags(
    R"DOC(Synthesized constructor with the following keyword arguments:
 
 Parameters
@@ -1617,16 +1816,16 @@ omega0_ratio : {par_2}, default=1e-9
 
 // ----- Method table ----
 template <>
-PyMethodDef c2py::tp_methods<_c2py_cls_9>[] = {
+PyMethodDef c2py::tp_methods<_c2py_cls_11>[] = {
 
    {nullptr, nullptr, 0, nullptr} // Sentinel
 };
 
-constexpr auto _c2py_doc_member_159 = R"DOC(Width of the log-Gaussian kernel; unset: alpha of the solve)DOC";
-constexpr auto _c2py_doc_member_160 = R"DOC(Width of the final derivative-of-Fermi pass, in units of T; unset: gamma of the solve)DOC";
-constexpr auto _c2py_doc_member_161 = R"DOC(omega0 = omega0_ratio * T)DOC";
-static PyObject *prop_get_dict_9(PyObject *self, void *) {
-  auto &self_c = *(((c2py::wrap<_c2py_cls_9> *)self)->_c);
+constexpr auto _c2py_doc_member_171 = R"DOC(Width of the log-Gaussian kernel; unset: alpha of the solve)DOC";
+constexpr auto _c2py_doc_member_172 = R"DOC(Width of the final derivative-of-Fermi pass, in units of T; unset: gamma of the solve)DOC";
+constexpr auto _c2py_doc_member_173 = R"DOC(omega0 = omega0_ratio * T)DOC";
+static PyObject *prop_get_dict_11(PyObject *self, void *) {
+  auto &self_c = *(((c2py::wrap<_c2py_cls_11> *)self)->_c);
   c2py::pydict dic;
   dic["alpha"]        = self_c.alpha;
   dic["gamma"]        = self_c.gamma;
@@ -1637,25 +1836,25 @@ static PyObject *prop_get_dict_9(PyObject *self, void *) {
 // ----- Member and property table ----
 
 template <>
-constinit PyGetSetDef c2py::tp_getset<_c2py_cls_9>[] = {
-   c2py::getsetdef_from_member<&_c2py_cls_9::alpha, _c2py_cls_9>("alpha", _c2py_doc_member_159),
-   c2py::getsetdef_from_member<&_c2py_cls_9::gamma, _c2py_cls_9>("gamma", _c2py_doc_member_160),
-   c2py::getsetdef_from_member<&_c2py_cls_9::omega0_ratio, _c2py_cls_9>("omega0_ratio", _c2py_doc_member_161),
-   {"__dict__", (getter)prop_get_dict_9, nullptr, "", nullptr},
+constinit PyGetSetDef c2py::tp_getset<_c2py_cls_11>[] = {
+   c2py::getsetdef_from_member<&_c2py_cls_11::alpha, _c2py_cls_11>("alpha", _c2py_doc_member_171),
+   c2py::getsetdef_from_member<&_c2py_cls_11::gamma, _c2py_cls_11>("gamma", _c2py_doc_member_172),
+   c2py::getsetdef_from_member<&_c2py_cls_11::omega0_ratio, _c2py_cls_11>("omega0_ratio", _c2py_doc_member_173),
+   {"__dict__", (getter)prop_get_dict_11, nullptr, "", nullptr},
    {nullptr, nullptr, nullptr, nullptr, nullptr}};
 
 template <>
-const std::string c2py::tp_doc<_c2py_cls_9> =
-   R"DOC(Parameters of a broadening of stored bins; T is that of the solve)DOC" + std::string{"\n\n----------\n\n"} + c2py::tp_ctor_doc<_c2py_cls_9>;
-// --------- class _c2py_cls_10 -----------
-using _c2py_cls_10                                            = nrgljubljana_interface::solver_core;
-template <> constexpr bool c2py::is_wrapped<_c2py_cls_10>     = true;
-template <> inline constexpr auto c2py::tp_name<_c2py_cls_10> = "nrgljubljana_interface.solver_core.SolverCore";
+const std::string c2py::tp_doc<_c2py_cls_11> =
+   R"DOC(Parameters of a broadening of stored bins; T is that of the solve)DOC" + std::string{"\n\n----------\n\n"} + c2py::tp_ctor_doc<_c2py_cls_11>;
+// --------- class _c2py_cls_12 -----------
+using _c2py_cls_12                                            = nrgljubljana_interface::solver_core;
+template <> constexpr bool c2py::is_wrapped<_c2py_cls_12>     = true;
+template <> inline constexpr auto c2py::tp_name<_c2py_cls_12> = "nrgljubljana_interface.solver_core.SolverCore";
 static const auto _c2py_init_0 =
-   c2py::dispatcher_c_kw_t{c2py::c_constructor<_c2py_cls_10, nrgljubljana_interface::constr_params_t, bool>("cp", "mpi"_a = true)};
-template <> constexpr initproc c2py::tp_init<_c2py_cls_10> = c2py::pyfkw_constructor<_c2py_init_0>;
+   c2py::dispatcher_c_kw_t{c2py::c_constructor<_c2py_cls_12, nrgljubljana_interface::constr_params_t, bool>("cp", "mpi"_a = true)};
+template <> constexpr initproc c2py::tp_init<_c2py_cls_12> = c2py::pyfkw_constructor<_c2py_init_0>;
 template <>
-const std::string c2py::tp_ctor_doc<_c2py_cls_10> =
+const std::string c2py::tp_ctor_doc<_c2py_cls_12> =
    _c2py_init_0.doc(R"DOC(
 Construct an NRGLjubljana_interface solver.
 
@@ -1669,71 +1868,81 @@ mpi : {par_1}
 )DOC",
                     {{c2py::python_typename<nrgljubljana_interface::constr_params_t>()}, {c2py::python_typename<bool>()}});
 // be_quiet
-static auto const _c2py_fun_2 = c2py::dispatcher_f_kw_t{c2py::cmethod([](_c2py_cls_10 &self) -> decltype(auto) { return self.be_quiet(); }, "self")};
+static auto const _c2py_fun_2 = c2py::dispatcher_f_kw_t{c2py::cmethod([](_c2py_cls_12 &self) -> decltype(auto) { return self.be_quiet(); }, "self")};
 
 // broaden
 static auto const _c2py_fun_3 = c2py::dispatcher_f_kw_t{
-   c2py::cmethod([](_c2py_cls_10 &self, const std::string &correlator,
+   c2py::cmethod([](_c2py_cls_12 &self, const std::string &correlator,
                     const nrgljubljana_interface::broadening_params_t &b) -> decltype(auto) { return self.broaden(correlator, b); },
                  "self", "correlator", "b"_a = nrgljubljana_interface::broadening_params_t{})};
 
 // check_model_params
 static auto const _c2py_fun_4 = c2py::dispatcher_f_kw_t{c2py::cmethod(
-   [](_c2py_cls_10 &self, const nrgljubljana_interface::solve_params_t &sp) -> decltype(auto) { return self.check_model_params(sp); }, "self", "sp")};
+   [](_c2py_cls_12 &self, const nrgljubljana_interface::solve_params_t &sp) -> decltype(auto) { return self.check_model_params(sp); }, "self", "sp")};
 
 // create_tempdir
 static auto const _c2py_fun_5 = c2py::dispatcher_f_kw_t{c2py::cmethod(
-   [](_c2py_cls_10 &self, const std::string &tempdir_) -> decltype(auto) { return self.create_tempdir(tempdir_); }, "self", "tempdir_")};
+   [](_c2py_cls_12 &self, const std::string &tempdir_) -> decltype(auto) { return self.create_tempdir(tempdir_); }, "self", "tempdir_")};
 
 // generate_param_file
 static auto const _c2py_fun_6 =
-   c2py::dispatcher_f_kw_t{c2py::cmethod([](_c2py_cls_10 &self, double z) -> decltype(auto) { return self.generate_param_file(z); }, "self", "z")};
+   c2py::dispatcher_f_kw_t{c2py::cmethod([](_c2py_cls_12 &self, double z) -> decltype(auto) { return self.generate_param_file(z); }, "self", "z")};
 
 // instantiate
 static auto const _c2py_fun_7 = c2py::dispatcher_f_kw_t{c2py::cmethod(
-   [](_c2py_cls_10 &self, double z, const std::string &taskdir) -> decltype(auto) { return self.instantiate(z, taskdir); }, "self", "z", "taskdir")};
+   [](_c2py_cls_12 &self, double z, const std::string &taskdir) -> decltype(auto) { return self.instantiate(z, taskdir); }, "self", "z", "taskdir")};
 
 // last_result
 static auto const _c2py_fun_8 =
-   c2py::dispatcher_f_kw_t{c2py::cmethod([](_c2py_cls_10 const &self) -> decltype(auto) { return self.last_result_copy(); }, "self")};
+   c2py::dispatcher_f_kw_t{c2py::cmethod([](_c2py_cls_12 const &self) -> decltype(auto) { return self.last_result_copy(); }, "self")};
+
+// param_text
+static auto const _c2py_fun_9 =
+   c2py::dispatcher_f_kw_t{c2py::cmethod([](_c2py_cls_12 &self, double z) -> decltype(auto) { return self.param_text(z); }, "self", "z")};
 
 // readexpv
-static auto const _c2py_fun_9 =
-   c2py::dispatcher_f_kw_t{c2py::cmethod([](_c2py_cls_10 &self, int Nz) -> decltype(auto) { return self.readexpv(Nz); }, "self", "Nz")};
+static auto const _c2py_fun_10 =
+   c2py::dispatcher_f_kw_t{c2py::cmethod([](_c2py_cls_12 &self, int Nz) -> decltype(auto) { return self.readexpv(Nz); }, "self", "Nz")};
 
 // readtdfdm
-static auto const _c2py_fun_10 =
-   c2py::dispatcher_f_kw_t{c2py::cmethod([](_c2py_cls_10 &self, int Nz) -> decltype(auto) { return self.readtdfdm(Nz); }, "self", "Nz")};
+static auto const _c2py_fun_11 =
+   c2py::dispatcher_f_kw_t{c2py::cmethod([](_c2py_cls_12 &self, int Nz) -> decltype(auto) { return self.readtdfdm(Nz); }, "self", "Nz")};
 
 // set_nrg_params
-static auto const _c2py_fun_11 = c2py::dispatcher_f_kw_t{c2py::cmethod(
-   [](_c2py_cls_10 &self, const nrgljubljana_interface::nrg_params_t &nrg_params) -> decltype(auto) { return self.set_nrg_params(nrg_params); },
+static auto const _c2py_fun_12 = c2py::dispatcher_f_kw_t{c2py::cmethod(
+   [](_c2py_cls_12 &self, const nrgljubljana_interface::nrg_params_t &nrg_params) -> decltype(auto) { return self.set_nrg_params(nrg_params); },
    "self", "nrg_params")};
 
 // set_params
-static auto const _c2py_fun_12 =
-   c2py::dispatcher_f_kw_t{c2py::cmethod([](_c2py_cls_10 &self) -> decltype(auto) { return self.set_params(); }, "self")};
+static auto const _c2py_fun_13 =
+   c2py::dispatcher_f_kw_t{c2py::cmethod([](_c2py_cls_12 &self) -> decltype(auto) { return self.set_params(); }, "self")};
 
 // set_verbosity
-static auto const _c2py_fun_13 =
-   c2py::dispatcher_f_kw_t{c2py::cmethod([](_c2py_cls_10 &self, bool v) -> decltype(auto) { return self.set_verbosity(v); }, "self", "v")};
+static auto const _c2py_fun_14 =
+   c2py::dispatcher_f_kw_t{c2py::cmethod([](_c2py_cls_12 &self, bool v) -> decltype(auto) { return self.set_verbosity(v); }, "self", "v")};
 
 // solve
-static auto const _c2py_fun_14 = c2py::dispatcher_f_kw_t{
+static auto const _c2py_fun_15 = c2py::dispatcher_f_kw_t{
    c2py::cmethod(
-      [](_c2py_cls_10 &self, const nrgljubljana_interface::solve_params_t &solve_params) -> decltype(auto) { return self.solve(solve_params); },
+      [](_c2py_cls_12 &self, const nrgljubljana_interface::solve_params_t &solve_params) -> decltype(auto) { return self.solve(solve_params); },
       "self", "solve_params"),
-   c2py::cmethod([](_c2py_cls_10 &self, const nrgljubljana_interface::solve_params_t &solve_params,
+   c2py::cmethod([](_c2py_cls_12 &self, const nrgljubljana_interface::solve_params_t &solve_params,
                     const nrgljubljana_interface::options_t &options) -> decltype(auto) { return self.solve(solve_params, options); },
                  "self", "solve_params", "options")};
 
+// solve_library
+static auto const _c2py_fun_16 = c2py::dispatcher_f_kw_t{
+   c2py::cmethod([](_c2py_cls_12 &self, const std::vector<double> &z, const std::string &work, const std::map<std::string, std::string> &spectra,
+                    nrgljubljana_interface::result_t &r) -> decltype(auto) { return self.solve_library(z, work, spectra, r); },
+                 "self", "z", "work", "spectra", "r")};
+
 // solve_one
-static auto const _c2py_fun_15 = c2py::dispatcher_f_kw_t{
-   c2py::cmethod([](_c2py_cls_10 &self, const std::string &taskdir) -> decltype(auto) { return self.solve_one(taskdir); }, "self", "taskdir")};
+static auto const _c2py_fun_17 = c2py::dispatcher_f_kw_t{
+   c2py::cmethod([](_c2py_cls_12 &self, const std::string &taskdir) -> decltype(auto) { return self.solve_one(taskdir); }, "self", "taskdir")};
 
 // write_gamma
-static auto const _c2py_fun_16 =
-   c2py::dispatcher_f_kw_t{c2py::cmethod([](_c2py_cls_10 &self) -> decltype(auto) { return self.write_gamma(); }, "self")};
+static auto const _c2py_fun_18 =
+   c2py::dispatcher_f_kw_t{c2py::cmethod([](_c2py_cls_12 &self) -> decltype(auto) { return self.write_gamma(); }, "self")};
 
 static const auto _c2py_doc_2 = _c2py_fun_2.doc(R"DOC(
 Suppress verbose output from the NRG solver.
@@ -1807,17 +2016,9 @@ taskdir : {par_1}
 static const auto _c2py_doc_8  = _c2py_fun_8.doc(R"DOC(
 The result of the last solve (a copy); None before the first solve
 )DOC");
-static const auto _c2py_doc_9  = _c2py_fun_9.doc(R"DOC(
-Read expectation values from the NRG output files.
-
-Parameters
-----------
-Nz : {par_0}
-   Number of discretization twists.
-)DOC",
-                                                 {{c2py::python_typename<int>()}});
+static const auto _c2py_doc_9  = _c2py_fun_9.doc(R"DOC()DOC");
 static const auto _c2py_doc_10 = _c2py_fun_10.doc(R"DOC(
-Read thermodynamic variables (FDM algorithm) from the NRG output files.
+Read expectation values from the NRG output files.
 
 Parameters
 ----------
@@ -1826,6 +2027,15 @@ Nz : {par_0}
 )DOC",
                                                   {{c2py::python_typename<int>()}});
 static const auto _c2py_doc_11 = _c2py_fun_11.doc(R"DOC(
+Read thermodynamic variables (FDM algorithm) from the NRG output files.
+
+Parameters
+----------
+Nz : {par_0}
+   Number of discretization twists.
+)DOC",
+                                                  {{c2py::python_typename<int>()}});
+static const auto _c2py_doc_12 = _c2py_fun_12.doc(R"DOC(
 Adjust the advanced (low-level) NRG parameters.
 
 Parameters
@@ -1834,10 +2044,10 @@ nrg_params : {par_0}
    Low-level NRG parameters.
 )DOC",
                                                   {{c2py::python_typename<const nrgljubljana_interface::nrg_params_t &>()}});
-static const auto _c2py_doc_12 = _c2py_fun_12.doc(R"DOC(
+static const auto _c2py_doc_13 = _c2py_fun_13.doc(R"DOC(
 Establish good defaults for the low-level NRG parameters.
 )DOC");
-static const auto _c2py_doc_13 = _c2py_fun_13.doc(R"DOC(
+static const auto _c2py_doc_14 = _c2py_fun_14.doc(R"DOC(
 Set the verbosity (see also ``be_quiet()``).
 
 Parameters
@@ -1846,7 +2056,7 @@ v : {par_0}
    If true, enable verbose output.
 )DOC",
                                                   {{c2py::python_typename<bool>()}});
-static const auto _c2py_doc_14 = _c2py_fun_14.doc(
+static const auto _c2py_doc_15 = _c2py_fun_15.doc(
    R"DOC(
 [1] Solve the impurity problem.
 
@@ -1871,7 +2081,8 @@ options : {par_1}
    What to compute and return.
 )DOC",
    {{c2py::python_typename<const nrgljubljana_interface::solve_params_t &>()}, {c2py::python_typename<const nrgljubljana_interface::options_t &>()}});
-static const auto _c2py_doc_15 = _c2py_fun_15.doc(R"DOC(
+static const auto _c2py_doc_16 = _c2py_fun_16.doc(R"DOC()DOC");
+static const auto _c2py_doc_17 = _c2py_fun_17.doc(R"DOC(
 Perform an individual NRG calculation. Called from ``solve()``.
 
 Parameters
@@ -1880,13 +2091,13 @@ taskdir : {par_0}
    Directory containing the prepared calculation.
 )DOC",
                                                   {{c2py::python_typename<const std::string &>()}});
-static const auto _c2py_doc_16 = _c2py_fun_16.doc(R"DOC(
+static const auto _c2py_doc_18 = _c2py_fun_18.doc(R"DOC(
 Write :math:`\Gamma = -\mathrm{Im}\,\Delta(\omega)` to a file.
 )DOC");
 
 // ----- Method table ----
 template <>
-PyMethodDef c2py::tp_methods<_c2py_cls_10>[] = {
+PyMethodDef c2py::tp_methods<_c2py_cls_12>[] = {
    {"be_quiet", (PyCFunction)c2py::pyfkw<_c2py_fun_2>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_2.c_str()},
    {"broaden", (PyCFunction)c2py::pyfkw<_c2py_fun_3>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_3.c_str()},
    {"check_model_params", (PyCFunction)c2py::pyfkw<_c2py_fun_4>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_4.c_str()},
@@ -1894,104 +2105,106 @@ PyMethodDef c2py::tp_methods<_c2py_cls_10>[] = {
    {"generate_param_file", (PyCFunction)c2py::pyfkw<_c2py_fun_6>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_6.c_str()},
    {"instantiate", (PyCFunction)c2py::pyfkw<_c2py_fun_7>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_7.c_str()},
    {"last_result", (PyCFunction)c2py::pyfkw<_c2py_fun_8>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_8.c_str()},
-   {"readexpv", (PyCFunction)c2py::pyfkw<_c2py_fun_9>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_9.c_str()},
-   {"readtdfdm", (PyCFunction)c2py::pyfkw<_c2py_fun_10>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_10.c_str()},
-   {"set_nrg_params", (PyCFunction)c2py::pyfkw<_c2py_fun_11>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_11.c_str()},
-   {"set_params", (PyCFunction)c2py::pyfkw<_c2py_fun_12>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_12.c_str()},
-   {"set_verbosity", (PyCFunction)c2py::pyfkw<_c2py_fun_13>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_13.c_str()},
-   {"solve", (PyCFunction)c2py::pyfkw<_c2py_fun_14>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_14.c_str()},
-   {"solve_one", (PyCFunction)c2py::pyfkw<_c2py_fun_15>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_15.c_str()},
-   {"write_gamma", (PyCFunction)c2py::pyfkw<_c2py_fun_16>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_16.c_str()},
-   {"__write_hdf5__", c2py::tpxx_write_h5<_c2py_cls_10>, METH_VARARGS, "  "},
-   {"__getstate__", c2py::getstate_h5<_c2py_cls_10>, METH_NOARGS, ""},
-   {"__setstate__", c2py::setstate_h5<_c2py_cls_10>, METH_O, ""},
+   {"param_text", (PyCFunction)c2py::pyfkw<_c2py_fun_9>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_9.c_str()},
+   {"readexpv", (PyCFunction)c2py::pyfkw<_c2py_fun_10>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_10.c_str()},
+   {"readtdfdm", (PyCFunction)c2py::pyfkw<_c2py_fun_11>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_11.c_str()},
+   {"set_nrg_params", (PyCFunction)c2py::pyfkw<_c2py_fun_12>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_12.c_str()},
+   {"set_params", (PyCFunction)c2py::pyfkw<_c2py_fun_13>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_13.c_str()},
+   {"set_verbosity", (PyCFunction)c2py::pyfkw<_c2py_fun_14>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_14.c_str()},
+   {"solve", (PyCFunction)c2py::pyfkw<_c2py_fun_15>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_15.c_str()},
+   {"solve_library", (PyCFunction)c2py::pyfkw<_c2py_fun_16>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_16.c_str()},
+   {"solve_one", (PyCFunction)c2py::pyfkw<_c2py_fun_17>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_17.c_str()},
+   {"write_gamma", (PyCFunction)c2py::pyfkw<_c2py_fun_18>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_18.c_str()},
+   {"__write_hdf5__", c2py::tpxx_write_h5<_c2py_cls_12>, METH_VARARGS, "  "},
+   {"__getstate__", c2py::getstate_h5<_c2py_cls_12>, METH_NOARGS, ""},
+   {"__setstate__", c2py::setstate_h5<_c2py_cls_12>, METH_O, ""},
    {nullptr, nullptr, 0, nullptr} // Sentinel
 };
 
-constexpr auto _c2py_doc_member_162 = R"DOC(Parameters used for the solver construction.)DOC";
-constexpr auto _c2py_doc_member_163 = R"DOC(Low-level NRG parameters.)DOC";
-constexpr auto _c2py_doc_member_164 = R"DOC(Parameters used for the most recent solve process.)DOC";
-constexpr auto _c2py_doc_member_165 = R"DOC(If true, detailed output from NRGLjubljana and its tools is sent to stdout.)DOC";
-constexpr auto _c2py_doc_member_166 = R"DOC(Keep the temporary directories after the calculation.)DOC";
-constexpr auto _c2py_doc_member_167 = R"DOC(The Green's function structure object.)DOC";
-constexpr auto _c2py_doc_member_168 = R"DOC(The hybridization function structure object.)DOC";
-constexpr auto _c2py_doc_member_169 = R"DOC(The susceptibility structure object.)DOC";
-constexpr auto _c2py_doc_member_170 = R"DOC(Logarithmic real-frequency mesh.)DOC";
-constexpr auto _c2py_doc_member_171 = R"DOC(The hybridization function on the real-frequency axis.)DOC";
-constexpr auto _c2py_doc_member_172 = R"DOC(The spectral function :math:`A(\omega)`.)DOC";
-constexpr auto _c2py_doc_member_173 = R"DOC(The spectral function :math:`B_l(\omega)` of the auxiliary correlator :math:`F_l(\omega)`.)DOC";
-constexpr auto _c2py_doc_member_174 = R"DOC(The spectral function :math:`B_r(\omega)` of the auxiliary correlator :math:`F_r(\omega)`.)DOC";
-constexpr auto _c2py_doc_member_175 = R"DOC(The spectral function :math:`C(\omega)` of the auxiliary correlator :math:`I(\omega)`.)DOC";
-constexpr auto _c2py_doc_member_176 = R"DOC(The retarded Green's function :math:`G(\omega)`.)DOC";
-constexpr auto _c2py_doc_member_177 = R"DOC(The auxiliary Green's function :math:`F_l(\omega) = \Sigma(\omega)\, G(\omega)`.)DOC";
-constexpr auto _c2py_doc_member_178 = R"DOC(The auxiliary Green's function :math:`F_r(\omega) = G(\omega)\, \Sigma(\omega)`.)DOC";
-constexpr auto _c2py_doc_member_179 = R"DOC(The auxiliary Green's function :math:`I(\omega)`.)DOC";
-constexpr auto _c2py_doc_member_180 = R"DOC(Constant Hartree shift to the self-energy, stored as a Green's function.)DOC";
-constexpr auto _c2py_doc_member_181 =
+constexpr auto _c2py_doc_member_174 = R"DOC(Parameters used for the solver construction.)DOC";
+constexpr auto _c2py_doc_member_175 = R"DOC(Low-level NRG parameters.)DOC";
+constexpr auto _c2py_doc_member_176 = R"DOC(Parameters used for the most recent solve process.)DOC";
+constexpr auto _c2py_doc_member_177 = R"DOC(If true, detailed output from NRGLjubljana and its tools is sent to stdout.)DOC";
+constexpr auto _c2py_doc_member_178 = R"DOC(Keep the temporary directories after the calculation.)DOC";
+constexpr auto _c2py_doc_member_179 = R"DOC(The Green's function structure object.)DOC";
+constexpr auto _c2py_doc_member_180 = R"DOC(The hybridization function structure object.)DOC";
+constexpr auto _c2py_doc_member_181 = R"DOC(The susceptibility structure object.)DOC";
+constexpr auto _c2py_doc_member_182 = R"DOC(Logarithmic real-frequency mesh.)DOC";
+constexpr auto _c2py_doc_member_183 = R"DOC(The hybridization function on the real-frequency axis.)DOC";
+constexpr auto _c2py_doc_member_184 = R"DOC(The spectral function :math:`A(\omega)`.)DOC";
+constexpr auto _c2py_doc_member_185 = R"DOC(The spectral function :math:`B_l(\omega)` of the auxiliary correlator :math:`F_l(\omega)`.)DOC";
+constexpr auto _c2py_doc_member_186 = R"DOC(The spectral function :math:`B_r(\omega)` of the auxiliary correlator :math:`F_r(\omega)`.)DOC";
+constexpr auto _c2py_doc_member_187 = R"DOC(The spectral function :math:`C(\omega)` of the auxiliary correlator :math:`I(\omega)`.)DOC";
+constexpr auto _c2py_doc_member_188 = R"DOC(The retarded Green's function :math:`G(\omega)`.)DOC";
+constexpr auto _c2py_doc_member_189 = R"DOC(The auxiliary Green's function :math:`F_l(\omega) = \Sigma(\omega)\, G(\omega)`.)DOC";
+constexpr auto _c2py_doc_member_190 = R"DOC(The auxiliary Green's function :math:`F_r(\omega) = G(\omega)\, \Sigma(\omega)`.)DOC";
+constexpr auto _c2py_doc_member_191 = R"DOC(The auxiliary Green's function :math:`I(\omega)`.)DOC";
+constexpr auto _c2py_doc_member_192 = R"DOC(Constant Hartree shift to the self-energy, stored as a Green's function.)DOC";
+constexpr auto _c2py_doc_member_193 =
    R"DOC(The retarded self-energy :math:`\Sigma(\omega)` (computed from :math:`F_l`, :math:`F_r`, :math:`G` and :math:`I`).)DOC";
-constexpr auto _c2py_doc_member_182 = R"DOC(Expectation values of local impurity operators.)DOC";
-constexpr auto _c2py_doc_member_183 = R"DOC(Thermodynamic variables (FDM algorithm).)DOC";
-constexpr auto _c2py_doc_member_184 = R"DOC(Charge susceptibility :math:`\chi_{NN}(\omega)`.)DOC";
-constexpr auto _c2py_doc_member_185 = R"DOC(Spin susceptibility :math:`\chi_{SS}(\omega)`.)DOC";
+constexpr auto _c2py_doc_member_194 = R"DOC(Expectation values of local impurity operators.)DOC";
+constexpr auto _c2py_doc_member_195 = R"DOC(Thermodynamic variables (FDM algorithm).)DOC";
+constexpr auto _c2py_doc_member_196 = R"DOC(Charge susceptibility :math:`\chi_{NN}(\omega)`.)DOC";
+constexpr auto _c2py_doc_member_197 = R"DOC(Spin susceptibility :math:`\chi_{SS}(\omega)`.)DOC";
 
 // ----- Member and property table ----
 
 template <>
-constinit PyGetSetDef c2py::tp_getset<_c2py_cls_10>[] = {
-   c2py::getsetdef_from_member<&_c2py_cls_10::constr_params, _c2py_cls_10>("constr_params", _c2py_doc_member_162),
-   c2py::getsetdef_from_member<&_c2py_cls_10::nrg_params, _c2py_cls_10>("nrg_params", _c2py_doc_member_163),
-   c2py::getsetdef_from_member<&_c2py_cls_10::last_solve_params, _c2py_cls_10>("last_solve_params", _c2py_doc_member_164),
-   c2py::getsetdef_from_member<&_c2py_cls_10::verbose, _c2py_cls_10>("verbose", _c2py_doc_member_165),
-   c2py::getsetdef_from_member<&_c2py_cls_10::keep_temp_dir, _c2py_cls_10>("keep_temp_dir", _c2py_doc_member_166),
-   c2py::getsetdef_from_member<&_c2py_cls_10::gf_struct, _c2py_cls_10>("gf_struct", _c2py_doc_member_167),
-   c2py::getsetdef_from_member<&_c2py_cls_10::Delta_struct, _c2py_cls_10>("Delta_struct", _c2py_doc_member_168),
-   c2py::getsetdef_from_member<&_c2py_cls_10::chi_struct, _c2py_cls_10>("chi_struct", _c2py_doc_member_169),
-   c2py::getsetdef_from_member<&_c2py_cls_10::log_mesh, _c2py_cls_10>("log_mesh", _c2py_doc_member_170),
-   c2py::getsetdef_from_member<&_c2py_cls_10::Delta_w, _c2py_cls_10>("Delta_w", _c2py_doc_member_171),
-   c2py::getsetdef_from_member<&_c2py_cls_10::A_w, _c2py_cls_10>("A_w", _c2py_doc_member_172),
-   c2py::getsetdef_from_member<&_c2py_cls_10::B_l_w, _c2py_cls_10>("B_l_w", _c2py_doc_member_173),
-   c2py::getsetdef_from_member<&_c2py_cls_10::B_r_w, _c2py_cls_10>("B_r_w", _c2py_doc_member_174),
-   c2py::getsetdef_from_member<&_c2py_cls_10::C_w, _c2py_cls_10>("C_w", _c2py_doc_member_175),
-   c2py::getsetdef_from_member<&_c2py_cls_10::G_w, _c2py_cls_10>("G_w", _c2py_doc_member_176),
-   c2py::getsetdef_from_member<&_c2py_cls_10::F_l_w, _c2py_cls_10>("F_l_w", _c2py_doc_member_177),
-   c2py::getsetdef_from_member<&_c2py_cls_10::F_r_w, _c2py_cls_10>("F_r_w", _c2py_doc_member_178),
-   c2py::getsetdef_from_member<&_c2py_cls_10::I_w, _c2py_cls_10>("I_w", _c2py_doc_member_179),
-   c2py::getsetdef_from_member<&_c2py_cls_10::SigmaHartree_w, _c2py_cls_10>("SigmaHartree_w", _c2py_doc_member_180),
-   c2py::getsetdef_from_member<&_c2py_cls_10::Sigma_w, _c2py_cls_10>("Sigma_w", _c2py_doc_member_181),
-   c2py::getsetdef_from_member<&_c2py_cls_10::expv, _c2py_cls_10>("expv", _c2py_doc_member_182),
-   c2py::getsetdef_from_member<&_c2py_cls_10::tdfdm, _c2py_cls_10>("tdfdm", _c2py_doc_member_183),
-   c2py::getsetdef_from_member<&_c2py_cls_10::chi_NN_w, _c2py_cls_10>("chi_NN_w", _c2py_doc_member_184),
-   c2py::getsetdef_from_member<&_c2py_cls_10::chi_SS_w, _c2py_cls_10>("chi_SS_w", _c2py_doc_member_185),
+constinit PyGetSetDef c2py::tp_getset<_c2py_cls_12>[] = {
+   c2py::getsetdef_from_member<&_c2py_cls_12::constr_params, _c2py_cls_12>("constr_params", _c2py_doc_member_174),
+   c2py::getsetdef_from_member<&_c2py_cls_12::nrg_params, _c2py_cls_12>("nrg_params", _c2py_doc_member_175),
+   c2py::getsetdef_from_member<&_c2py_cls_12::last_solve_params, _c2py_cls_12>("last_solve_params", _c2py_doc_member_176),
+   c2py::getsetdef_from_member<&_c2py_cls_12::verbose, _c2py_cls_12>("verbose", _c2py_doc_member_177),
+   c2py::getsetdef_from_member<&_c2py_cls_12::keep_temp_dir, _c2py_cls_12>("keep_temp_dir", _c2py_doc_member_178),
+   c2py::getsetdef_from_member<&_c2py_cls_12::gf_struct, _c2py_cls_12>("gf_struct", _c2py_doc_member_179),
+   c2py::getsetdef_from_member<&_c2py_cls_12::Delta_struct, _c2py_cls_12>("Delta_struct", _c2py_doc_member_180),
+   c2py::getsetdef_from_member<&_c2py_cls_12::chi_struct, _c2py_cls_12>("chi_struct", _c2py_doc_member_181),
+   c2py::getsetdef_from_member<&_c2py_cls_12::log_mesh, _c2py_cls_12>("log_mesh", _c2py_doc_member_182),
+   c2py::getsetdef_from_member<&_c2py_cls_12::Delta_w, _c2py_cls_12>("Delta_w", _c2py_doc_member_183),
+   c2py::getsetdef_from_member<&_c2py_cls_12::A_w, _c2py_cls_12>("A_w", _c2py_doc_member_184),
+   c2py::getsetdef_from_member<&_c2py_cls_12::B_l_w, _c2py_cls_12>("B_l_w", _c2py_doc_member_185),
+   c2py::getsetdef_from_member<&_c2py_cls_12::B_r_w, _c2py_cls_12>("B_r_w", _c2py_doc_member_186),
+   c2py::getsetdef_from_member<&_c2py_cls_12::C_w, _c2py_cls_12>("C_w", _c2py_doc_member_187),
+   c2py::getsetdef_from_member<&_c2py_cls_12::G_w, _c2py_cls_12>("G_w", _c2py_doc_member_188),
+   c2py::getsetdef_from_member<&_c2py_cls_12::F_l_w, _c2py_cls_12>("F_l_w", _c2py_doc_member_189),
+   c2py::getsetdef_from_member<&_c2py_cls_12::F_r_w, _c2py_cls_12>("F_r_w", _c2py_doc_member_190),
+   c2py::getsetdef_from_member<&_c2py_cls_12::I_w, _c2py_cls_12>("I_w", _c2py_doc_member_191),
+   c2py::getsetdef_from_member<&_c2py_cls_12::SigmaHartree_w, _c2py_cls_12>("SigmaHartree_w", _c2py_doc_member_192),
+   c2py::getsetdef_from_member<&_c2py_cls_12::Sigma_w, _c2py_cls_12>("Sigma_w", _c2py_doc_member_193),
+   c2py::getsetdef_from_member<&_c2py_cls_12::expv, _c2py_cls_12>("expv", _c2py_doc_member_194),
+   c2py::getsetdef_from_member<&_c2py_cls_12::tdfdm, _c2py_cls_12>("tdfdm", _c2py_doc_member_195),
+   c2py::getsetdef_from_member<&_c2py_cls_12::chi_NN_w, _c2py_cls_12>("chi_NN_w", _c2py_doc_member_196),
+   c2py::getsetdef_from_member<&_c2py_cls_12::chi_SS_w, _c2py_cls_12>("chi_SS_w", _c2py_doc_member_197),
 
    {nullptr, nullptr, nullptr, nullptr, nullptr}};
 
 template <>
-const std::string c2py::tp_doc<_c2py_cls_10> = R"DOC(TRIQS interface to the NRGLjubljana numerical renormalization group impurity solver.
+const std::string c2py::tp_doc<_c2py_cls_12> = R"DOC(TRIQS interface to the NRGLjubljana numerical renormalization group impurity solver.
 
 Given a hybridization function, drives the external NRGLjubljana solver to compute
 spectral functions, Green's functions, the self-energy, susceptibilities and
 thermodynamic/expectation values for quantum impurity models.)DOC"
-   + std::string{"\n\n----------\n\n"} + c2py::tp_ctor_doc<_c2py_cls_10>;
+   + std::string{"\n\n----------\n\n"} + c2py::tp_ctor_doc<_c2py_cls_12>;
 
 // ==================== module functions ====================
 
 // broaden
-static auto const _c2py_fun_17 = c2py::dispatcher_f_kw_t{
+static auto const _c2py_fun_19 = c2py::dispatcher_f_kw_t{
    c2py::cfun([](const nrgljubljana_interface::result_t &r, const std::string &correlator, const nrgljubljana_interface::broadening_params_t &b,
                  const std::optional<triqs::mesh::refreq_log> &mesh) { return nrgljubljana_interface::broaden(r, correlator, b, mesh); },
               "r", "correlator", "b"_a = nrgljubljana_interface::broadening_params_t{}, "mesh"_a = std::optional<triqs::mesh::refreq_log>{})};
 
 // hilbert_transform_elementwise
-static auto const _c2py_fun_18 = c2py::dispatcher_f_kw_t{c2py::cfun(
+static auto const _c2py_fun_20 = c2py::dispatcher_f_kw_t{c2py::cfun(
    [](const nrgljubljana_interface::m_w_cvt &gf, std::complex<double> z) { return nrgljubljana_interface::hilbert_transform_elementwise(gf, z); },
    "gf", "z")};
 
 // hilbert_transform_refreq
-static auto const _c2py_fun_19 = c2py::dispatcher_f_kw_t{c2py::cfun(
+static auto const _c2py_fun_21 = c2py::dispatcher_f_kw_t{c2py::cfun(
    [](const nrgljubljana_interface::c_w_cvt &gf, std::complex<double> z) { return nrgljubljana_interface::hilbert_transform_refreq(gf, z); }, "gf",
    "z")};
 
-static const auto _c2py_doc_17 = _c2py_fun_17.doc(R"DOC(
+static const auto _c2py_doc_19 = _c2py_fun_19.doc(R"DOC(
 Broaden the stored bins of a correlator of a result into a Green's function, without running NRG
 Ljubljana.
 
@@ -2002,7 +2215,7 @@ Im = A for bosonic types (s, t, o), with the real part by Kramers-Kronig; unlist
 The mesh defaults to the mesh of the result. Throws std::invalid_argument for a name not in the manifest (Sigma
 and SigmaHartree are not correlators) and std::runtime_error if the result holds no bins of the correlator.
 )DOC");
-static const auto _c2py_doc_18 = _c2py_fun_18.doc(
+static const auto _c2py_doc_20 = _c2py_fun_20.doc(
    R"DOC(
 Hilbert transform for refreq objects (matrix, elementwise).
 
@@ -2021,8 +2234,8 @@ Returns
    {{c2py::python_typename<const nrgljubljana_interface::m_w_cvt &>()}, {c2py::python_typename<std::complex<double>>()}},
    {c2py::python_typename<
       nda::basic_array<std::complex<double>, 2, nda::C_layout, 'M', nda::heap_basic<nda::mem::mallocator<nda::mem::AddressSpace::Host>>>>()});
-static const auto _c2py_doc_19 =
-   _c2py_fun_19.doc(R"DOC(
+static const auto _c2py_doc_21 =
+   _c2py_fun_21.doc(R"DOC(
 Hilbert transform for refreq objects (scalar).
 
 Parameters
@@ -2042,9 +2255,9 @@ Returns
 //--------------------- module function table  -----------------------------
 
 static PyMethodDef module_methods[] = {
-   {"broaden", (PyCFunction)c2py::pyfkw<_c2py_fun_17>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_17.c_str()},
-   {"hilbert_transform_elementwise", (PyCFunction)c2py::pyfkw<_c2py_fun_18>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_18.c_str()},
-   {"hilbert_transform_refreq", (PyCFunction)c2py::pyfkw<_c2py_fun_19>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_19.c_str()},
+   {"broaden", (PyCFunction)c2py::pyfkw<_c2py_fun_19>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_19.c_str()},
+   {"hilbert_transform_elementwise", (PyCFunction)c2py::pyfkw<_c2py_fun_20>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_20.c_str()},
+   {"hilbert_transform_refreq", (PyCFunction)c2py::pyfkw<_c2py_fun_21>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_21.c_str()},
    {nullptr, nullptr, 0, nullptr} // Sentinel
 };
 
@@ -2088,6 +2301,8 @@ extern "C" __attribute__((visibility("default"))) PyObject *PyInit_solver_core()
   if (PyType_Ready(&c2py::wrap_pytype<_c2py_cls_8>) < 0) return NULL;
   if (PyType_Ready(&c2py::wrap_pytype<_c2py_cls_9>) < 0) return NULL;
   if (PyType_Ready(&c2py::wrap_pytype<_c2py_cls_10>) < 0) return NULL;
+  if (PyType_Ready(&c2py::wrap_pytype<_c2py_cls_11>) < 0) return NULL;
+  if (PyType_Ready(&c2py::wrap_pytype<_c2py_cls_12>) < 0) return NULL;
 
   m = PyModule_Create(&module_def);
   if (m == NULL) return NULL;
@@ -2100,21 +2315,23 @@ extern "C" __attribute__((visibility("default"))) PyObject *PyInit_solver_core()
   _add_type(_c2py_cls_1, "SolveParamsT");
   _add_type(_c2py_cls_2, "NrgParamsT");
   _add_type(_c2py_cls_3, "OptionsT");
-  _add_type(_c2py_cls_4, "StepTableT");
-  _add_type(_c2py_cls_5, "EnergyLevelT");
-  _add_type(_c2py_cls_6, "SpectrumBinsT");
-  _add_type(_c2py_cls_7, "TwistResultT");
-  _add_type(_c2py_cls_8, "ResultT");
-  _add_type(_c2py_cls_9, "BroadeningParamsT");
-  _add_type(_c2py_cls_10, "SolverCore");
+  _add_type(_c2py_cls_4, "ChannelCoefficientsT");
+  _add_type(_c2py_cls_5, "ChainCoefficientsT");
+  _add_type(_c2py_cls_6, "StepTableT");
+  _add_type(_c2py_cls_7, "EnergyLevelT");
+  _add_type(_c2py_cls_8, "SpectrumBinsT");
+  _add_type(_c2py_cls_9, "TwistResultT");
+  _add_type(_c2py_cls_10, "ResultT");
+  _add_type(_c2py_cls_11, "BroadeningParamsT");
+  _add_type(_c2py_cls_12, "SolverCore");
 #undef _add_type
 
   c2py::pyref module = c2py::pyref::module("h5.formats");
   if (not module) return nullptr;
   c2py::pyref register_class = module.attr("register_class");
 
-  register_h5_type<_c2py_cls_8>(register_class);
   register_h5_type<_c2py_cls_10>(register_class);
+  register_h5_type<_c2py_cls_12>(register_class);
 
   return m;
 }

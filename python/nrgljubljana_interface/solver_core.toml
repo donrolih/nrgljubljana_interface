@@ -2,4 +2,4 @@
 package_name  = "nrgljubljana_interface"
 documentation = "TRIQS interface to the NRGLjubljana numerical renormalization group impurity solver."
 namespaces    = "nrgljubljana_interface nrgljubljana_interface::nrg"
-match_names   = "nrgljubljana_interface::(solver_core|constr_params_t|solve_params_t|nrg_params_t|options_t|result_t|twist_result_t|broadening_params_t|broaden|hilbert_transform_refreq|hilbert_transform_elementwise|nrg::spectrum_bins_t|nrg::step_table_t|nrg::energy_level_t)"
+match_names   = "nrgljubljana_interface::(solver_core|constr_params_t|solve_params_t|nrg_params_t|options_t|result_t|twist_result_t|broadening_params_t|broaden|hilbert_transform_refreq|hilbert_transform_elementwise|nrg::spectrum_bins_t|nrg::chain_coefficients_t|nrg::channel_coefficients_t|nrg::step_table_t|nrg::energy_level_t)"

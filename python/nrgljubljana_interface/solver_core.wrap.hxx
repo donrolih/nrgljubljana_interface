@@ -2,17 +2,23 @@
 
 #ifndef C2PY_HXX_DECLARATION_solver_core_GUARDS
 #define C2PY_HXX_DECLARATION_solver_core_GUARDS
-template <> constexpr bool c2py::is_wrapped<nrgljubljana_interface::constr_params_t>          = true;
-template <> inline constexpr auto c2py::tp_name<nrgljubljana_interface::constr_params_t>      = "nrgljubljana_interface.solver_core.ConstrParamsT";
-template <> constexpr bool c2py::is_wrapped<nrgljubljana_interface::solve_params_t>           = true;
-template <> inline constexpr auto c2py::tp_name<nrgljubljana_interface::solve_params_t>       = "nrgljubljana_interface.solver_core.SolveParamsT";
-template <> constexpr bool c2py::is_wrapped<nrgljubljana_interface::nrg_params_t>             = true;
-template <> inline constexpr auto c2py::tp_name<nrgljubljana_interface::nrg_params_t>         = "nrgljubljana_interface.solver_core.NrgParamsT";
-template <> constexpr bool c2py::is_wrapped<nrgljubljana_interface::options_t>                = true;
-template <> inline constexpr auto c2py::tp_name<nrgljubljana_interface::options_t>            = "nrgljubljana_interface.solver_core.OptionsT";
-template <> constexpr bool c2py::is_wrapped<nrgljubljana_interface::nrg::step_table_t>        = true;
-template <> inline constexpr auto c2py::tp_name<nrgljubljana_interface::nrg::step_table_t>    = "nrgljubljana_interface.solver_core.StepTableT";
-template <> constexpr bool c2py::is_wrapped<nrgljubljana_interface::nrg::energy_level_t>      = true;
+template <> constexpr bool c2py::is_wrapped<nrgljubljana_interface::constr_params_t>             = true;
+template <> inline constexpr auto c2py::tp_name<nrgljubljana_interface::constr_params_t>         = "nrgljubljana_interface.solver_core.ConstrParamsT";
+template <> constexpr bool c2py::is_wrapped<nrgljubljana_interface::solve_params_t>              = true;
+template <> inline constexpr auto c2py::tp_name<nrgljubljana_interface::solve_params_t>          = "nrgljubljana_interface.solver_core.SolveParamsT";
+template <> constexpr bool c2py::is_wrapped<nrgljubljana_interface::nrg_params_t>                = true;
+template <> inline constexpr auto c2py::tp_name<nrgljubljana_interface::nrg_params_t>            = "nrgljubljana_interface.solver_core.NrgParamsT";
+template <> constexpr bool c2py::is_wrapped<nrgljubljana_interface::options_t>                   = true;
+template <> inline constexpr auto c2py::tp_name<nrgljubljana_interface::options_t>               = "nrgljubljana_interface.solver_core.OptionsT";
+template <> constexpr bool c2py::is_wrapped<nrgljubljana_interface::nrg::channel_coefficients_t> = true;
+template <>
+inline constexpr auto c2py::tp_name<nrgljubljana_interface::nrg::channel_coefficients_t> = "nrgljubljana_interface.solver_core.ChannelCoefficientsT";
+template <> constexpr bool c2py::is_wrapped<nrgljubljana_interface::nrg::chain_coefficients_t> = true;
+template <>
+inline constexpr auto c2py::tp_name<nrgljubljana_interface::nrg::chain_coefficients_t>     = "nrgljubljana_interface.solver_core.ChainCoefficientsT";
+template <> constexpr bool c2py::is_wrapped<nrgljubljana_interface::nrg::step_table_t>     = true;
+template <> inline constexpr auto c2py::tp_name<nrgljubljana_interface::nrg::step_table_t> = "nrgljubljana_interface.solver_core.StepTableT";
+template <> constexpr bool c2py::is_wrapped<nrgljubljana_interface::nrg::energy_level_t>   = true;
 template <> inline constexpr auto c2py::tp_name<nrgljubljana_interface::nrg::energy_level_t>  = "nrgljubljana_interface.solver_core.EnergyLevelT";
 template <> constexpr bool c2py::is_wrapped<nrgljubljana_interface::nrg::spectrum_bins_t>     = true;
 template <> inline constexpr auto c2py::tp_name<nrgljubljana_interface::nrg::spectrum_bins_t> = "nrgljubljana_interface.solver_core.SpectrumBinsT";

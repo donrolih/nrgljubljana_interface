@@ -3,6 +3,7 @@
 #pragma once
 
 #include "./options.hpp"
+#include "../nrg/chain.hpp"
 #include "../nrg/output.hpp"
 #include "../nrg/spectrum.hpp"
 #include "../params.hpp"
@@ -47,6 +48,8 @@ namespace nrgljubljana_interface {
 
     /// Lowest levels of each NRG step (empty unless options.energies > 0)
     energy_flow_t energy_flow;
+    /// The Wilson chain coefficients of the twist (in-process route; empty on the script route)
+    nrg::chain_coefficients_t chain = {};
   };
 
   /// The result of a solve: what was solved, the raw data of each twist, their averages and the Green's functions
@@ -87,6 +90,11 @@ namespace nrgljubljana_interface {
 
     /// Raw data of each twist
     std::vector<twist_result_t> twists;
+
+    /// The points (block, frequency) at which an eigenvalue of Γ was raised to the floor, and the largest amount
+    /// (in-process route; 0 on the script route)
+    long Gamma_projected_points = 0;
+    double Gamma_largest_violation = 0;
 
     /// FDM expectation values, averaged over the twists
     std::map<std::string, double> expv;

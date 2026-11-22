@@ -20,6 +20,9 @@
  *
  ******************************************************************************/
 #include "./solver_core.hpp"
+#include "./dmft/causality.hpp"
+#include "./nrg/chain.hpp"
+#include "./nrg/parameter_file.hpp"
 
 #include <triqs/utility/exceptions.hpp> // TRIQS_RUNTIME_ERROR
 #include <itertools/itertools.hpp>
@@ -28,6 +31,7 @@
 #include <cmath>      // pow, log
 #include <cstdlib>    // system
 #include <filesystem>
+#include <sstream>
 #include <sys/stat.h> // mkdir
 #include <iostream>
 #include <fstream>
@@ -82,7 +86,6 @@ namespace nrgljubljana_interface {
     } catch (std::invalid_argument const &e) { TRIQS_RUNTIME_ERROR << e.what(); }
     correlator_type = check.correlator_type;
     auto const &m   = manifest;
-    if (m.pipeline != "scripts") TRIQS_RUNTIME_ERROR << dir << "/manifest: pipeline=" << m.pipeline << " is not available yet; only scripts";
 
     gf_struct    = m.gf;
     Delta_struct = m.delta;
@@ -207,7 +210,7 @@ namespace nrgljubljana_interface {
       for (auto [i, j] : product_range(bl_size, bl_size)) {
         std::ofstream F("Gamma_" + bl_name + "_" + std::to_string(i) + std::to_string(j) + ".dat");
         F << std::setprecision(std::numeric_limits<double>::max_digits10); // number of decimal digits necessary to differentiate all values of this type
-        const double cutoff = 1e-8; // ensure hybridisation function is positive
+        const double cutoff = last_solve_params->Gamma_floor; // ensure hybridisation function is positive
         for (auto w : Delta_w[bl_idx].mesh()) {
           double value = -Delta_w[bl_idx][w](i, j).imag();
           if (value < cutoff) { value = cutoff; }
@@ -314,32 +317,36 @@ namespace nrgljubljana_interface {
     std::string tempdir{};
     if (comm.rank() == 0) {
       std::cout << "Starting NRG solver\n";
-      tempdir = create_tempdir("");  // Create a temporary directory for file-based interfacing (RAM disk is best)
+      tempdir = std::filesystem::absolute(create_tempdir("")).string(); // file-based interfacing (RAM disk is best)
     }
     sync(); // Ensures temporary directory is created
     if (comm.size() > 1) mpi::broadcast(tempdir, comm);
-    std::string cwd = get_current_dir();
-    if (chdir(tempdir.c_str()) != 0) TRIQS_RUNTIME_ERROR << "chdir to tempdir failed.";
-    if (comm.rank() == 0) {
-      write_gamma();
-      // we need a mock param file for 'adapt' tool
-      generate_param_file(1.0);
-      call(constr_params.get_model_dir() + "/prepare", verbose);
-      call("./discretize", verbose);
-      for (auto k : range(z.size())) instantiate(z[k], std::to_string(k + 1));
-    }
-    sync(); // Ensures the initialization scripts have completed
-
-    // Perform the calculations in parallel
-    auto chunk = mpi::chunk(range(1, long(z.size()) + 1), comm);
-    for (int i: chunk)
-      solve_one(std::to_string(i));
-
-    sync(); // Ensures all subcalculations are completed
-
-    // Raw results: every rank reads all twists (the working directory is shared)
+    std::string cwd    = get_current_dir();
     auto const spectra = selected_spectra(options, manifest, correlator_type);
-    for (auto k : range(z.size())) r.twists.push_back(read_twist(std::to_string(k + 1), z[k], spectra, options.fdm, options.energies > 0));
+
+    if (manifest.pipeline == "library") {
+      solve_library(z, tempdir, spectra, r);
+    } else {
+      if (chdir(tempdir.c_str()) != 0) TRIQS_RUNTIME_ERROR << "chdir to tempdir failed.";
+      if (comm.rank() == 0) {
+        write_gamma();
+        // we need a mock param file for 'adapt' tool
+        generate_param_file(1.0);
+        call(constr_params.get_model_dir() + "/prepare", verbose);
+        call("./discretize", verbose);
+        for (auto k : range(z.size())) instantiate(z[k], std::to_string(k + 1));
+      }
+      sync(); // Ensures the initialization scripts have completed
+
+      // Perform the calculations in parallel
+      auto chunk = mpi::chunk(range(1, long(z.size()) + 1), comm);
+      for (int i : chunk) solve_one(std::to_string(i));
+
+      sync(); // Ensures all subcalculations are completed
+
+      // Raw results: every rank reads all twists (the working directory is shared)
+      for (auto k : range(z.size())) r.twists.push_back(read_twist(std::to_string(k + 1), z[k], spectra, options.fdm, options.energies > 0));
+    }
 
     // Spectra and averages, on every rank from the same input
     try {
@@ -442,7 +449,7 @@ namespace nrgljubljana_interface {
     } while (ss);
   }
 
-  void solver_core::generate_param_file(double z) {
+  std::string solver_core::param_text(double z) {
     const constr_params_t &cp = constr_params;
     const solve_params_t &sp  = *last_solve_params;
     nrg_params_t &np          = nrg_params;
@@ -451,11 +458,173 @@ namespace nrgljubljana_interface {
     set_params();
     // Check if all model parameters have been defined
     check_model_params(sp);
-    // Generate the parameter file; the options decide the spectrum lists and the density-matrix settings
+    // The options decide the spectrum lists and the density-matrix settings
     auto cp_solve = cp;
     apply_options(options, manifest, correlator_type, cp_solve, np);
+    return render_param_file(cp_solve, sp, np);
+  }
+
+  void solver_core::generate_param_file(double z) {
     std::ofstream F("param");
-    F << render_param_file(cp_solve, sp, np);
+    F << param_text(z);
+  }
+
+  namespace {
+
+    // Run f on every rank; an exception on any rank is raised on every rank (the message of the lowest failing rank),
+    // so that none is left waiting in a collective call
+    template <typename F> void collectively(mpi::communicator const &comm, F &&f) {
+      std::string error;
+      try {
+        f();
+      } catch (std::exception const &e) { error = e.what(); }
+      if (comm.size() > 1) {
+        int const first = mpi::all_reduce(error.empty() ? comm.size() : comm.rank(), comm, MPI_MIN);
+        if (first < comm.size()) mpi::broadcast(error, comm, first);
+      }
+      if (not error.empty()) TRIQS_RUNTIME_ERROR << error;
+    }
+
+    std::string number(double x) {
+      std::ostringstream os;
+      os.precision(17);
+      os << x;
+      return os.str();
+    }
+
+    // The text of parameter-file sections
+    std::string section_text(nrg::parameter_sections_t const &sections) {
+      std::string text;
+      for (auto const &[name, keys] : sections) {
+        text += "[" + name + "]\n";
+        for (auto const &[key, value] : keys) text += key + "=" + value + "\n";
+      }
+      return text;
+    }
+
+    // The coefficients of all twists from rank 0 to every rank
+    void broadcast(std::vector<nrg::chain_coefficients_t> &chains, mpi::communicator const &comm) {
+      if (comm.size() == 1) return;
+      long n = long(chains.size());
+      mpi::broadcast(n, comm, 0);
+      chains.resize(n);
+      for (auto &c : chains) {
+        mpi::broadcast(c.z, comm, 0);
+        mpi::broadcast(c.Lambda, comm, 0);
+        mpi::broadcast(c.bandrescale, comm, 0);
+        long channels = long(c.channels.size());
+        mpi::broadcast(channels, comm, 0);
+        c.channels.resize(channels);
+        for (auto &ch : c.channels) {
+          mpi::broadcast(ch.theta, comm, 0);
+          mpi::broadcast(ch.xi, comm, 0);
+          mpi::broadcast(ch.zeta, comm, 0);
+        }
+      }
+    }
+
+  } // namespace
+
+  void solver_core::solve_library(std::vector<double> const &z, std::string const &work, std::map<std::string, std::string> const &spectra,
+                                  result_t &r) {
+    namespace fs              = std::filesystem;
+    solve_params_t const &sp  = *last_solve_params;
+    std::string const pre     = "in-process solve: ";
+
+    // Step 2: Γ = (Δ† − Δ)/2i, its eigenvalues raised to the floor
+    if (not(std::isfinite(sp.Gamma_floor) and sp.Gamma_floor >= 0)) TRIQS_RUNTIME_ERROR << pre << "Gamma_floor must be finite and >= 0";
+    auto const [Delta_p, projection] = dmft::causal_projection(Delta_w, sp.Gamma_floor);
+    r.Gamma_projected_points          = projection.projected_points;
+    r.Gamma_largest_violation         = projection.largest_violation;
+    auto const Gamma                  = dmft::spectral_part(Delta_p);
+
+    // Step 3: Γ of the coefficient channels; any other nonzero element is an error, never dropped
+    std::vector<std::pair<long, long>> channel; // (block, orbital) of each coefficient channel
+    for (auto const &e : manifest.coefficient_channels) {
+      if (e.i != e.j) TRIQS_RUNTIME_ERROR << pre << "the coefficient channel " << templates::to_string(e) << " is off-diagonal";
+      auto const &names = Gamma.block_names();
+      auto const b      = std::find(names.begin(), names.end(), e.block) - names.begin();
+      if (b == long(names.size())) TRIQS_RUNTIME_ERROR << pre << "no block " << e.block << " in Δ";
+      channel.emplace_back(b, e.i);
+    }
+    for (long b = 0; b < long(Gamma.size()); ++b) {
+      auto const &d = Gamma[b].data();
+      for (long i = 0; i < d.extent(1); ++i)
+        for (long j = 0; j < d.extent(2); ++j) {
+          bool const is_channel = i == j and std::find(channel.begin(), channel.end(), std::pair<long, long>{b, i}) != channel.end();
+          if (is_channel) continue;
+          double largest = 0;
+          for (long k = 0; k < d.extent(0); ++k) largest = std::max(largest, std::abs(d(k, i, j)));
+          if (largest > 0)
+            TRIQS_RUNTIME_ERROR << pre << "Γ of " << Gamma.block_names()[b] << "[" << i << "," << j << "] is nonzero (largest " << largest
+                                << "), which the uncoupled channels of the template cannot represent";
+        }
+    }
+    nrg::channel_gamma_t gamma;
+    {
+      auto const &pts = Gamma[0].mesh().points();
+      gamma.omega.assign(pts.begin(), pts.end());
+      gamma.gamma.assign(pts.size(), std::vector<double>(channel.size()));
+      for (std::size_t c = 0; c < channel.size(); ++c) {
+        auto const &[b, i] = channel[c];
+        for (std::size_t k = 0; k < pts.size(); ++k) gamma.gamma[k][c] = Gamma[b].data()(long(k), i, i).real();
+      }
+    }
+
+    // Step 4: the parameter sections of each twist; Nmax from Tmin (with bandrescale) unless Tmin <= 0
+    std::vector<nrg::parameter_sections_t> sections(z.size());
+    std::vector<unsigned> nmax(z.size());
+    collectively(comm, [&] {
+      for (std::size_t k = 0; k < z.size(); ++k) {
+        sections[k] = nrg::read_parameter_sections(param_text(z[k]), "param");
+        auto &param = sections[k].at("param");
+        param["density_interpolation"] = nrg_params.density_interpolation;
+        if (sp.Tmin > 0) {
+          auto with_tmin = param;
+          with_tmin.erase("Nmax");
+          with_tmin["Tmin"] = number(sp.Tmin);
+          nmax[k]           = nrg::chain_length(with_tmin);
+        } else {
+          if (nrg_params.Nmax < 1) throw std::invalid_argument("with Tmin <= 0 the chain length needs Nmax (set_nrg_params) >= 1");
+          nmax[k] = unsigned(nrg_params.Nmax);
+        }
+        param["Nmax"] = std::to_string(nmax[k]);
+      }
+      unsigned const longest = *std::max_element(nmax.begin(), nmax.end());
+      for (auto &s : sections) {
+        s.at("param")["mMAX"] = std::to_string(std::max(80u, 2 * longest));
+        nrg::validate_chain_parameters(s.at("param"));
+      }
+    });
+    unsigned const longest = *std::max_element(nmax.begin(), nmax.end());
+
+    // Step 5: the chains of all twists on rank 0
+    std::vector<nrg::chain_coefficients_t> chains;
+    collectively(comm, [&] {
+      if (comm.rank() == 0) chains = nrg::discretize(gamma, sections[0].at("param"), z, longest, verbose ? "" : (fs::path(work) / "discretize.log").string());
+    });
+    broadcast(chains, comm);
+
+    // Steps 6–8: each rank initializes and solves its twists
+    auto const template_dir = fs::absolute(constr_params.get_model_dir()).string();
+    char const *workdir_env = std::getenv("NRG_WORKDIR");
+    collectively(comm, [&] {
+      for (long i : mpi::chunk(range(long(z.size())), comm)) {
+        auto const dir = fs::path(work) / std::to_string(i + 1);
+        fs::create_directories(dir);
+        std::ofstream(dir / "param") << section_text(sections[i]);
+        auto const scratch = workdir_env ? fs::absolute(workdir_env).string() : dir.string();
+        nrg::instantiate(dir.string(), template_dir, nmax[i], chains[i], verbose ? "" : (dir / "instantiate.log").string());
+        nrg::solve(dir.string(), scratch, verbose ? "" : (dir / "solve.log").string());
+      }
+    });
+    sync();
+
+    // Raw results: every rank reads all twists (the working directory is shared)
+    for (std::size_t k = 0; k < z.size(); ++k) {
+      r.twists.push_back(read_twist((fs::path(work) / std::to_string(k + 1)).string(), z[k], spectra, options.fdm, options.energies > 0));
+      r.twists.back().chain = chains[k];
+    }
   }
 
   // -------------------------------------------------------------------------------

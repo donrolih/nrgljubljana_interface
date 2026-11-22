@@ -80,6 +80,7 @@ namespace nrgljubljana_interface {
     h5_write(grp, "gamma", sp.gamma);
     h5_write(grp, "method", sp.method);
     h5_write(grp, "bandrescale", sp.bandrescale);
+    h5_write(grp, "Gamma_floor", sp.Gamma_floor);
     h5_write(grp, "model_parameters", sp.model_parameters);
   }
 
@@ -96,6 +97,8 @@ namespace nrgljubljana_interface {
     h5_read(grp, "gamma", sp.gamma);
     h5_read(grp, "method", sp.method);
     h5_read(grp, "bandrescale", sp.bandrescale);
+    sp.Gamma_floor = solve_params_t{}.Gamma_floor; // absent in files written before it existed
+    if (grp.has_key("Gamma_floor")) h5_read(grp, "Gamma_floor", sp.Gamma_floor);
     h5_read(grp, "model_parameters", sp.model_parameters);
   }
 
@@ -116,6 +119,7 @@ namespace nrgljubljana_interface {
     h5_write(grp, "Nmax", np.Nmax);
     h5_write(grp, "xmax", np.xmax);
     h5_write(grp, "discretization", np.discretization);
+    h5_write(grp, "density_interpolation", np.density_interpolation);
     h5_write(grp, "z", np.z);
     h5_write(grp, "tri", np.tri);
     h5_write(grp, "preccpp", np.preccpp);
@@ -210,6 +214,8 @@ namespace nrgljubljana_interface {
     h5_read(grp, "Nmax", np.Nmax);
     h5_read(grp, "xmax", np.xmax);
     h5_read(grp, "discretization", np.discretization);
+    np.density_interpolation = nrg_params_t{}.density_interpolation; // absent in files written before it existed
+    if (grp.has_key("density_interpolation")) h5_read(grp, "density_interpolation", np.density_interpolation);
     h5_read(grp, "z", np.z);
     h5_read(grp, "tri", np.tri);
     h5_read(grp, "preccpp", np.preccpp);

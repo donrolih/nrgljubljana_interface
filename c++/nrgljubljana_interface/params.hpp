@@ -140,6 +140,10 @@ namespace nrgljubljana_interface {
     /// Band rescaling factor (half-width of the support of the hybridisation function); set to mesh_max if negative.
     double bandrescale = -1.0;
 
+    /// Floor of the hybridisation spectrum Γ = (Δ† − Δ)/2i: eigenvalues below it are raised to it (in-process route;
+    /// the script route raises each element of −Im Δ below it).
+    double Gamma_floor = 1e-8;
+
     /// Model parameters (name to value map, e.g. U1, eps1).
     std::map<std::string, double> model_parameters;
 
@@ -199,6 +203,10 @@ namespace nrgljubljana_interface {
 
     /// Discretization scheme.
     std::string discretization = "Z";
+
+    /// Interpolation of Γ between its mesh points in the discretization of the in-process route (mixchain): steffen
+    /// (monotone cubic) or linear.
+    std::string density_interpolation = "steffen";
 
     /// Parameter \f$ z \f$ (twist) in the logarithmic discretization.
     double z = 1.0;
