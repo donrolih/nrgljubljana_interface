@@ -31,6 +31,32 @@ namespace nrgljubljana_interface::dmft {
       double filling, weight_error;
     };
 
+    // The number of states, for the plausibility of the filling
+    double number_of_states(mu_input_t const &input) {
+      double states = 0;
+      for (long b = 0; b < long(input.Sigma.size()); ++b) {
+        auto const it = input.degeneracy.find(input.Sigma.block_names()[b]);
+        if (it != input.degeneracy.end()) states += double(it->second) * double(input.Sigma[b].data().extent(1));
+      }
+      return states;
+    }
+
+    // One lattice evaluation: the filling at μ and the largest |∫ A_ii dω − 1|; with a goal both are checked
+    evaluation_t evaluate_filling(mu_input_t const &input, lattice_t const &lattice, double mu, mu_control_params_t const &p, double states) {
+      if (not std::isfinite(mu)) throw std::runtime_error("mu_control_t: a trial μ is not finite");
+      auto const G      = lattice.local_gf(input.Sigma, mu);
+      double weight_err = 0;
+      for (auto const &m : spectral_weight(G))
+        for (long i = 0; i < m.extent(0); ++i) weight_err = std::max(weight_err, std::abs(m(i, i).real() - 1));
+      if (p.goal and not(weight_err <= p.weight_tol))
+        throw std::runtime_error("mu_control_t: the lattice spectral weight at μ = " + number(mu) + " is off by " + number(weight_err)
+                                 + ", more than weight_tol; the mesh may not cover the spectrum");
+      double const n   = occupancy(G, input.T, input.degeneracy, p.epsabs, p.epsrel).total;
+      double const tol = p.weight_tol * states;
+      if (p.goal and not(n >= -tol and n <= states + tol)) throw std::runtime_error("mu_control_t: unphysical filling " + number(n) + " at μ = " + number(mu));
+      return {n, weight_err};
+    }
+
   } // namespace
 
   void h5_write(h5::group g, std::string const &name, mu_control_params_t const &p) {
@@ -84,31 +110,13 @@ namespace nrgljubljana_interface::dmft {
     auto const &p = params_;
     if (not std::isfinite(input.mu)) throw std::invalid_argument("mu_control_t: μ must be finite, got " + number(input.mu));
 
-    // The number of states, for the plausibility of the filling
-    double states = 0;
-    for (long b = 0; b < long(input.Sigma.size()); ++b) {
-      auto const it = input.degeneracy.find(input.Sigma.block_names()[b]);
-      if (it != input.degeneracy.end()) states += double(it->second) * double(input.Sigma[b].data().extent(1));
-    }
-
+    double const states = number_of_states(input);
     std::map<double, evaluation_t> cache;
     auto evaluate = [&](double mu, long reserve) -> evaluation_t const & {
-      if (not std::isfinite(mu)) throw std::runtime_error("mu_control_t: a trial μ is not finite");
       if (auto const found = cache.find(mu); found != cache.end()) return found->second;
       if (long(cache.size()) >= p.max_evaluations - reserve)
         throw std::runtime_error("mu_control_t: max_evaluations (" + std::to_string(p.max_evaluations) + ") exceeded");
-      auto const G      = lattice.local_gf(input.Sigma, mu);
-      double weight_err = 0;
-      auto const w      = spectral_weight(G);
-      for (auto const &m : w)
-        for (long i = 0; i < m.extent(0); ++i) weight_err = std::max(weight_err, std::abs(m(i, i).real() - 1));
-      if (p.goal and not(weight_err <= p.weight_tol))
-        throw std::runtime_error("mu_control_t: the lattice spectral weight at μ = " + number(mu) + " is off by " + number(weight_err)
-                                 + ", more than weight_tol; the mesh may not cover the spectrum");
-      double const n   = occupancy(G, input.T, input.degeneracy, p.epsabs, p.epsrel).total;
-      double const tol = p.weight_tol * states;
-      if (p.goal and not(n >= -tol and n <= states + tol)) throw std::runtime_error("mu_control_t: unphysical filling " + number(n) + " at μ = " + number(mu));
-      return cache.emplace(mu, evaluation_t{n, weight_err}).first->second;
+      return cache.emplace(mu, evaluate_filling(input, lattice, mu, p, states)).first->second;
     };
 
     double const mu       = input.mu;
@@ -199,6 +207,21 @@ namespace nrgljubljana_interface::dmft {
     finish(mu_next, std::move(status));
     if (std::abs(result.report.filling_next - goal) > std::abs(error_old) + p.root_tol)
       throw std::runtime_error("mu_control_t: the step to μ = " + number(mu_next) + " made the filling error worse");
+    return result;
+  }
+
+  mu_result_t mu_control_t::filling(mu_input_t const &input, lattice_t const &lattice) const {
+    if (not std::isfinite(input.mu)) throw std::invalid_argument("mu_control_t: μ must be finite, got " + number(input.mu));
+    auto const e = evaluate_filling(input, lattice, input.mu, params_, number_of_states(input));
+    mu_result_t result;
+    result.mu_next                  = input.mu;
+    result.filling                  = e.filling;
+    result.report.status            = "measured";
+    result.report.filling           = e.filling;
+    result.report.filling_next      = e.filling;
+    result.report.weight_error      = e.weight_error;
+    result.report.weight_error_next = e.weight_error;
+    result.report.evaluations       = 1;
     return result;
   }
 

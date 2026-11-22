@@ -63,14 +63,16 @@ namespace nrgljubljana_interface::dmft {
 
   /**
    * The DMFT loop. One step: the impurity levels ⟨h⟩_ii − μ from the manifest's [levels]; the solve with Δ; Σ
-   * made causal; G_loc at μ; μ_next from the μ control (or from the mixer, when it moves μ); (G_loc, Δ_out) at
-   * μ_next; the convergence status with G_imp = impurity_gf(Δ, Σ, −μ); Γ and Γ_out mixed and the next Δ
-   * from hybridization_from_Gamma. Rank 0 broadcasts Δ_mix, μ_next and the status.
+   * made causal; G_loc at μ; μ_next from the μ control; (G_loc, Δ_out) at μ_next; the convergence status with
+   * G_imp = impurity_gf(Δ, Σ, −μ); Γ and Γ_out mixed and the next Δ from hybridization_from_Gamma. Rank 0 broadcasts
+   * Δ_mix, μ_next and the status. When the mixer moves μ, the μ control only measures the filling at μ (status
+   * "mixer"), Δ_out is taken at μ, and μ_next comes from the mixer.
    *
    * Without a μ control μ stays fixed and the filling is still measured. Construction throws std::invalid_argument
    * for options that do not give G, F_l, F_r and I broadened for the full set of z, a manifest without a level for
-   * every diagonal element or with Δ and G of different structure, a level also given as a model parameter, and a
-   * lattice that cannot give the on-site energy of the structure.
+   * every diagonal element or with Δ and G of different structure, a level also given as a model parameter, a
+   * lattice that cannot give the on-site energy of the structure, and a mixer that moves μ without a μ control with
+   * a goal.
    */
   class dmft_loop {
    public:

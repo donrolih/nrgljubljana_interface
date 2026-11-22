@@ -52,7 +52,7 @@ namespace nrgljubljana_interface::dmft {
 
   /// What the μ control did
   struct mu_report_t {
-    /// "fixed", "within_tolerance", "bracketed" or "limited"
+    /// "fixed", "within_tolerance", "bracketed" or "limited"; "measured" from filling, "mixer" when the mixer moves μ
     std::string status = {};
     /// The filling at μ and at μ_next
     double filling = 0, filling_next = 0;
@@ -95,6 +95,9 @@ namespace nrgljubljana_interface::dmft {
     explicit mu_control_t(mu_control_params_t const &params = {});
 
     [[nodiscard]] C2PY_IGNORE mu_result_t adjust(mu_input_t const &input, lattice_t const &lattice) const;
+
+    /// Only the filling at μ, one lattice evaluation with the checks of adjust; μ_next = μ, status "measured"
+    [[nodiscard]] C2PY_IGNORE mu_result_t filling(mu_input_t const &input, lattice_t const &lattice) const;
 
     [[nodiscard]] mu_control_params_t const &params() const { return params_; }
 

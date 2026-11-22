@@ -28,7 +28,7 @@ namespace nrgljubljana_interface::dmft {
 
   /// The lattices and the mixers a loop can take from Python
   using lattice_variant_t = std::variant<bethe_lattice_t, tabulated_lattice_t, callable_lattice_t>;
-  using mixer_variant_t   = std::variant<linear_mixer>;
+  using mixer_variant_t   = std::variant<linear_mixer, broyden_mixer>;
 
   namespace detail {
 
@@ -57,6 +57,11 @@ namespace nrgljubljana_interface::dmft {
   /// μ for the next iteration, with Σ held fixed (see MuControlT)
   C2PY_WRAP_AS_METHOD mu_result_t adjust(mu_control_t const &self, mu_input_t const &input, lattice_variant_t const &lattice) {
     return std::visit([&](auto const &l) { return self.adjust(input, l); }, lattice);
+  }
+
+  /// Only the filling at μ, one lattice evaluation (see MuControlT)
+  C2PY_WRAP_AS_METHOD mu_result_t filling(mu_control_t const &self, mu_input_t const &input, lattice_variant_t const &lattice) {
+    return std::visit([&](auto const &l) { return self.filling(input, l); }, lattice);
   }
 
   /// Call the function with the StepResult of each step, after it is committed; what it returns is ignored

@@ -203,6 +203,52 @@ TEST(Loop, FillingGoal) {
   EXPECT_NEAR(loop.mu(), (lo + hi) / 2, 1e-2);
 }
 
+// Broyden reaches the fixed point of linear mixing in fewer iterations
+TEST(Loop, Broyden) {
+  bethe_lattice_t const lattice(D);
+  double const mu0 = 0.1;
+  auto iterations = [&](mixer_t &mixer) {
+    mock_solver solver(siam_manifest + levels_section);
+    convergence_t convergence(convergence_params());
+    dmft_loop loop(solver, lattice, mixer, convergence, loop_params());
+    loop.initialize(constant(dcomplex(0.2, -1e-3)), mu0);
+    EXPECT_EQ(loop.run(), "converged");
+    EXPECT_LT(spectral_distance(*loop.G_loc(), fixed_point(mu0)).max, 1e-2);
+    return loop.iteration();
+  };
+  linear_mixer linear(0.5);
+  broyden_mixer broyden;
+  long const n_linear = iterations(linear), n_broyden = iterations(broyden);
+  EXPECT_LT(n_broyden, n_linear) << "Broyden " << n_broyden << ", linear " << n_linear;
+}
+
+// With mu, the μ control moves μ during the warmup and only measures the filling afterwards
+TEST(Loop, BroydenMovesMu) {
+  mock_solver solver(siam_manifest + levels_section);
+  bethe_lattice_t const lattice(D);
+  broyden_params_t p;
+  p.mu     = true;
+  p.warmup = 2;
+  broyden_mixer mixer(p);
+  convergence_t convergence(convergence_params());
+  double const goal = 0.8;
+  dmft_loop loop(solver, lattice, mixer, convergence, loop_params(), mu_control_t{goal_params(goal)});
+  std::vector<std::string> statuses;
+  loop.set_callback([&](step_result_t const &r) { statuses.push_back(r.mu_report.status); });
+  loop.initialize(constant(dcomplex(0.2, -1e-3)), 0.0);
+  EXPECT_EQ(loop.run(), "converged");
+  EXPECT_NEAR(loop.last_step()->filling, goal, 1e-6);
+  ASSERT_GT(statuses.size(), 2u);
+  EXPECT_NE(statuses[0], "mixer");
+  EXPECT_NE(statuses[1], "mixer");
+  for (std::size_t i = 2; i < statuses.size(); ++i) EXPECT_EQ(statuses[i], "mixer");
+
+  broyden_mixer other(p);
+  convergence_t c2(convergence_params());
+  expect_error<std::invalid_argument>([&] { (void)dmft_loop(solver, lattice, other, c2, loop_params()); },
+                                      "the mixer moves μ, which needs a μ control with a goal");
+}
+
 TEST(Loop, StepRunCallbackStatistics) {
   std::string const dir = "dmft_loop_run";
   std::filesystem::remove_all(dir);

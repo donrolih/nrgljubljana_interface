@@ -144,6 +144,8 @@ namespace nrgljubljana_interface::dmft {
     check_manifest(m, params_.solve_params);
     if (not(std::isfinite(params_.Gamma_floor) and params_.Gamma_floor >= 0) or not(std::isfinite(params_.Sigma_floor) and params_.Sigma_floor >= 0))
       throw std::invalid_argument("dmft_loop: the floors must be finite and >= 0");
+    if (mixer_.moves_mu(std::numeric_limits<long>::max()) and not mu_control_.params().goal)
+      throw std::invalid_argument("dmft_loop: the mixer moves μ, which needs a μ control with a goal");
     onsite_    = lattice_.onsite_energy(m.gf);
     degeneracy_ = m.degeneracy;
     if (not params_.run_dir.empty()) on_rank_0(solver_.communicator(), [&] { std::filesystem::create_directories(params_.run_dir); });
@@ -319,10 +321,12 @@ namespace nrgljubljana_interface::dmft {
 
     // 4–6: G_loc at μ, μ_next, Δ_out
     auto const G_loc      = lattice_.local_gf(Sigma, mu_);
-    auto const adjusted   = mu_control_.adjust({Sigma, mu_, params_.solve_params.T, degeneracy_}, lattice_);
+    bool const mixer_mu   = mixer_.moves_mu(n);
+    mu_input_t const mu_input{Sigma, mu_, params_.solve_params.T, degeneracy_};
+    auto adjusted         = mixer_mu ? mu_control_.filling(mu_input, lattice_) : mu_control_.adjust(mu_input, lattice_);
+    if (mixer_mu) adjusted.report.status = "mixer";
     r.mu_report           = adjusted.report;
     r.filling             = adjusted.filling;
-    bool const mixer_mu   = mixer_.moves_mu(n);
     double const mu_out   = mixer_mu ? mu_ : adjusted.mu_next;
     auto const Delta_out  = lattice_.self_consistency(Sigma, mu_out).second;
 
@@ -342,13 +346,12 @@ namespace nrgljubljana_interface::dmft {
     g_w_t Delta_mix = *Delta_;
     double mu_next   = mu_;
     try {
-      auto const mixed = mixer_.mix({n, spectral_part(*Delta_), spectral_part(Delta_out), mu_, adjusted.filling});
-      r.mix_report     = mixed.report;
+      auto mixed = mixer_.mix_hybridization(n, *Delta_, Delta_out, onsite_, params_.Gamma_floor, mu_, adjusted.filling, mu_control_.params().goal);
+      r.mix_report = mixed.report;
       if (mixer_mu and not mixed.mu_next) throw std::runtime_error("dmft_loop: the mixer moves μ but gave none");
-      mu_next             = mixer_mu ? *mixed.mu_next : adjusted.mu_next;
-      auto [next, report] = hybridization_from_Gamma(mixed.Gamma_mix, onsite_, params_.Gamma_floor);
-      Delta_mix          = std::move(next);
-      r.Delta_projection  = report;
+      mu_next            = mixer_mu ? *mixed.mu_next : adjusted.mu_next;
+      Delta_mix          = std::move(mixed.Delta_mix);
+      r.Delta_projection = mixed.projection;
     } catch (std::exception const &) {
       if (r.convergence.status == "continue") throw;
       Delta_mix   = *Delta_;

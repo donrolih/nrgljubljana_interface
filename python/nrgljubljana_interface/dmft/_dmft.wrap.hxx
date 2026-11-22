@@ -25,9 +25,16 @@ template <> constexpr bool c2py::is_wrapped<nrgljubljana_interface::dmft::mix_re
 template <> inline constexpr auto c2py::tp_name<nrgljubljana_interface::dmft::mix_report_t>    = "nrgljubljana_interface.dmft._dmft.MixReportT";
 template <> constexpr bool c2py::is_wrapped<nrgljubljana_interface::dmft::mix_result_t>        = true;
 template <> inline constexpr auto c2py::tp_name<nrgljubljana_interface::dmft::mix_result_t>    = "nrgljubljana_interface.dmft._dmft.MixResultT";
-template <> constexpr bool c2py::is_wrapped<nrgljubljana_interface::dmft::linear_mixer>        = true;
-template <> inline constexpr auto c2py::tp_name<nrgljubljana_interface::dmft::linear_mixer>    = "nrgljubljana_interface.dmft._dmft.LinearMixer";
-template <> constexpr bool c2py::is_wrapped<nrgljubljana_interface::dmft::mu_control_params_t> = true;
+template <> constexpr bool c2py::is_wrapped<nrgljubljana_interface::dmft::hybridization_mix_t> = true;
+template <>
+inline constexpr auto c2py::tp_name<nrgljubljana_interface::dmft::hybridization_mix_t>      = "nrgljubljana_interface.dmft._dmft.HybridizationMixT";
+template <> constexpr bool c2py::is_wrapped<nrgljubljana_interface::dmft::linear_mixer>     = true;
+template <> inline constexpr auto c2py::tp_name<nrgljubljana_interface::dmft::linear_mixer> = "nrgljubljana_interface.dmft._dmft.LinearMixer";
+template <> constexpr bool c2py::is_wrapped<nrgljubljana_interface::dmft::broyden_params_t> = true;
+template <> inline constexpr auto c2py::tp_name<nrgljubljana_interface::dmft::broyden_params_t> = "nrgljubljana_interface.dmft._dmft.BroydenParamsT";
+template <> constexpr bool c2py::is_wrapped<nrgljubljana_interface::dmft::broyden_mixer>        = true;
+template <> inline constexpr auto c2py::tp_name<nrgljubljana_interface::dmft::broyden_mixer>    = "nrgljubljana_interface.dmft._dmft.BroydenMixer";
+template <> constexpr bool c2py::is_wrapped<nrgljubljana_interface::dmft::mu_control_params_t>  = true;
 template <>
 inline constexpr auto c2py::tp_name<nrgljubljana_interface::dmft::mu_control_params_t>      = "nrgljubljana_interface.dmft._dmft.MuControlParamsT";
 template <> constexpr bool c2py::is_wrapped<nrgljubljana_interface::dmft::mu_input_t>       = true;

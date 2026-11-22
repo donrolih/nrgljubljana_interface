@@ -14,7 +14,7 @@ from nrgljubljana_interface.dmft import (causal_projection, spectral_part, high_
                                          spectral_weight, spectral_distance, hilbert_transform, BetheLattice,
                                          TabulatedLattice, CallableLattice, DosT, LinearMixer, MuControl,
                                          Convergence, MuControlParamsT, ConvergenceParamsT, LoopParamsT, StepResultT,
-                                         CausalityReportT, MuInputT, MixInputT)
+                                         CausalityReportT, MuInputT, MixInputT, BroydenMixer)
 
 D = 1.0
 
@@ -168,6 +168,26 @@ class test_dmft_functions(unittest.TestCase):
         mixed = LinearMixer(0.5).mix(MixInputT(iteration=1, Gamma=Gamma, Gamma_out=Gamma_out, mu=0.0, filling=adjusted.filling))
         np.testing.assert_allclose(mixed.Gamma_mix['imp'].data, 0.5 * (Gamma['imp'].data + Gamma_out['imp'].data), atol=1e-14)
         self.assertEqual(mixed.report.method, "linear")
+
+        # Broyden with μ: the first step is the linear one, μ moves by mu_alpha (goal − n), clamped
+        broyden = BroydenMixer(alpha=0.5, mu=True, mu_alpha=0.5, max_mu_step=0.05)
+        self.assertTrue(broyden.moves_mu(1))
+        stepped = broyden.mix(MixInputT(iteration=1, Gamma=Gamma, Gamma_out=Gamma_out, mu=0.0, filling=1.0, goal=0.8))
+        np.testing.assert_allclose(stepped.Gamma_mix['imp'].data, mixed.Gamma_mix['imp'].data, atol=1e-12)
+        self.assertAlmostEqual(stepped.mu_next, -0.05, places=14)
+        self.assertEqual(stepped.report.history_size, 1)
+        self.assertIn("broyden alpha=0.5", broyden.description())
+
+        # Δ and Δ_out mixed in one call: the mixed Γ, floored, with the Hermitian part rebuilt
+        h = [np.zeros((1, 1), dtype=complex)]
+        combined = LinearMixer(0.5).mix_hybridization(1, Delta, Delta_out, h, 1e-6)
+        Delta_mix, projection = hybridization_from_Gamma(mixed.Gamma_mix, h, 1e-6)
+        np.testing.assert_allclose(combined.Delta_mix['imp'].data, Delta_mix['imp'].data, atol=1e-14)
+        self.assertEqual(combined.projection.projected_points, projection.projected_points)
+
+        measured = mu_control.filling(MuInputT(Sigma=Sigma, mu=0.0, T=0.01, degeneracy={'imp': 2}), lattice)
+        self.assertEqual(measured.report.status, "measured")
+        self.assertEqual(measured.filling, adjusted.filling)
 
     # --- parameters and reports in HDF5
 

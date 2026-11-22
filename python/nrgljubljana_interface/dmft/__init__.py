@@ -10,7 +10,7 @@ keyword-argument constructors for :class:`MuControl`, :class:`Convergence` and :
 - Measurements: ``occupancy``, ``spectral_weight``, ``spectral_distance``
 - Lattices: :class:`BetheLattice`, :class:`TabulatedLattice`, :class:`CallableLattice`, and ``hilbert_transform`` of a
   tabulated DOS
-- Loop controls: :class:`LinearMixer`, :class:`MuControl`, :class:`Convergence`
+- Loop controls: :class:`LinearMixer`, :class:`BroydenMixer`, :class:`MuControl`, :class:`Convergence`
 - The loop: :class:`DMFTLoop`
 
 Block matrices (on-site energy, Hartree self-energy, occupancy) are lists of matrices in the block order of the
@@ -24,10 +24,10 @@ from ._dmft import spectral_part, causal_projection, rebuild_hermitian_part, hig
 from ._dmft import Sigma_IFG, Sigma_FG, impurity_gf
 from ._dmft import occupancy, spectral_weight, spectral_distance, hilbert_transform
 from ._dmft import CausalityReportT, OccupancyT, DistanceT, DosT
-from ._dmft import MixInputT, MixReportT, MixResultT, MuControlParamsT, MuInputT, MuReportT, MuResultT
+from ._dmft import MixInputT, MixReportT, MixResultT, HybridizationMixT, BroydenParamsT, MuControlParamsT, MuInputT, MuReportT, MuResultT
 from ._dmft import ConvergenceParamsT, ConvergenceInputT, ConvergenceResultT, LoopParamsT, StepResultT
 from ._dmft import BetheLatticeT as BetheLattice, TabulatedLatticeT as TabulatedLattice, CallableLatticeT as CallableLattice
-from ._dmft import LinearMixer
+from ._dmft import LinearMixer, BroydenMixer as _BroydenMixer
 from ._dmft import MuControlT as _MuControlT, ConvergenceT as _ConvergenceT, PyDmftLoop as _DmftLoop
 
 # Fields of LoopParamsT other than the solve parameters and the options
@@ -43,6 +43,17 @@ class MuControl(_MuControlT):
 
     def __init__(self, *args, **params_kw):
         _MuControlT.__init__(self, args[0] if args else MuControlParamsT(**params_kw))
+
+
+class BroydenMixer(_BroydenMixer):
+    """
+    Broyden mixing of Γ, optionally with μ. Takes a BroydenParamsT positionally, or its fields as keyword arguments
+    (alpha, history, mu, mu_alpha, warmup, max_mu_step, weighted, w0, max_condition). With mu=True the loop needs a
+    MuControl with a goal, which moves μ during the first warmup iterations and measures the filling.
+    """
+
+    def __init__(self, *args, **params_kw):
+        _BroydenMixer.__init__(self, args[0] if args else BroydenParamsT(**params_kw))
 
 
 class Convergence(_ConvergenceT):
@@ -65,7 +76,7 @@ class DMFTLoop(_DmftLoop):
         The impurity solver; its template must give the impurity levels in [levels].
     lattice : BetheLattice, TabulatedLattice or CallableLattice
         Copied into the loop.
-    mixer : LinearMixer
+    mixer : LinearMixer or BroydenMixer
         Copied into the loop, which holds the mixer's state.
     convergence : Convergence
     args : LoopParamsT, optional
@@ -92,7 +103,7 @@ class DMFTLoop(_DmftLoop):
 
 __all__ = ['spectral_part', 'causal_projection', 'rebuild_hermitian_part', 'high_frequency_limit', 'hybridization_from_Gamma',
            'Sigma_IFG', 'Sigma_FG', 'impurity_gf', 'occupancy', 'spectral_weight', 'spectral_distance', 'hilbert_transform',
-           'BetheLattice', 'TabulatedLattice', 'CallableLattice', 'DosT', 'LinearMixer', 'MuControl',
-           'Convergence', 'DMFTLoop', 'CausalityReportT', 'OccupancyT', 'DistanceT', 'MixInputT', 'MixReportT', 'MixResultT',
+           'BetheLattice', 'TabulatedLattice', 'CallableLattice', 'DosT', 'LinearMixer', 'BroydenMixer', 'BroydenParamsT', 'MuControl',
+           'Convergence', 'DMFTLoop', 'CausalityReportT', 'OccupancyT', 'DistanceT', 'MixInputT', 'MixReportT', 'MixResultT', 'HybridizationMixT',
            'MuControlParamsT', 'MuInputT', 'MuReportT', 'MuResultT', 'ConvergenceParamsT', 'ConvergenceInputT',
            'ConvergenceResultT', 'LoopParamsT', 'StepResultT']

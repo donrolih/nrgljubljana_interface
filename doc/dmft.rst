@@ -74,30 +74,41 @@ The same steps can be written in Python, for full control of each one:
 
 .. code-block:: python
 
+   import numpy as np
    from nrgljubljana_interface import Solver
-   from nrgljubljana_interface.dmft import (BetheLattice, MuControl, LinearMixer, MuInputT, MixInputT,
-                                            causal_projection, spectral_part, hybridization_from_Gamma,
-                                            spectral_distance)
+   from nrgljubljana_interface.dmft import (TabulatedLattice, MuControl, LinearMixer, MuInputT, causal_projection,
+                                            hybridization_from_Gamma, spectral_part, impurity_gf, spectral_distance)
 
-   U, T = 4.0, 0.0025
+   U, goal, T = 4.0, 0.8, 0.0025
    S = Solver(model="SIAM", symtype="QS", mesh_min=1e-7, mesh_max=40.0, mesh_ratio=1.01)
-   lattice, mu_control, mixer = BetheLattice(1.0), MuControl(goal=0.8), LinearMixer(0.5)
-   h = lattice.onsite_energy([("imp", 1)])
+   lattice = TabulatedLattice(TabulatedLattice.read_dos("DOS.dat"))
+   mu_control, mixer = MuControl(goal=goal), LinearMixer(0.5)
+   h = lattice.onsite_energy([("imp", 1)])            # ⟨h⟩ per block
 
    mu = 0.51
    Sigma = S.Sigma_w.copy()
-   Sigma << U / 2
-   G_loc, Delta = lattice.self_consistency(Sigma, mu)
+   Sigma << U / 2 - 1e-4j
+   G_loc, Delta_out = lattice.self_consistency(Sigma, mu)
+   Delta, projection = hybridization_from_Gamma(spectral_part(Delta_out), h, 1e-6)
    for iteration in range(1, 51):
        S.Delta_w << Delta
        S.solve(T=T, Lambda=2.0, Nz=4, keep=2000, model_parameters={"U1": U, "eps1": h[0][0, 0].real - mu})
-       Sigma, _ = causal_projection(S.Sigma_w, 1e-12)
+       Sigma, Sigma_projection = causal_projection(S.Sigma_w, 1e-12)
+
        adjusted = mu_control.adjust(MuInputT(Sigma=Sigma, mu=mu, T=T, degeneracy={"imp": 2}), lattice)
        G_loc_next, Delta_out = lattice.self_consistency(Sigma, adjusted.mu_next)
-       mixed = mixer.mix(MixInputT(iteration=iteration, Gamma=spectral_part(Delta), Gamma_out=spectral_part(Delta_out),
-                                   mu=mu, filling=adjusted.filling))
-       Delta, _ = hybridization_from_Gamma(mixed.Gamma_mix, h, 1e-6)
-       distance = spectral_distance(G_loc_next, G_loc).max
-       G_loc, mu = G_loc_next, adjusted.mu_next
-       if distance < 1e-6:
+       G_imp = impurity_gf(Delta, Sigma, [np.array([[-mu]], dtype=complex)])
+
+       mixed = mixer.mix_hybridization(iteration, Delta, Delta_out, h, 1e-6)
+       distance = spectral_distance(G_loc_next, G_loc).max   # the largest over the matrix elements
+       print(iteration, mu, adjusted.filling, distance, spectral_distance(G_imp, G_loc).max)
+       Delta, G_loc, mu = mixed.Delta_mix, G_loc_next, adjusted.mu_next
+       if distance < 1e-6 and abs(adjusted.filling - goal) < 1e-6:
            break
+
+``lattice.self_consistency(Sigma, mu)`` returns the local Green's function and Δ at that μ; here the G_loc at the
+next μ is the one compared in the next iteration. ``mixer.mix_hybridization`` mixes Γ = −Im Δ of Δ and Δ_out and
+rebuilds the next Δ (``mixed.Delta_mix``), with the report of the mixer (``mixed.report``) and of the causal
+projection (``mixed.projection``); with a mixer that moves μ it also gives ``mixed.mu_next``, and takes ``mu``,
+``filling`` and ``goal``. ``spectral_distance`` returns the distance of each matrix element (``elements``) and the
+largest (``max``).
