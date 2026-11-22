@@ -18,7 +18,7 @@ Let us go through the script. The impurity solver is constructed as for a single
 contain the whole spectrum, here up to :math:`|\omega| = 40`:
 
 .. literalinclude:: hubbard.py
-  :lines: 14-15
+  :lines: 15-16
 
 The length of the Wilson chain is set directly by ``Nmax`` (with ``Tmin=-1`` below, so that it is not derived from
 ``Tmin``). The lattice is given by its density of states, tabulated in :download:`DOS.dat <DOS.dat>`, which the
@@ -26,7 +26,7 @@ script :download:`dos.py <dos.py>` generates; the DOS must be normalized to one.
 lattice through closed forms, and ``CallableLattice`` accepts a lattice written in Python.
 
 .. literalinclude:: hubbard.py
-  :lines: 18
+  :lines: 19
 
 The loop controls: linear mixing of :math:`\Gamma = -\mathrm{Im}\,\Delta`, the chemical potential adjusted towards
 the filling with the self-energy held fixed (at most 0.05 per iteration), and the convergence test, which requires
@@ -34,7 +34,7 @@ three consecutive iterations in which the local spectral function changes by les
 10th and the 50th iteration:
 
 .. literalinclude:: hubbard.py
-  :lines: 21-23
+  :lines: 22-24
 
 The loop takes the solver, the lattice and the loop controls, the floors of the spectral parts of :math:`\Delta`
 and :math:`\Sigma`, the run directory, and the keyword arguments of ``Solver.solve``. The impurity level ``eps1``
@@ -42,21 +42,22 @@ is not among them: the template maps it to the impurity (its ``[levels]`` sectio
 on-site energy of the lattice and :math:`\mu` in each iteration.
 
 .. literalinclude:: hubbard.py
-  :lines: 26-29
+  :lines: 27-30
 
 The loop starts from the Hartree self-energy :math:`U/2` and :math:`\mu = 0.51`, or continues an interrupted run
 from the checkpoint in its run directory:
 
 .. literalinclude:: hubbard.py
-  :lines: 32-37
+  :lines: 33-38
 
 During the run the loop writes three files in ``run/``: ``stats.dat``, one line per iteration (μ and μ for the next
 iteration, the filling, the convergence measures, the mixing residual, the causal projections, the status),
 ``checkpoint.h5``, the latest iteration, and ``history.h5``, all iterations. ``run()`` returns ``"converged"``, or
-``"stop"`` if the loop reached ``max_iter``. The script then stores the result:
+``"stop"`` if the loop reached ``max_iter``. The script then stores the result; under MPI every rank holds it, and
+rank 0 writes the file:
 
 .. literalinclude:: hubbard.py
-  :lines: 40-46
+  :lines: 41-48
 
 Let us plot the spectral function of the local lattice Green's function:
 

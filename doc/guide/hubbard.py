@@ -2,6 +2,7 @@
 
 import os
 from h5 import HDFArchive
+from triqs.utility import mpi
 from nrgljubljana_interface import Solver
 from nrgljubljana_interface.dmft import TabulatedLattice, LinearMixer, MuControl, Convergence, DMFTLoop
 
@@ -36,11 +37,12 @@ else:
 
 status = loop.run()
 
-# Store the result
-with HDFArchive("solution.h5", "w") as ar:
-    ar["status"] = status
-    ar["mu"] = loop.mu()
-    ar["Sigma"] = loop.Sigma()
-    ar["G_loc"] = loop.G_loc()
-    ar["Delta"] = loop.Delta()
-    ar["last_step"] = loop.last_step()
+# Store the result (every rank holds it; rank 0 writes)
+if mpi.is_master_node():
+    with HDFArchive("solution.h5", "w") as ar:
+        ar["status"] = status
+        ar["mu"] = loop.mu()
+        ar["Sigma"] = loop.Sigma()
+        ar["G_loc"] = loop.G_loc()
+        ar["Delta"] = loop.Delta()
+        ar["last_step"] = loop.last_step()
