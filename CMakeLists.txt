@@ -173,8 +173,8 @@ message(STATUS "MPIEXEC_POSTFLAGS: ${MPIEXEC_POSTFLAGS}")
 add_subdirectory(deps)
 
 # NRG Ljubljana source, fetched below; the library also reports it (nrg::revision)
-set(NRGLJUBLJANA_REPOSITORY donrolih/nrgljubljana)
-set(NRGLJUBLJANA_GIT_TAG 6c332ecd7a778a96f9a835dbf677aa645d77d6eb)
+set(NRGLJUBLJANA_REPOSITORY rokzitko/nrgljubljana)
+set(NRGLJUBLJANA_GIT_TAG ec45faa076a371fccbde6c0ba667b815197f50a6)
 
 # Build and install the library
 add_subdirectory(c++/${PROJECT_NAME})
