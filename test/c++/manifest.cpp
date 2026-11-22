@@ -25,6 +25,7 @@ symtype=QS
 channels=1
 ops=n_d n_d^2 hop0 A_d self_d sigma_d SigmaHartree
 params=U1 eps1
+pipeline=library
 
 [structure]
 gf=imp:1
@@ -248,9 +249,9 @@ TEST(Manifest, TemplateValues) {
   EXPECT_TRUE(contains(error_of(replaced(siam_qs, "channels=1", "channels=x")), "[template] channels"));
   EXPECT_TRUE(contains(error_of(replaced(siam_qs, "hop0 A_d", "hop0 hop0 A_d")), "[template] ops: \"hop0\" given twice"));
   EXPECT_TRUE(contains(error_of(replaced(siam_qs, "symtype=QS", "symtype=")), "[template] symtype: empty"));
-  EXPECT_EQ(parse_manifest(siam_qs).pipeline, "scripts"); // the default
-  EXPECT_EQ(parse_manifest(replaced(siam_qs, "params=U1 eps1", "params=U1 eps1\npipeline=library")).pipeline, "library");
-  EXPECT_TRUE(contains(error_of(replaced(siam_qs, "params=U1 eps1", "params=U1 eps1\npipeline=perl")),
+  EXPECT_EQ(parse_manifest(siam_qs).pipeline, "library");
+  EXPECT_EQ(parse_manifest(replaced(siam_qs, "pipeline=library\n", "")).pipeline, "scripts"); // the default
+  EXPECT_TRUE(contains(error_of(replaced(siam_qs, "pipeline=library", "pipeline=perl")),
                        "[template] pipeline: unknown pipeline \"perl\" (scripts or library)"));
 }
 
@@ -367,22 +368,26 @@ TEST(Template, ShippedManifests) {
   for (auto const *name : {"SIAM/QS", "SIAM/QSZ", "SIAM/ISO", "2orb-UJ/QS", "Holstein/Nph=10/QS", "CLEAN/QS"}) {
     auto const dir = template_dir(name);
     EXPECT_NO_THROW(check_against_template(load_manifest(dir), dir)) << name;
-    EXPECT_EQ(load_manifest(dir).pipeline, "scripts") << name;
+    EXPECT_EQ(load_manifest(dir).pipeline, std::string(name) == "SIAM/QS" ? "library" : "scripts") << name;
   }
 }
 
 // The route of a template must match its files: scripts needs every script, library none
 TEST(Template, Pipeline) {
-  namespace fs       = std::filesystem;
-  auto const library = replaced(siam_qs, "params=U1 eps1", "params=U1 eps1\npipeline=library");
-  EXPECT_TRUE(contains(check_error_of(library), "[template] pipeline: library, but the template still has the script prepare"));
+  namespace fs = std::filesystem;
+  // SIAM/QS runs in-process: no scripts
+  EXPECT_EQ(check_error_of(siam_qs), "");
+  EXPECT_TRUE(contains(check_error_of(replaced(siam_qs, "pipeline=library\n", "")), "[template] pipeline: scripts, but the template has no prepare"));
 
-  std::string const copy = "siam_qs_without_scripts";
+  // SIAM/QSZ runs through its scripts
+  auto const qsz     = template_dir("SIAM/QSZ");
+  auto const library = replaced(siam_qsz, "params=U1 eps1 B1", "params=U1 eps1 B1\npipeline=library");
+  EXPECT_EQ(check_error_of(siam_qsz, qsz), "");
+  EXPECT_TRUE(contains(check_error_of(library, qsz), "[template] pipeline: library, but the template still has the script prepare"));
+  std::string const copy = "siam_qsz_without_wilson";
   fs::remove_all(copy);
-  fs::copy(template_dir("SIAM/QS"), copy, fs::copy_options::recursive);
+  fs::copy(qsz, copy, fs::copy_options::recursive);
   fs::remove(fs::path(copy) / "wilson");
-  EXPECT_TRUE(contains(check_error_of(siam_qs, copy), "[template] pipeline: scripts, but the template has no wilson"));
-  for (auto const *script : template_scripts) fs::remove(fs::path(copy) / script);
-  EXPECT_EQ(check_error_of(library, copy), "");
+  EXPECT_TRUE(contains(check_error_of(siam_qsz, copy), "[template] pipeline: scripts, but the template has no wilson"));
   fs::remove_all(copy);
 }

@@ -45,7 +45,7 @@ TEST(nrgljubljana_interface, siam) { // NOLINT
 
   // Initialize hybridization function
   for (auto w : S.log_mesh)
-    S.Delta_w[0][w](0,0) = 0.05i;
+    S.Delta_w[0][w](0,0) = -0.05i; // a flat band: Gamma = -Im Delta = 0.05
 
   // Solve the impurity model
   S.solve(sp);

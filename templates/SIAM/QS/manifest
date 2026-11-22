@@ -7,6 +7,7 @@ symtype=QS
 channels=1
 ops=n_d n_d^2 hop0 A_d self_d sigma_d SigmaHartree
 params=U1 eps1
+pipeline=library
 
 [structure]
 gf=imp:1
