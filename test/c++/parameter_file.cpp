@@ -1,4 +1,4 @@
-// Parser for parameter-file text (nrg/parameter_file.hpp)
+// Parameter-file text through nrg/parameter_file.hpp (NRG Ljubljana's reader)
 
 #include <gtest/gtest.h>
 
@@ -35,7 +35,7 @@ TEST(ParameterFile, SectionsAndKeys) {
 }
 
 TEST(ParameterFile, WhitespaceCommentsAndBlankLines) {
-  auto s = read_parameter_sections("# leading comment\n\n  [ sec ]  \n\t key  =  value \t\n   # indented comment\n\nk2=v2\r\n");
+  auto s = read_parameter_sections("# leading comment\n\n[sec]\n\t key  =  value \t\n   # indented comment\n\nk2=v2\r\n");
   ASSERT_EQ(s.size(), 1u);
   auto const &sec = s.at("sec");
   EXPECT_EQ(sec.size(), 2u);
@@ -136,7 +136,14 @@ TEST(ParameterFile, MalformedSectionHeader) {
   EXPECT_TRUE(contains(error_of("[a\nx=1\n"), "line 1: malformed section header"));
   EXPECT_TRUE(contains(error_of("[a] trailing\n"), "malformed section header"));
   EXPECT_TRUE(contains(error_of("[]\n"), "empty section name"));
-  EXPECT_TRUE(contains(error_of("[  ]\n"), "empty section name"));
+  EXPECT_TRUE(contains(error_of("[  ]\n"), "whitespace in a section header"));
+}
+
+TEST(ParameterFile, HeaderExactlyName) {
+  // As the solver reads its parameter files: no whitespace around or inside the brackets, no \r on a header line
+  EXPECT_TRUE(contains(error_of("  [sec]\nx=1\n"), "line 1: whitespace in a section header"));
+  EXPECT_TRUE(contains(error_of("[ sec ]\nx=1\n"), "whitespace in a section header"));
+  EXPECT_TRUE(contains(error_of("[sec]\r\nx=1\n"), "whitespace in a section header"));
 }
 
 TEST(ParameterFile, DuplicateSection) {
