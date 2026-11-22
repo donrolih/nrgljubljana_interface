@@ -60,11 +60,11 @@ namespace nrgljubljana_interface::nrg {
 
   /**
    * The file NRG Ljubljana writes the FDM spectral bins of an NRG correlator to, given its spectrum list (s, t, o, d,
-   * q): "<prefix>_FDM_dens_<correlator>.bin" with the prefix corr, spin, orbspin, spec or specq. The correlator is
-   * "op1-op2", or "op1-op2-u" / "op1-op2-d" for one spin of a doublet list under a symmetry type with a field.
-   * Throws std::invalid_argument for another type or form.
+   * q): "<prefix>_FDM_dens_<op1>-<op2>[-u|-d].bin" with the prefix corr, spin, orbspin, spec or specq. The operators
+   * and the spin suffix ("", "u" or "d") are those the manifest splits the correlator into (operator names may
+   * contain '-'). Throws std::invalid_argument for another type or suffix, or an empty operator name.
    */
-  std::string spectrum_file(std::string const &nrg_correlator, char type);
+  std::string spectrum_file(std::string const &op1, std::string const &op2, std::string const &suffix, char type);
 
   /// The contents of a file; throws std::runtime_error if it cannot be read
   std::string read_text_file(std::string const &path);

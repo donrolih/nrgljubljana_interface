@@ -8,15 +8,16 @@
 
 namespace nrgljubljana_interface {
 
-  std::map<std::string, char> selected_spectra(options_t const &r, templates::manifest_t const &m,
-                                                std::map<std::string, char> const &correlator_type) {
-    std::map<std::string, char> result;
+  std::map<std::string, std::string> selected_spectra(options_t const &r, templates::manifest_t const &m,
+                                                       std::map<std::string, char> const &correlator_type) {
+    std::map<std::string, std::string> result;
     for (auto const &name : selected_correlators(r, m))
-      for (auto const &entry : m.correlators.at(name)) result[entry.nrg_name] = correlator_type.at(entry.nrg_name);
+      for (auto const &entry : m.correlators.at(name))
+        result[entry.nrg_name] = nrg::spectrum_file(entry.op1, entry.op2, entry.suffix, correlator_type.at(entry.nrg_name));
     return result;
   }
 
-  twist_result_t read_twist(std::string const &dir, double z, std::map<std::string, char> const &spectra, bool fdm, bool energy_flow) {
+  twist_result_t read_twist(std::string const &dir, double z, std::map<std::string, std::string> const &spectra, bool fdm, bool energy_flow) {
     auto const path   = [&](std::string const &file) { return (std::filesystem::path(dir) / file).string(); };
     auto const exists = [&](std::string const &file) { return std::filesystem::exists(path(file)); };
 
@@ -29,8 +30,8 @@ namespace nrgljubljana_interface {
       t.customfdm = nrg::parse_final_values(nrg::read_text_file(path("customfdm")), path("customfdm"));
       t.tdfdm     = nrg::parse_final_values(nrg::read_text_file(path("tdfdm")), path("tdfdm"));
     }
-    for (auto const &[corr, type] : spectra) {
-      auto const file = path(nrg::spectrum_file(corr, type));
+    for (auto const &[corr, name] : spectra) {
+      auto const file = path(name);
       if (not std::filesystem::exists(file)) throw std::runtime_error(file + ": missing; NRG Ljubljana did not compute " + corr);
       t.spectra[corr] = nrg::load_spectrum(file, false);
     }

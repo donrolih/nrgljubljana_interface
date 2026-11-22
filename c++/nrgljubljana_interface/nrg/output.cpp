@@ -56,23 +56,13 @@ namespace nrgljubljana_interface::nrg {
     return result;
   }
 
-  std::string spectrum_file(std::string const &nrg_correlator, char type) {
+  std::string spectrum_file(std::string const &op1, std::string const &op2, std::string const &suffix, char type) {
     auto const list = spectrum_list(type);
-    // "op1-op2", or "op1-op2-u" / "op1-op2-d" for one spin of a doublet list under a symmetry type with a field
-    std::string correlator = nrg_correlator;
-    int spin               = 0;
-    auto const first       = nrg_correlator.find('-');
-    auto const second      = first == std::string::npos ? std::string::npos : nrg_correlator.find('-', first + 1);
-    if (first == std::string::npos or first == 0 or first + 1 == nrg_correlator.size())
-      throw std::invalid_argument("spectrum_file: \"" + nrg_correlator + "\" is not of the form op1-op2");
-    if (second != std::string::npos) {
-      auto const suffix = nrg_correlator.substr(second + 1);
-      if (suffix != "u" and suffix != "d")
-        throw std::invalid_argument("spectrum_file: \"" + nrg_correlator + "\" is not of the form op1-op2, op1-op2-u or op1-op2-d");
-      correlator = nrg_correlator.substr(0, second);
-      spin       = suffix == "u" ? 1 : -1;
-    }
-    return NRG::Workflow::spectrum_file_name(list, correlator, "FDM", spin) + ".bin";
+    if (op1.empty() or op2.empty()) throw std::invalid_argument("spectrum_file: an empty operator name");
+    if (not suffix.empty() and suffix != "u" and suffix != "d")
+      throw std::invalid_argument("spectrum_file: the spin suffix must be empty, u or d, got \"" + suffix + "\"");
+    int const spin = suffix.empty() ? 0 : (suffix == "u" ? 1 : -1);
+    return NRG::Workflow::spectrum_file_name(list, op1 + "-" + op2, "FDM", spin) + ".bin";
   }
 
   std::string read_text_file(std::string const &path) {

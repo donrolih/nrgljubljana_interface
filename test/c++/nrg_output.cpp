@@ -94,14 +94,16 @@ TEST(NrgOutput, EnergyFlowErrors) {
 }
 
 TEST(NrgOutput, SpectrumFile) {
-  EXPECT_EQ(spectrum_file("A_d-A_d", 'd'), "spec_FDM_dens_A_d-A_d.bin");
-  EXPECT_EQ(spectrum_file("A_d-A_d-u", 'd'), "spec_FDM_dens_A_d-A_d-u.bin");
-  EXPECT_EQ(spectrum_file("n_d-n_d", 's'), "corr_FDM_dens_n_d-n_d.bin");
-  EXPECT_EQ(spectrum_file("sigma_d-sigma_d", 't'), "spin_FDM_dens_sigma_d-sigma_d.bin");
-  EXPECT_EQ(spectrum_file("x-x", 'o'), "orbspin_FDM_dens_x-x.bin");
-  EXPECT_EQ(spectrum_file("x-x", 'q'), "specq_FDM_dens_x-x.bin");
-  EXPECT_EQ(spectrum_file("A_d-A_d-d", 'd'), "spec_FDM_dens_A_d-A_d-d.bin");
-  EXPECT_THROW(spectrum_file("x-x", 'p'), std::invalid_argument);
-  EXPECT_THROW(spectrum_file("A_d-A_d-x", 'd'), std::invalid_argument);
-  EXPECT_THROW(spectrum_file("A_d", 'd'), std::invalid_argument);
+  EXPECT_EQ(spectrum_file("A_d", "A_d", "", 'd'), "spec_FDM_dens_A_d-A_d.bin");
+  EXPECT_EQ(spectrum_file("A_d", "A_d", "u", 'd'), "spec_FDM_dens_A_d-A_d-u.bin");
+  EXPECT_EQ(spectrum_file("A_d", "A_d", "d", 'd'), "spec_FDM_dens_A_d-A_d-d.bin");
+  EXPECT_EQ(spectrum_file("n_d", "n_d", "", 's'), "corr_FDM_dens_n_d-n_d.bin");
+  EXPECT_EQ(spectrum_file("sigma_d", "sigma_d", "", 't'), "spin_FDM_dens_sigma_d-sigma_d.bin");
+  EXPECT_EQ(spectrum_file("x", "x", "", 'o'), "orbspin_FDM_dens_x-x.bin");
+  EXPECT_EQ(spectrum_file("x", "x", "", 'q'), "specq_FDM_dens_x-x.bin");
+  // operator names may contain '-': the split is the manifest's, not guessed from the name
+  EXPECT_EQ(spectrum_file("n_d", "SigmaHartree-u", "", 's'), "corr_FDM_dens_n_d-SigmaHartree-u.bin");
+  EXPECT_THROW(spectrum_file("x", "x", "", 'p'), std::invalid_argument);
+  EXPECT_THROW(spectrum_file("A_d", "A_d", "x", 'd'), std::invalid_argument);
+  EXPECT_THROW(spectrum_file("", "A_d", "", 'd'), std::invalid_argument);
 }
